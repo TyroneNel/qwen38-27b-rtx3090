@@ -14,6 +14,9 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(dirname "$HERE")"
 cd "$REPO"
 RESULT=${1:?usage: measure_c1.sh <result.json>}
+# Same seam as paired_run.sh: a native python cannot resolve cygwin/MSYS
+# /e/-style paths, so normalize argv once (identity on Linux).
+command -v cygpath >/dev/null 2>&1 && RESULT=$(cygpath -m "$RESULT")
 export PATH="$REPO/venv/bin:$PATH"
 export OPENAI_API_KEY=${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}
 PORT=${PORT:-18020}
