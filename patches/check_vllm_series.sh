@@ -32,6 +32,23 @@ GIT_ROOT=$(git -C "$VLLM_SOURCE" rev-parse --show-toplevel)
 PREFIX=${VLLM_SOURCE#"$GIT_ROOT"/}
 if [ "$PREFIX" = "$VLLM_SOURCE" ]; then PREFIX=.; fi
 
+# F10: this script runs `git checkout -- . && git clean -qfd` — destructive to
+# whatever tree it points at. Refuse the two unsafe targets outright:
+#  - this repo itself (must never be reset/cleaned by a helper);
+#  - any tree without explicit opt-in (env ALLOW_TREE_RESET=1) or a
+#   `.qwen-disposable-series-target` sentinel (which CI stamps into its
+#   throwaway checkout). Pass a disposable worktree, not your workspace.
+if [ "$GIT_ROOT" = "$HERE" ]; then
+  echo "REFUSING: VLLM_SOURCE resolves into this repo ($HERE)." >&2
+  echo "Create a disposable checkout/worktree of vLLM 0.28.0 and point here." >&2
+  exit 1
+fi
+if [ "${ALLOW_TREE_RESET:-0}" != 1 ] && [ ! -f "$GIT_ROOT/.qwen-disposable-series-target" ]; then
+  echo "REFUSING: $GIT_ROOT has no .qwen-disposable-series-target sentinel." >&2
+  echo "Set ALLOW_TREE_RESET=1 to confirm destructive reset+clean of that tree." >&2
+  exit 1
+fi
+
 # DFlash2 is native in 0.28.0; the backport patch is kept for older pins.
 SKIP=(dflash2-backport.patch)
 
