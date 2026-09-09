@@ -29,8 +29,11 @@
 set -u
 MODE=self-test
 for a in "$@"; do case $a in --self-test) MODE=self-test;; --live) MODE=live;; \
+  --live-b1) MODE=live-b1;; --live-b6) MODE=live-b6;; \
   --negative-test) MODE=negative;; \
   *) echo "crash_inject_proof: unknown flag $a" >&2; exit 1;; esac; done
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+VENV_PY="$REPO_DIR/venv/bin/python"
 
 PASS=0; FAIL=0; SKIP=0
 LOG=""; [ -n "${PROOF_LOG:-}" ] && LOG="$PROOF_LOG"
@@ -145,7 +148,65 @@ _self_test() {
   rm -rf "$root"
 }
 
-# ---- live boundary configs: publisher command per boundary (NOT run now) ----
+# ---- live publishers ------------------------------------------------------
+# B1: draft-vocab extras on the REAL model dir. Safe to kill: the only write
+# is extras-tmp + os.replace, so a kill leaves litter (*.tmp) + old-intact.
+# Re-run converges to new-complete.
+_live_b1() {
+  local base=${1:?usage: --live-b1 <model-dir>}
+  local target="model_extra_tensors.safetensors"
+  local old; old=$(sha "$base/$target")
+  say "B1 old extras: ${old:-absent}"
+  # setsid: the publisher (python) is a CHILD of the subshell; killing only
+  # the subshell would orphan it and it would keep writing. A fresh session
+  # per publisher lets kill -- -PID take the whole group. Same in _live_b6.
+  setsid "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" & local pid=$!
+  # Kill inside the tmp-write window: poll for the tmp file rather than
+  # sleeping a fixed delay (build speed varies with hardware).
+  local seen=0
+  for _ in $(seq 1 300); do
+    kill -0 "$pid" 2>/dev/null || break
+    ls "$base/$target".tmp* >/dev/null 2>&1 && { seen=1; break; }
+    sleep 1
+  done
+  if [ "$seen" = 0 ]; then
+    wait "$pid" 2>/dev/null
+    skip "live/B1-kill" "build finished before the tmp window was observed; verifying new-complete only"
+  else
+    sleep 2
+    kill -9 -- -$pid 2>/dev/null; wait "$pid" 2>/dev/null
+    local cur; cur=$(sha "$base/$target")
+    if [ "$cur" = "$old" ]; then verdict "live/B1-kill" 0 "old-intact after SIGKILL";
+    else verdict "live/B1-kill" 1 "extras changed under SIGKILL (old=$old cur=$cur)"; fi
+  fi
+  "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
+    || { verdict "live/B1-rerun" 1 "clean re-run failed"; return; }
+  local new; new=$(sha "$base/$target")
+  "$VENV_PY" - "$base/$target" <<'PY' || verdict "live/B1-rerun" 1 "extras do not parse"
+import sys
+from safetensors import safe_open
+with safe_open(sys.argv[1], framework="pt") as f:
+    assert any(k.startswith("mtp.draft_lm_head") for k in f.keys()), "no draft head tensors"
+PY
+  verdict "live/B1-rerun" 0 "new-complete ($new), parses with draft head"
+}
+
+# B6: prepare.sh lock protocol against the REAL lock file. docker/prepare.sh
+# itself cds to /app (container-only), so the host-side proof exercises the
+# identical mechanism: flock -n on <models>/.prepare.lock must serialize,
+# and a SIGKILLed holder must release (fd death, no wedged lock).
+_live_b6() {
+  local lock=${1:?usage: --live-b6 <models-dir>}/.prepare.lock
+  setsid flock "$lock" sleep 30 & local holder=$!
+  sleep 1
+  if flock -n "$lock" true 2>/dev/null; then
+    kill -9 -- -$holder 2>/dev/null; wait "$holder" 2>/dev/null
+    verdict "live/B6-contention" 1 "second holder acquired a held lock"
+  else verdict "live/B6-contention" 0 "concurrent prepare refused"; fi
+  kill -9 -- -$holder 2>/dev/null; wait "$holder" 2>/dev/null
+  if flock -n "$lock" true 2>/dev/null; then verdict "live/B6-release" 0 "lock released after SIGKILL";
+  else verdict "live/B6-release" 1 "lock wedged after SIGKILL"; fi
+}
 # Each entry: name|generation-dir|target|publisher-command. The live cycle
 # snapshots, backgrounds the publisher, SIGKILLs, and applies the same
 # old-or-new + sources-unchanged + lock assertions with boundary-specific
@@ -161,7 +222,9 @@ _live_boundaries() {
   say "Run with idle hardware: PROOF_LOG=evidence.log bash $0 --live (then implement per-boundary publishers)."
 }
 
-if [ "$MODE" = live ]; then _live_boundaries; elif [ "$MODE" = negative ]; then _negative_test; else _self_test; fi
+if [ "$MODE" = live ]; then _live_boundaries; elif [ "$MODE" = negative ]; then _negative_test;
+elif [ "$MODE" = live-b1 ]; then _live_b1 "${BOUND_BASE:-}"; elif [ "$MODE" = live-b6 ]; then _live_b6 "${BOUND_MODELS:-}";
+else _self_test; fi
 say "verdicts: PASS=$PASS FAIL=$FAIL SKIP=$SKIP"
 # Negative mode inverts the bar: success is the proof going red.
 if [ "$MODE" = negative ]; then [ "$FAIL" -gt 0 ]; else [ "$FAIL" = 0 ]; fi
