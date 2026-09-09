@@ -29,7 +29,7 @@
 set -u
 MODE=self-test
 for a in "$@"; do case $a in --self-test) MODE=self-test;; --live) MODE=live;; \
-  --live-b1) MODE=live-b1;; --live-b6) MODE=live-b6;; \
+  --live-b1) MODE=live-b1;; --live-b6) MODE=live-b6;; --live-b2) MODE=live-b2;; \
   --negative-test) MODE=negative;; \
   *) echo "crash_inject_proof: unknown flag $a" >&2; exit 1;; esac; done
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -160,12 +160,10 @@ _live_b1() {
   local old_idx; old_idx=$(sha "$base/model.safetensors.index.json")
   local old_ids; old_ids=$(sha "$base/draft_vocab_ids.json")
   say "B1 old extras: ${old:-absent} index: $old_idx ids: ${old_ids:-absent (counting path only)}"
-  # The save window (~108 MB, tens of ms on NVMe) is uncatchable by
-  # polling, so an inotify watcher (libc via ctypes, stdlib only) spawns the
-  # publisher itself and SIGKILLs the process group the instant the tmp file
-  # is created. Exit: 0 killed-in-window, 1 completed-pre-window, 2 error.
-  local watcher=$base/.watch-kill.py
-  cat > "$watcher" <<'PYEOF'
+# The save window (~108 MB, tens of ms on NVMe) is uncatchable by
+# polling, so an inotify watcher (libc via ctypes, stdlib only) spawns the
+_write_watcher() { # $1=dest-path; TRIGGER/ALLOW_RANDOM/DEADLINE_SECS via env
+  cat > "$1" <<'PYEOF'
 import ctypes, os, select, signal, struct, subprocess, sys, time
 DBG = os.environ.get("PROOF_DEBUG", "")
 def dbg(m):
@@ -180,10 +178,16 @@ watchdir = sys.argv[1].encode()
 dbg("watching %r" % watchdir)
 assert libc.inotify_add_watch(fd, watchdir, IN_CREATE | IN_MOVED_TO | IN_MOVED_FROM) >= 0
 tmpname = (sys.argv[2] + ".tmp").encode()
-dbg("tmpname %r" % tmpname)
+# TRIGGER: exact basename that fires the kill (CREATE or MOVED_TO).
+# ALLOW_RANDOM=1 also fires on any random .tmp* staging create (mid-save).
+# B1/B2a use the first save event; B2b waits for the index save specifically.
+trigger = os.environ.get("TRIGGER", sys.argv[2] + ".tmp").encode()
+allow_random = os.environ.get("ALLOW_RANDOM", "1") == "1"
+deadline_secs = int(os.environ.get("DEADLINE_SECS", "600"))
+dbg("trigger %r allow_random %s deadline %d" % (trigger, allow_random, deadline_secs))
 pub = subprocess.Popen(sys.argv[3:], start_new_session=True)
 dbg("spawned pid %d" % pub.pid)
-deadline = time.time() + 600
+deadline = time.time() + deadline_secs
 while time.time() < deadline:
     if pub.poll() is not None:
         sys.exit(1)  # publisher finished before any tmp event
@@ -196,13 +200,13 @@ while time.time() < deadline:
         wd, mask, cookie, ln = struct.unpack("iIII", data[off:off+16])
         name = data[off+16:off+16+ln].rstrip(b"\0")
         off += 16 + ln
-        # Hit on: the named tmp created OR moved into place, or any
-        # random .tmp* the writer stages through first (safetensors
-        # save_file writes a random-tmp + rename internally, so the named
-        # tmp arrives via MOVED_TO already complete — killing on the random
-        # .tmp CREATE is what lands mid-save).
-        named = name == tmpname and (mask & (IN_CREATE | IN_MOVED_TO))
-        staged = name.startswith(b".tmp") and (mask & IN_CREATE)
+        # Hit on: the trigger tmp created or moved into place, or (when
+        # allowed) any random .tmp* the writer stages through first
+        # (safetensors save_file writes a random-tmp + rename internally, so
+        # the named tmp arrives via MOVED_TO already complete — killing on
+        # the random .tmp CREATE is what lands mid-save).
+        named = name == trigger and (mask & (IN_CREATE | IN_MOVED_TO))
+        staged = allow_random and name.startswith(b".tmp") and (mask & IN_CREATE)
         if named or staged:
             dbg("HIT %r" % name)
             time.sleep(0.1)  # land mid-save, not at creation
@@ -213,7 +217,9 @@ while time.time() < deadline:
             dbg("other mask=%#x name=%r" % (mask, name))
 sys.exit(2)
 PYEOF
+}
   "$VENV_PY" --version >/dev/null 2>&1 || { verdict "live/B1-kill" 1 "venv python missing"; return; }
+  local watcher=$base/.watch-kill.py; _write_watcher "$watcher"
   local wk; wk=3
   python3 "$watcher" "$base" "$target" "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
     && wk=0 || wk=$?
@@ -262,6 +268,64 @@ PY
   else verdict "live/B1-rerun-ids" 1 "ids truncated after re-run"; fi
 }
 
+# B2: quant_lm_head set atomicity on a SCRATCH generation (never the live
+# tree: a mid-set kill is unrecoverable by re-run — see below — so the live
+# tree must not be the patient).
+# Inspection finding under test: shard/index/config are each tmp+replaced
+# but the SET has no commit. Worse, line 64 re-copies .bak unconditionally,
+# so a re-run after a mid-set kill clobbers the rollback with the new shard
+# and then KeyErrors on the missing lm_head.weight. Expected live result:
+# run A (shard-stage kill) all-old PASS; run B (index-stage kill) MIXED —
+# shard new + index old = unloadable generation = the Loop C finding that
+# promotes a set-atomic fix (single manifest marker).
+#   BOUND_B2=<scratch-dir> bash prepare/crash_inject_proof.sh --live-b2
+_live_b2() {
+  local base=${1:?usage: --live-b2 <scratch-dir>}
+  [ -d "$base" ] || { verdict "live/B2-setup" 1 "base dir missing: $base"; return; }
+  local shard; shard=$("$VENV_PY" - "$base/model.safetensors.index.json" <<'PY'
+import json, sys
+print(json.load(open(sys.argv[1]))["weight_map"]["lm_head.weight"])
+PY
+) || { verdict "live/B2-setup" 1 "no bf16 lm_head.weight in $base (already quantized?)"; return; }
+  say "B2 shard: $shard"
+  local files=("$shard" model.safetensors.index.json config.json)
+  local desc="$base/.proof-b2-desc"
+  ( cd "$base" && sha256sum "${files[@]}" > "$desc" ) 2>/dev/null
+  snap() { ( cd "$base" && sha256sum "${files[@]}" 2>/dev/null ); }
+  oldset=$(snap)
+  # Back up the set aside: run B clobbers .bak, so rollback for restore.
+  rm -rf "$base/.proof-b2-orig"; mkdir -p "$base/.proof-b2-orig"
+  cp -a "$base/$shard" "$base/model.safetensors.index.json" "$base/config.json" "$base/.proof-b2-orig/"
+  runkill() { # $1=stage-name $2=trigger $3=allow-random
+    _write_watcher "$base/.watch-kill.py"
+    TRIGGER="$2" ALLOW_RANDOM="$3" DEADLINE_SECS=1800 python3 "$base/.watch-kill.py" "$base" "unused" \
+      "$VENV_PY" "$REPO_DIR/prepare/quant_lm_head.py" "$base" && echo KILLED-0 || echo KILLED-$?
+  }
+  say "B2 run A: kill at shard-save"
+  runkill A "$shard.tmp" 1
+  if [ "$(snap)" = "$oldset" ]; then verdict "live/B2-A" 0 "all-old after shard-stage kill";
+  else verdict "live/B2-A" 1 "set changed under shard-stage kill"; fi
+  say "B2 clean re-run to new-complete"
+  "$VENV_PY" "$REPO_DIR/prepare/quant_lm_head.py" "$base" \
+    || { verdict "live/B2-rerun" 1 "clean re-run failed"; return; }
+  newset=$(snap)
+  [ "$newset" != "$oldset" ] && verdict "live/B2-rerun" 0 "new set published" \
+    || { verdict "live/B2-rerun" 1 "set unchanged by re-run"; return; }
+  say "B2 run B: kill at index-save (mid-set window)"
+  runkill B "model.safetensors.index.json.tmp" 0
+  local now; now=$(snap)
+  if [ "$now" = "$newset" ]; then
+    skip "live/B2-B" "kill landed post-everything (coherent-new); mid-set window missed"
+  elif [ "$now" = "$oldset" ]; then
+    skip "live/B2-B" "kill landed pre-shard-replace (all-old); mid-set window missed"
+  else
+    verdict "live/B2-B" 1 "MIXED SET after index-stage kill (expected protocol gap; see B2 note)"
+  fi
+  cp -a "$base/.proof-b2-orig/." "$base/"
+  rm -rf "$base/.proof-b2-orig" "$base/.watch-kill.py" "$desc"
+  [ "$(snap)" = "$oldset" ] && verdict "live/B2-restore" 0 "generation restored from backup" \
+    || verdict "live/B2-restore" 1 "restore failed"
+}
 # B6: prepare.sh lock protocol against the REAL lock file. docker/prepare.sh
 # itself cds to /app (container-only), so the host-side proof exercises the
 # identical mechanism: flock -n on <models>/.prepare.lock must serialize,
@@ -295,6 +359,7 @@ _live_boundaries() {
 
 if [ "$MODE" = live ]; then _live_boundaries; elif [ "$MODE" = negative ]; then _negative_test;
 elif [ "$MODE" = live-b1 ]; then _live_b1 "${BOUND_BASE:-}"; elif [ "$MODE" = live-b6 ]; then _live_b6 "${BOUND_MODELS:-}";
+elif [ "$MODE" = live-b2 ]; then _live_b2 "${BOUND_B2:-}";
 else _self_test; fi
 say "verdicts: PASS=$PASS FAIL=$FAIL SKIP=$SKIP"
 # Negative mode inverts the bar: success is the proof going red.
