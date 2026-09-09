@@ -162,6 +162,57 @@ _live_b1() {
   say "B1 old extras: ${old:-absent} index: $old_idx ids: ${old_ids:-absent (counting path only)}"
 # The save window (~108 MB, tens of ms on NVMe) is uncatchable by
 # polling, so an inotify watcher (libc via ctypes, stdlib only) spawns the
+  "$VENV_PY" --version >/dev/null 2>&1 || { verdict "live/B1-kill" 1 "venv python missing"; return; }
+  local watcher=$base/.watch-kill.py; _write_watcher "$watcher"
+  local wk; wk=3
+  python3 "$watcher" "$base" "$target" "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
+    && wk=0 || wk=$?
+  rm -f "$watcher"
+  if [ "$wk" = 1 ]; then
+    skip "live/B1-kill" "build finished before the tmp window was observed; verifying new-complete only"
+  elif [ "$wk" != 0 ]; then
+    verdict "live/B1-kill" 1 "watcher error (exit=$wk)"; return
+  else
+    local cur; cur=$(sha "$base/$target")
+    if [ "$cur" = "$old" ]; then verdict "live/B1-kill-extras" 0 "old-intact after SIGKILL";
+    else verdict "live/B1-kill-extras" 1 "extras changed under SIGKILL (old=$old cur=$cur)"; fi
+    # The index rewrite is in-place: after a mid-build kill it must still be
+    # the OLD index (hash match). Only a clean re-run may introduce the new
+    # head entries — never the kill.
+    local cur_idx; cur_idx=$(sha "$base/model.safetensors.index.json")
+    if [ "$cur_idx" = "$old_idx" ]; then verdict "live/B1-kill-index" 0 "old index intact";
+    else verdict "live/B1-kill-index" 1 "index changed under SIGKILL (old=$old_idx cur=$cur_idx)"; fi
+    local cur_ids; cur_ids=$(sha "$base/draft_vocab_ids.json")
+    if [ "$cur_ids" = "$old_ids" ]; then verdict "live/B1-kill-ids" 0 "ids unchanged";
+    else verdict "live/B1-kill-ids" 1 "ids changed under SIGKILL"; fi
+  fi
+  "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
+    || { verdict "live/B1-rerun" 1 "clean re-run failed"; return; }
+  local new; new=$(sha "$base/$target")
+  "$VENV_PY" - "$base/$target" <<'PY' || verdict "live/B1-rerun" 1 "extras do not parse"
+import sys
+from safetensors import safe_open
+with safe_open(sys.argv[1], framework="pt") as f:
+    assert any(k.startswith("mtp.draft_lm_head") for k in f.keys()), "no draft head tensors"
+PY
+  verdict "live/B1-rerun" 0 "new-complete ($new), parses with draft head"
+  # The ids file exists only on the counting path (no --ids); with --ids its
+  # absence is correct, not a gap. Require parse only when present.
+  "$VENV_PY" - "$base/model.safetensors.index.json" <<'PY' \
+    && verdict "live/B1-rerun-index" 0 "index parses with draft head after re-run" \
+    || verdict "live/B1-rerun-index" 1 "index broken after re-run"
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert "weight_map" in d and "mtp.draft_lm_head.weight" in str(d)
+PY
+  if [ ! -f "$base/draft_vocab_ids.json" ]; then
+    verdict "live/B1-rerun-ids" 0 "ids absent (shipped-ids path writes none)"
+  elif "$VENV_PY" -c "import json,sys; json.load(open(sys.argv[1]))" "$base/draft_vocab_ids.json" 2>/dev/null; then
+    verdict "live/B1-rerun-ids" 0 "ids parse after re-run"
+  else verdict "live/B1-rerun-ids" 1 "ids truncated after re-run"; fi
+}
+
+# Shared inotify kill-window watcher (see B1 note above).
 _write_watcher() { # $1=dest-path; TRIGGER/ALLOW_RANDOM/DEADLINE_SECS via env
   cat > "$1" <<'PYEOF'
 import ctypes, os, select, signal, struct, subprocess, sys, time
@@ -217,55 +268,6 @@ while time.time() < deadline:
             dbg("other mask=%#x name=%r" % (mask, name))
 sys.exit(2)
 PYEOF
-}
-  "$VENV_PY" --version >/dev/null 2>&1 || { verdict "live/B1-kill" 1 "venv python missing"; return; }
-  local watcher=$base/.watch-kill.py; _write_watcher "$watcher"
-  local wk; wk=3
-  python3 "$watcher" "$base" "$target" "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
-    && wk=0 || wk=$?
-  rm -f "$watcher"
-  if [ "$wk" = 1 ]; then
-    skip "live/B1-kill" "build finished before the tmp window was observed; verifying new-complete only"
-  elif [ "$wk" != 0 ]; then
-    verdict "live/B1-kill" 1 "watcher error (exit=$wk)"; return
-  else
-    local cur; cur=$(sha "$base/$target")
-    if [ "$cur" = "$old" ]; then verdict "live/B1-kill-extras" 0 "old-intact after SIGKILL";
-    else verdict "live/B1-kill-extras" 1 "extras changed under SIGKILL (old=$old cur=$cur)"; fi
-    # The index rewrite is in-place: after a mid-build kill it must still be
-    # the OLD index (hash match). Only a clean re-run may introduce the new
-    # head entries — never the kill.
-    local cur_idx; cur_idx=$(sha "$base/model.safetensors.index.json")
-    if [ "$cur_idx" = "$old_idx" ]; then verdict "live/B1-kill-index" 0 "old index intact";
-    else verdict "live/B1-kill-index" 1 "index changed under SIGKILL (old=$old_idx cur=$cur_idx)"; fi
-    local cur_ids; cur_ids=$(sha "$base/draft_vocab_ids.json")
-    if [ "$cur_ids" = "$old_ids" ]; then verdict "live/B1-kill-ids" 0 "ids unchanged";
-    else verdict "live/B1-kill-ids" 1 "ids changed under SIGKILL"; fi
-  fi
-  "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
-    || { verdict "live/B1-rerun" 1 "clean re-run failed"; return; }
-  local new; new=$(sha "$base/$target")
-  "$VENV_PY" - "$base/$target" <<'PY' || verdict "live/B1-rerun" 1 "extras do not parse"
-import sys
-from safetensors import safe_open
-with safe_open(sys.argv[1], framework="pt") as f:
-    assert any(k.startswith("mtp.draft_lm_head") for k in f.keys()), "no draft head tensors"
-PY
-  verdict "live/B1-rerun" 0 "new-complete ($new), parses with draft head"
-  # The ids file exists only on the counting path (no --ids); with --ids its
-  # absence is correct, not a gap. Require parse only when present.
-  "$VENV_PY" - "$base/model.safetensors.index.json" <<'PY' \
-    && verdict "live/B1-rerun-index" 0 "index parses with draft head after re-run" \
-    || verdict "live/B1-rerun-index" 1 "index broken after re-run"
-import json, sys
-d = json.load(open(sys.argv[1]))
-assert "weight_map" in d and "mtp.draft_lm_head.weight" in str(d)
-PY
-  if [ ! -f "$base/draft_vocab_ids.json" ]; then
-    verdict "live/B1-rerun-ids" 0 "ids absent (shipped-ids path writes none)"
-  elif "$VENV_PY" -c "import json,sys; json.load(open(sys.argv[1]))" "$base/draft_vocab_ids.json" 2>/dev/null; then
-    verdict "live/B1-rerun-ids" 0 "ids parse after re-run"
-  else verdict "live/B1-rerun-ids" 1 "ids truncated after re-run"; fi
 }
 
 # B2: quant_lm_head set atomicity on a SCRATCH generation (never the live
