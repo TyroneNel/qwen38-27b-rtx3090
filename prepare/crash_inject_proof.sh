@@ -154,30 +154,87 @@ _self_test() {
 # Re-run converges to new-complete.
 _live_b1() {
   local base=${1:?usage: --live-b1 <model-dir>}
+  [ -d "$base" ] || { verdict "live/B1-kill" 1 "base dir missing: $base"; return; }
   local target="model_extra_tensors.safetensors"
   local old; old=$(sha "$base/$target")
-  say "B1 old extras: ${old:-absent}"
-  # setsid: the publisher (python) is a CHILD of the subshell; killing only
-  # the subshell would orphan it and it would keep writing. A fresh session
-  # per publisher lets kill -- -PID take the whole group. Same in _live_b6.
-  setsid "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" & local pid=$!
-  # Kill inside the tmp-write window: poll for the tmp file rather than
-  # sleeping a fixed delay (build speed varies with hardware).
-  local seen=0
-  for _ in $(seq 1 300); do
-    kill -0 "$pid" 2>/dev/null || break
-    ls "$base/$target".tmp* >/dev/null 2>&1 && { seen=1; break; }
-    sleep 1
-  done
-  if [ "$seen" = 0 ]; then
-    wait "$pid" 2>/dev/null
+  local old_idx; old_idx=$(sha "$base/model.safetensors.index.json")
+  local old_ids; old_ids=$(sha "$base/draft_vocab_ids.json")
+  say "B1 old extras: ${old:-absent} index: $old_idx ids: ${old_ids:-absent (counting path only)}"
+  # The save window (~108 MB, tens of ms on NVMe) is uncatchable by
+  # polling, so an inotify watcher (libc via ctypes, stdlib only) spawns the
+  # publisher itself and SIGKILLs the process group the instant the tmp file
+  # is created. Exit: 0 killed-in-window, 1 completed-pre-window, 2 error.
+  local watcher=$base/.watch-kill.py
+  cat > "$watcher" <<'PYEOF'
+import ctypes, os, select, signal, struct, subprocess, sys, time
+DBG = os.environ.get("PROOF_DEBUG", "")
+def dbg(m):
+    if DBG:
+        sys.stderr.write("watcher-dbg: %s\n" % m)
+        sys.stderr.flush()
+libc = ctypes.CDLL("libc.so.6", use_errno=True)
+IN_CREATE, IN_MOVED_TO, IN_MOVED_FROM = 0x100, 0x80, 0x40
+fd = libc.inotify_init1(0)
+assert fd >= 0
+watchdir = sys.argv[1].encode()
+dbg("watching %r" % watchdir)
+assert libc.inotify_add_watch(fd, watchdir, IN_CREATE | IN_MOVED_TO | IN_MOVED_FROM) >= 0
+tmpname = (sys.argv[2] + ".tmp").encode()
+dbg("tmpname %r" % tmpname)
+pub = subprocess.Popen(sys.argv[3:], start_new_session=True)
+dbg("spawned pid %d" % pub.pid)
+deadline = time.time() + 600
+while time.time() < deadline:
+    if pub.poll() is not None:
+        sys.exit(1)  # publisher finished before any tmp event
+    r, _, _ = select.select([fd], [], [], 0.05)
+    if not r:
+        continue
+    data = os.read(fd, 4096)
+    off = 0
+    while off + 16 <= len(data):
+        wd, mask, cookie, ln = struct.unpack("iIII", data[off:off+16])
+        name = data[off+16:off+16+ln].rstrip(b"\0")
+        off += 16 + ln
+        # Hit on: the named tmp created OR moved into place, or any
+        # random .tmp* the writer stages through first (safetensors
+        # save_file writes a random-tmp + rename internally, so the named
+        # tmp arrives via MOVED_TO already complete — killing on the random
+        # .tmp CREATE is what lands mid-save).
+        named = name == tmpname and (mask & (IN_CREATE | IN_MOVED_TO))
+        staged = name.startswith(b".tmp") and (mask & IN_CREATE)
+        if named or staged:
+            dbg("HIT %r" % name)
+            time.sleep(0.1)  # land mid-save, not at creation
+            os.killpg(pub.pid, signal.SIGKILL)
+            pub.wait()
+            sys.exit(0)
+        else:
+            dbg("other mask=%#x name=%r" % (mask, name))
+sys.exit(2)
+PYEOF
+  "$VENV_PY" --version >/dev/null 2>&1 || { verdict "live/B1-kill" 1 "venv python missing"; return; }
+  local wk; wk=3
+  python3 "$watcher" "$base" "$target" "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
+    && wk=0 || wk=$?
+  rm -f "$watcher"
+  if [ "$wk" = 1 ]; then
     skip "live/B1-kill" "build finished before the tmp window was observed; verifying new-complete only"
+  elif [ "$wk" != 0 ]; then
+    verdict "live/B1-kill" 1 "watcher error (exit=$wk)"; return
   else
-    sleep 2
-    kill -9 -- -$pid 2>/dev/null; wait "$pid" 2>/dev/null
     local cur; cur=$(sha "$base/$target")
-    if [ "$cur" = "$old" ]; then verdict "live/B1-kill" 0 "old-intact after SIGKILL";
-    else verdict "live/B1-kill" 1 "extras changed under SIGKILL (old=$old cur=$cur)"; fi
+    if [ "$cur" = "$old" ]; then verdict "live/B1-kill-extras" 0 "old-intact after SIGKILL";
+    else verdict "live/B1-kill-extras" 1 "extras changed under SIGKILL (old=$old cur=$cur)"; fi
+    # The index rewrite is in-place: after a mid-build kill it must still be
+    # the OLD index (hash match). Only a clean re-run may introduce the new
+    # head entries — never the kill.
+    local cur_idx; cur_idx=$(sha "$base/model.safetensors.index.json")
+    if [ "$cur_idx" = "$old_idx" ]; then verdict "live/B1-kill-index" 0 "old index intact";
+    else verdict "live/B1-kill-index" 1 "index changed under SIGKILL (old=$old_idx cur=$cur_idx)"; fi
+    local cur_ids; cur_ids=$(sha "$base/draft_vocab_ids.json")
+    if [ "$cur_ids" = "$old_ids" ]; then verdict "live/B1-kill-ids" 0 "ids unchanged";
+    else verdict "live/B1-kill-ids" 1 "ids changed under SIGKILL"; fi
   fi
   "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
     || { verdict "live/B1-rerun" 1 "clean re-run failed"; return; }
@@ -189,6 +246,20 @@ with safe_open(sys.argv[1], framework="pt") as f:
     assert any(k.startswith("mtp.draft_lm_head") for k in f.keys()), "no draft head tensors"
 PY
   verdict "live/B1-rerun" 0 "new-complete ($new), parses with draft head"
+  # The ids file exists only on the counting path (no --ids); with --ids its
+  # absence is correct, not a gap. Require parse only when present.
+  "$VENV_PY" - "$base/model.safetensors.index.json" <<'PY' \
+    && verdict "live/B1-rerun-index" 0 "index parses with draft head after re-run" \
+    || verdict "live/B1-rerun-index" 1 "index broken after re-run"
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert "weight_map" in d and "mtp.draft_lm_head.weight" in str(d)
+PY
+  if [ ! -f "$base/draft_vocab_ids.json" ]; then
+    verdict "live/B1-rerun-ids" 0 "ids absent (shipped-ids path writes none)"
+  elif "$VENV_PY" -c "import json,sys; json.load(open(sys.argv[1]))" "$base/draft_vocab_ids.json" 2>/dev/null; then
+    verdict "live/B1-rerun-ids" 0 "ids parse after re-run"
+  else verdict "live/B1-rerun-ids" 1 "ids truncated after re-run"; fi
 }
 
 # B6: prepare.sh lock protocol against the REAL lock file. docker/prepare.sh
