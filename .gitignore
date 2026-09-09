@@ -2,6 +2,7 @@ __pycache__/
 api_key.txt
 bench/quality-data/
 bench/results/
+bench/results-prefill-ab/
 models/
 profiles/
 qwen.log
@@ -9,8 +10,6 @@ venv/
 drafter/data/
 drafter/runs/
 .env
-# local reproduction artifacts (symlinks here, so no trailing slash)
-venv
-models
-api_key.txt
-bench/results/
+# NOTE: docker-compose.override.yml is TRACKED (portable, no host specifics).
+# Host-local overrides belong in docker-compose.override.local.yml (also ignored).
+docker-compose.override.local.yml
