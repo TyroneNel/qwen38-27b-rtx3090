@@ -44,6 +44,15 @@ fi
 REPO="$(dirname "$DIR")"
 cd "$REPO"
 
+# Backlog 6 / F13: one validated resolver — refuses unknown KV, warns on
+# ignored (CTX/SPEC) and EXTRA_ARGS-shadowed controls, prints the redacted
+# effective config. Refusal exits here, before anything boots. The launcher
+# does not run under `set -e`, so a missing file would otherwise skip the check
+# silently.
+source "$REPO/resolve_config.sh" \
+  || { echo "start_qwen: cannot source $REPO/resolve_config.sh - refusing to boot unvalidated" >&2; exit 1; }
+resolve_effective_config batch
+
 MODEL=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}
 PORT=${PORT:-18020}
 MAX_SEQS=${MAX_SEQS:-64}
