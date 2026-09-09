@@ -25,6 +25,11 @@ model is 7 shards and symmetric, so quant_lm_head/quant_embed/quant_mtp serve it
 The rewritten shards replace the originals; the pre-quant files are kept as
 <shard>.bak-orig (renamed, not copied). config.json and the safetensors index
 are backed up as .bak-quant.
+
+Publication safety (F04): the FIRST .bak-orig is the pristine rollback point
+and is never overwritten — on single-shard exports the MTP and head tensors
+share one physical shard, and re-running would otherwise back up an
+already-modified shard over the original.
 """
 
 import copy
@@ -166,7 +171,13 @@ with safe_open(d + big, framework="pt") as f:
 print(f"rewriting {big} (streaming)")
 tmp = d + big + ".tmp"
 stream_rewrite(d + big, tmp, drop={lm_key, emb_key}, add=add)
-os.replace(d + big, d + big + ".bak-orig")
+# F04: keep the FIRST .bak-orig as the pristine copy. Overwriting it with an
+# already-modified shard (MTP and head tensors share one physical shard on
+# single-shard exports) destroys the rollback point.
+if not os.path.exists(d + big + ".bak-orig"):
+    os.replace(d + big, d + big + ".bak-orig")
+else:
+    os.remove(d + big)
 os.replace(tmp, d + big)
 del add
 
@@ -198,7 +209,11 @@ for m in MTP_LINEARS:
     del wm[m + ".weight"]
     for s in ("weight_packed", "weight_scale", "weight_shape"):
         wm[f"{m}.{s}"] = mtp_shard
-os.replace(d + mtp_shard, d + mtp_shard + ".bak-orig")
+# F04: same pristine-backup guard for the MTP shard.
+if not os.path.exists(d + mtp_shard + ".bak-orig"):
+    os.replace(d + mtp_shard, d + mtp_shard + ".bak-orig")
+else:
+    os.remove(d + mtp_shard)
 save_file(tensors, d + mtp_shard, metadata=mtp_meta or {"format": "pt"})
 del tensors
 
