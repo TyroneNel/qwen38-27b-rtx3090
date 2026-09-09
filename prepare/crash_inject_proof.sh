@@ -46,7 +46,6 @@ verdict() { # $1=name $2=0/1 $3=detail
 }
 skip() { SKIP=$((SKIP+1)); say "SKIP $1 ($2)"; }
 sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
-ino() { stat -c %i "$1" 2>/dev/null || stat -f %i "$1" 2>/dev/null; }
 
 # _cycle <name> <publisher-fn> <gendir> <target> <sourcedir> [rollback-relpath]
 # Rollback semantics (B3 shape): between the .bak-orig rename and the final
@@ -88,7 +87,7 @@ _cycle() {
   done
 }
 
-# ---- synthetic publishers: same protocols as B1-B6, ~2s of chunked writes ---
+# ---- synthetic publishers: same protocols as B1-B6, ~0.6s of chunked writes --
 _pub_tmp_replace() { # $1=gen $2=target  (B1, B2, B4 shape)
   local g=$1 t=$2 i
   : > "$g/$t.tmp"
