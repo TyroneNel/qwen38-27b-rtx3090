@@ -12,7 +12,7 @@ index 4ad1b10ba..1bd78be21 100644
  def prepare_dflash_inputs(
      input_buffers: InputBuffers,
      query_slot_mapping: torch.Tensor,
-@@ -731,38 +734,59 @@ def prepare_dflash_inputs(
+@@ -731,38 +734,63 @@ def prepare_dflash_inputs(
      max_tokens_per_req = max_target_query_len + num_query_per_req
      BLOCK_SIZE = min(256, triton.next_power_of_2(max(1, max_tokens_per_req)))
      num_blocks = triton.cdiv(max_tokens_per_req, BLOCK_SIZE)
@@ -59,9 +59,13 @@ index 4ad1b10ba..1bd78be21 100644
 +    # warning issue #48 captured seconds before every WSL2 wedge. One grid
 +    # row per variant, same buffers as the real launch below (the real launch
 +    # then overwrites everything), so the only cost is ~4 compiles at boot.
++    # Never launch inside CUDA-graph capture: extra launches recorded here
++    # would be baked into the graph and replayed on every step forever. The
++    # key stays un-marked, so prewarm happens on the first eager call instead.
++    _in_capture = torch.cuda.is_current_stream_capturing()
 +    _warm_key = (input_buffers.input_ids.device, num_query_per_req,
 +                 sample_from_anchor)
-+    if _warm_key not in _PREWARMED:
++    if _warm_key not in _PREWARMED and not _in_capture:
 +        _PREWARMED.add(_warm_key)
 +        _bs = min(256, triton.next_power_of_2(max(1, 1 + num_query_per_req)))
 +        _warm_sizes = []
