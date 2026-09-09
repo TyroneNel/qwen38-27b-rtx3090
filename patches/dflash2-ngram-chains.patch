@@ -238,9 +238,10 @@ index 9d299de5a..1371aab30 100644
 +        self.draft_max_seq_len = min(
 +            max_seq_len + self.num_query_per_req, self.max_model_len
 +        )
-+        self.last_num_emitted = (
-+            (num_sampled - num_rejected) if num_sampled is not None else None
-+        )
+        # num_sampled is the count the sampler EMITTED (bonus + accepted drafts);
+        # num_rejected = num_logits - num_sampled, so subtracting it would
+        # double-count rejections (same fix as dflash2-z-adaptive-emitted).
+        self.last_num_emitted = num_sampled if num_sampled is not None else None
 +
 +        if aux_hidden_states:
 +            hidden_states = self.model.combine_hidden_states(
