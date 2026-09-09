@@ -300,8 +300,8 @@ PY
   cp -a "$base/$shard" "$base/model.safetensors.index.json" "$base/config.json" "$base/.proof-b2-orig/"
   runkill() { # $1=stage-name $2=trigger $3=allow-random
     _write_watcher "$base/.watch-kill.py"
-    TRIGGER="$2" ALLOW_RANDOM="$3" DEADLINE_SECS=1800 python3 "$base/.watch-kill.py" "$base" "unused" \
-      "$VENV_PY" "$REPO_DIR/prepare/quant_lm_head.py" "$base" && echo KILLED-0 || echo KILLED-$?
+    { TRIGGER="$2" ALLOW_RANDOM="$3" DEADLINE_SECS=1800 python3 "$base/.watch-kill.py" "$base" "unused" \
+      "$VENV_PY" "$REPO_DIR/prepare/quant_lm_head.py" "$base" && echo KILLED-0 || echo KILLED-$?; } 2>&1 | tee -a "${PROOF_LOG:-/dev/null}"
   }
   say "B2 run A: kill at shard-save"
   runkill A "$shard.tmp" 1
