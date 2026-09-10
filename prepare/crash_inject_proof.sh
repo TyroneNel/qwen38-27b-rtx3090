@@ -18,6 +18,12 @@
 #   --live        same cycle against the REAL boundaries below. Needs the
 #                 model tree, venv, and idle CPU/GPU. NOT run while the
 #                 GPUs are busy; recorded here so the live run is mechanical.
+#                 Live modes need Linux/WSL2 (inotify, flock, setsid, stat -c);
+#                 --self-test and --negative-test are portable. Refuses to run
+#                 live elsewhere.
+# Env: PROOF_LOG=<path> appends the verdict log; PROOF_DEADLINE=<secs>
+# overrides the per-run watcher deadline (default 3600; the publisher's
+# corpus-count phase can legitimately take longer than the old 600s).
 #
 # Real boundaries (validity/model-prep branch):
 #   B1 build_draft_vocab.py  extras tmp + os.replace
@@ -26,14 +32,18 @@
 #   B4 drafter/capture.py    seqs.json.staging + os.replace
 #   B5 drafter/export_mtp.py generation copy-out + .bak-mtp rollback files
 #   B6 docker/prepare.sh     flock -n fd9 + completion manifest
-set -u
 MODE=self-test
 for a in "$@"; do case $a in --self-test) MODE=self-test;; --live) MODE=live;; \
   --live-b1) MODE=live-b1;; --live-b6) MODE=live-b6;; --live-b2) MODE=live-b2;; \
+  --live-b3) MODE=live-b3;; --live-b4) MODE=live-b4;; --live-b5) MODE=live-b5;; \
   --negative-test) MODE=negative;; \
   *) echo "crash_inject_proof: unknown flag $a" >&2; exit 1;; esac; done
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VENV_PY="$REPO_DIR/venv/bin/python"
+case "$MODE" in live-b*|live)
+  [ "$(uname -s)" = Linux ] || { echo "crash_inject_proof: live modes need Linux/WSL2 (inotify, flock, setsid); use --self-test" >&2; exit 1; }
+  ;;
+esac
 
 PASS=0; FAIL=0; SKIP=0
 LOG=""; [ -n "${PROOF_LOG:-}" ] && LOG="$PROOF_LOG"
@@ -165,22 +175,41 @@ _live_b1() {
   "$VENV_PY" --version >/dev/null 2>&1 || { verdict "live/B1-kill" 1 "venv python missing"; return; }
   local watcher=$base/.watch-kill.py; _write_watcher "$watcher"
   local wk; wk=3
-  python3 "$watcher" "$base" "$target" "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
+  DEADLINE_SECS="${PROOF_DEADLINE:-3600}" python3 "$watcher" "$base" "$target" "$VENV_PY" "$REPO_DIR/prepare/build_draft_vocab.py" "$base" --ids "$REPO_DIR/prepare/draft_vocab_ids.json" \
     && wk=0 || wk=$?
   rm -f "$watcher"
   if [ "$wk" = 1 ]; then
     skip "live/B1-kill" "build finished before the tmp window was observed; verifying new-complete only"
+  elif [ "$wk" = 2 ]; then
+    skip "live/B1-kill" "no tmp window seen within deadline (${PROOF_DEADLINE:-3600}s); raise PROOF_DEADLINE and retry"
+    return
+  elif [ "$wk" = 3 ]; then
+    verdict "live/B1-kill" 1 "inotify queue overflow — window events lost, verdict unknown"
+    return
   elif [ "$wk" != 0 ]; then
     verdict "live/B1-kill" 1 "watcher error (exit=$wk)"; return
   else
     local cur; cur=$(sha "$base/$target")
-    if [ "$cur" = "$old" ]; then verdict "live/B1-kill-extras" 0 "old-intact after SIGKILL";
-    else verdict "live/B1-kill-extras" 1 "extras changed under SIGKILL (old=$old cur=$cur)"; fi
-    # The index rewrite is in-place: after a mid-build kill it must still be
+    if [ "$cur" = "$old" ]; then
+      verdict "live/B1-kill-extras" 0 "old-intact after SIGKILL"
+    elif "$VENV_PY" - "$base/$target" <<'PY' 2>/dev/null
+import sys
+from safetensors import safe_open
+with safe_open(sys.argv[1], framework="pt") as f:
+    assert any(k.startswith("mtp.draft_lm_head") for k in f.keys()), "no draft head tensors"
+PY
+    then verdict "live/B1-kill-extras" 0 "new-complete after SIGKILL (parses with draft head)"
+    else verdict "live/B1-kill-extras" 1 "extras changed under SIGKILL and does not parse (old=$old cur=$cur)"
+    fi
+    # Post-Workstream-A the index publishes via .tmp + os.replace, so a kill
+    # mid-dump cannot truncate it. After a mid-build kill it must still be
     # the OLD index (hash match). Only a clean re-run may introduce the new
-    # head entries — never the kill.
+    # head entries — never the kill. Absent index before the run: nothing to
+    # assert — SKIP, never a vacuous PASS.
     local cur_idx; cur_idx=$(sha "$base/model.safetensors.index.json")
-    if [ "$cur_idx" = "$old_idx" ]; then verdict "live/B1-kill-index" 0 "old index intact";
+    if [ -z "$old_idx" ]; then
+      skip "live/B1-kill-index" "no index file before the run; predicate not applicable"
+    elif [ "$cur_idx" = "$old_idx" ]; then verdict "live/B1-kill-index" 0 "old index intact";
     else verdict "live/B1-kill-index" 1 "index changed under SIGKILL (old=$old_idx cur=$cur_idx)"; fi
     local cur_ids; cur_ids=$(sha "$base/draft_vocab_ids.json")
     if [ "$cur_ids" = "$old_ids" ]; then verdict "live/B1-kill-ids" 0 "ids unchanged";
@@ -234,23 +263,31 @@ tmpname = (sys.argv[2] + ".tmp").encode()
 # B1/B2a use the first save event; B2b waits for the index save specifically.
 trigger = os.environ.get("TRIGGER", sys.argv[2] + ".tmp").encode()
 allow_random = os.environ.get("ALLOW_RANDOM", "1") == "1"
-deadline_secs = int(os.environ.get("DEADLINE_SECS", "600"))
+deadline_secs = int(os.environ.get("DEADLINE_SECS", "3600"))
 dbg("trigger %r allow_random %s deadline %d" % (trigger, allow_random, deadline_secs))
 pub = subprocess.Popen(sys.argv[3:], start_new_session=True)
 dbg("spawned pid %d" % pub.pid)
 deadline = time.time() + deadline_secs
+buf = b""   # inotify events can straddle reads; carry the tail across
 while time.time() < deadline:
     if pub.poll() is not None:
         sys.exit(1)  # publisher finished before any tmp event
     r, _, _ = select.select([fd], [], [], 0.05)
     if not r:
         continue
-    data = os.read(fd, 4096)
+    buf += os.read(fd, 65536)
     off = 0
-    while off + 16 <= len(data):
-        wd, mask, cookie, ln = struct.unpack("iIII", data[off:off+16])
-        name = data[off+16:off+16+ln].rstrip(b"\0")
+    while True:
+        if len(buf) - off < 16:
+            buf = buf[off:]; break
+        wd, mask, cookie, ln = struct.unpack("iIII", buf[off:off+16])
+        if len(buf) - off < 16 + ln:
+            buf = buf[off:]; break   # incomplete event; wait for the next read
+        name = buf[off+16:off+16+ln].rstrip(b"\0")
         off += 16 + ln
+        if wd == -1 and (mask & 0x4000):
+            sys.stderr.write("watcher: inotify queue OVERFLOW — window events lost\n")
+            sys.exit(3)
         # Hit on: the trigger tmp created or moved into place, or (when
         # allowed) any random .tmp* the writer stages through first
         # (safetensors save_file writes a random-tmp + rename internally, so
@@ -344,6 +381,134 @@ _live_b6() {
   if flock -n "$lock" true 2>/dev/null; then verdict "live/B6-release" 0 "lock released after SIGKILL";
   else verdict "live/B6-release" 1 "lock wedged after SIGKILL"; fi
 }
+# B3: quant_heads_stream set atomicity on a SCRATCH bf16-head model subset
+# (same patient rules as B2 — the shards are destructive rewrites, so a
+# mid-set kill is unrecoverable by re-run). The script rewrites the big
+# shard, the MTP shard, the index and the config; each file is now
+# individually atomic (Workstream A), but the SET has no commit — run B
+# (index-stage kill after a clean re-run) is expected to expose shard-new +
+# index-old = MIXED, the finding that promotes a set-atomic fix.
+#   BOUND_B3=<scratch-dir> bash prepare/crash_inject_proof.sh --live-b3
+_live_b3() {
+  local base=${1:?usage: --live-b3 <scratch-dir>}
+  [ -d "$base" ] || { verdict "live/B3-setup" 1 "base dir missing: $base"; return; }
+  local lm_key="lm_head.weight"
+  local files; files=$("$VENV_PY" - "$base/model.safetensors.index.json" <<'PY'
+import json, sys
+idx = json.load(open(sys.argv[1])); wm = idx["weight_map"]
+assert "lm_head.weight" in wm, "no bf16 lm_head.weight (already quantized?)"
+mtp = [wm[m + ".weight"] for m in wm if m.startswith("mtp.layers.") and m.endswith(".weight")]
+mtp_shards = sorted(set(mtp))
+assert len(mtp_shards) == 1, f"mtp weights span several shards: {mtp_shards}"
+print(wm["lm_head.weight"], mtp_shards[0])
+PY
+) || { verdict "live/B3-setup" 1 "index introspection failed in $base"; return; }
+  set -- $files; local big=$1 mtp_shard=$2
+  say "B3 big shard: $big  mtp shard: $mtp_shard"
+  files=("$big" "$mtp_shard" model.safetensors.index.json config.json)
+  snap() { ( cd "$base" && sha256sum "${files[@]}" 2>/dev/null ); }
+  oldset=$(snap)
+  rm -rf "$base/.proof-b3-orig"; mkdir -p "$base/.proof-b3-orig"
+  cp -a "$base/$big" "$base/$mtp_shard" "$base/model.safetensors.index.json" "$base/config.json" "$base/.proof-b3-orig/"
+  runkill3() { # $1=stage-name $2=trigger $3=allow-random
+    _write_watcher "$base/.watch-kill.py"
+    { TRIGGER="$2" ALLOW_RANDOM="$3" DEADLINE_SECS="${PROOF_DEADLINE:-3600}" python3 "$base/.watch-kill.py" "$base" "unused" \
+      "$VENV_PY" "$REPO_DIR/prepare/quant_heads_stream.py" "$base" && echo KILLED-0 || echo KILLED-$?; } 2>&1 | tee -a "${PROOF_LOG:-/dev/null}"
+  }
+  say "B3 run A: kill at big-shard tmp write"
+  runkill3 A "$big.tmp" 1
+  if [ "$(snap)" = "$oldset" ]; then verdict "live/B3-A" 0 "all-old after big-shard-stage kill";
+  else verdict "live/B3-A" 1 "set changed under big-shard-stage kill"; fi
+  say "B3 clean re-run to new-complete"
+  "$VENV_PY" "$REPO_DIR/prepare/quant_heads_stream.py" "$base" \
+    || { verdict "live/B3-rerun" 1 "clean re-run failed"; return; }
+  newset=$(snap)
+  [ "$newset" != "$oldset" ] && verdict "live/B3-rerun" 0 "new set published" \
+    || { verdict "live/B3-rerun" 1 "set unchanged by re-run"; return; }
+  say "B3 run B: kill at index-save (mid-set window)"
+  runkill3 B "model.safetensors.index.json.tmp" 0
+  local now; now=$(snap)
+  if [ "$now" = "$newset" ]; then
+    skip "live/B3-B" "kill landed post-everything (coherent-new); mid-set window missed"
+  elif [ "$now" = "$oldset" ]; then
+    skip "live/B3-B" "kill landed pre-shard-replace (all-old); mid-set window missed"
+  else
+    verdict "live/B3-B" 1 "MIXED SET after index-stage kill (expected protocol gap; mirrors B2)"
+  fi
+  cp -a "$base/.proof-b3-orig/." "$base/"
+  rm -rf "$base/.proof-b3-orig" "$base/.watch-kill.py"
+  [ "$(snap)" = "$oldset" ] && verdict "live/B3-restore" 0 "generation restored from backup" \
+    || verdict "live/B3-restore" 1 "restore failed"
+}
+
+# B4: capture.py manifest staging against the REAL drafter/data dir. The
+# manifest (seqs.json) is the load-bearing publication; a kill at the
+# staging write must leave it old-intact (or absent if never published),
+# and a truncated seqs.json.staging is harmless litter. Non-destructive:
+# the current seqs.json is never replaced by the kill (os.replace only
+# runs at completion), so no restore is needed. Requires data/gen.jsonl;
+# the full re-run is a GPU capture job left to the operator.
+#   BOUND_B4=<drafter-data-dir> bash prepare/crash_inject_proof.sh --live-b4
+_live_b4() {
+  local base=${1:?usage: --live-b4 <drafter/data-dir>}
+  [ -d "$base" ] || { verdict "live/B4-setup" 1 "data dir missing: $base"; return; }
+  [ -f "$base/gen.jsonl" ] || { verdict "live/B4-setup" 1 "no gen.jsonl in $base"; return; }
+  local gen_hash; gen_hash=$(sha "$base/gen.jsonl")
+  local old; old=$(sha "$base/seqs.json")
+  say "B4 seqs.json before run: ${old:-absent}"
+  _write_watcher "$base/.watch-kill.py"
+  local wk; wk=3
+  { TRIGGER="seqs.json.staging" ALLOW_RANDOM=0 DEADLINE_SECS="${PROOF_DEADLINE:-3600}" \
+    python3 "$base/.watch-kill.py" "$base" "unused" \
+    "$VENV_PY" "$REPO_DIR/drafter/capture.py"; } 2>&1 | tee -a "${PROOF_LOG:-/dev/null}"
+  rm -f "$base/.watch-kill.py"
+  if [ "$(sha "$base/gen.jsonl")" != "$gen_hash" ]; then
+    verdict "live/B4-sources" 1 "gen.jsonl mutated"; return
+  else verdict "live/B4-sources" 0 "gen.jsonl unchanged"; fi
+  local cur; cur=$(sha "$base/seqs.json")
+  if [ -z "$old" ]; then
+    if [ -z "$cur" ]; then verdict "live/B4-manifest" 0 "manifest absent after kill (never published) — correct";
+    else verdict "live/B4-manifest" 1 "manifest appeared from a killed run"; fi
+  elif [ "$cur" = "$old" ]; then verdict "live/B4-manifest" 0 "old manifest intact after kill";
+  else verdict "live/B4-manifest" 1 "manifest changed under SIGKILL"; fi
+}
+
+# B5: export_mtp copy-out into a SCRATCH generation dir. Two shapes under
+# test: (a) the bulk copy-in of base shards is a plain shutil.copy — NOT
+# atomic, and the skip-if-exists re-run does not repair a truncated file;
+# (b) the generated files (extras/index/config/ids, post-Workstream-A) are
+# tmp+replace — a kill must leave them old-or-absent, never truncated.
+#   BOUND_B5=<scratch-dest-dir> BOUND_B5_SRC=<source-model-dir> \
+#   BOUND_B5_CK=<trained-checkpoint.safetensors> \
+#     bash prepare/crash_inject_proof.sh --live-b5
+_live_b5() {
+  local dest=${1:?usage: --live-b5 <scratch-dest-dir>}
+  local src=${BOUND_B5_SRC:?BOUND_B5=<source-model-dir> required}
+  local ck=${BOUND_B5_CK:?BOUND_B5_CK=<trained-checkpoint> required}
+  [ -d "$dest" ] || { verdict "live/B5-setup" 1 "dest dir missing: $dest"; return; }
+  [ -d "$src" ] || { verdict "live/B5-setup" 1 "source dir missing: $src"; return; }
+  [ -f "$ck" ] || { verdict "live/B5-setup" 1 "checkpoint missing: $ck"; return; }
+  # Snapshot the copied-in set: every model-*.safetensors in the source.
+  local copied=(); local f b
+  for f in "$src"/model-*.safetensors; do [ -e "$f" ] && copied+=("$(basename "$f")"); done
+  [ "${#copied[@]}" -gt 0 ] || { verdict "live/B5-setup" 1 "no model-*.safetensors in $src"; return; }
+  snap5() { local h=""; for b in "${copied[@]}"; do h="$h$(sha "$dest/$b")"; done; printf '%s' "$h"; }
+  _write_watcher "$dest/.watch-kill.py"
+  { TRIGGER="model_extra_tensors.safetensors.tmp" ALLOW_RANDOM=1 DEADLINE_SECS="${PROOF_DEADLINE:-3600}" \
+    python3 "$dest/.watch-kill.py" "$dest" "unused" \
+    "$VENV_PY" "$REPO_DIR/drafter/export_mtp.py" "$ck" "$src" "$dest"; } 2>&1 | tee -a "${PROOF_LOG:-/dev/null}"
+  rm -f "$dest/.watch-kill.py"
+  # Predicate: every copied-in shard present in dest must hash to its source.
+  # A mismatch is a truncated in-place copy — the copy-in gap — and re-run
+  # will NOT repair it (skip-if-exists). Generated files (*.tmp) are litter.
+  local bad=0
+  for b in "${copied[@]}"; do
+    [ -f "$dest/$b" ] || continue
+    [ "$(sha "$dest/$b")" = "$(sha "$src/$b")" ] || { verdict "live/B5-copyin" 1 "TRUNCATED in-place copy: $b (re-run will not repair)"; bad=1; }
+  done
+  [ "$bad" = 0 ] && verdict "live/B5-copyin" 0 "all copied-in shards complete after kill"
+}
+
 # Each entry: name|generation-dir|target|publisher-command. The live cycle
 # snapshots, backgrounds the publisher, SIGKILLs, and applies the same
 # old-or-new + sources-unchanged + lock assertions with boundary-specific
@@ -362,6 +527,9 @@ _live_boundaries() {
 if [ "$MODE" = live ]; then _live_boundaries; elif [ "$MODE" = negative ]; then _negative_test;
 elif [ "$MODE" = live-b1 ]; then _live_b1 "${BOUND_BASE:-}"; elif [ "$MODE" = live-b6 ]; then _live_b6 "${BOUND_MODELS:-}";
 elif [ "$MODE" = live-b2 ]; then _live_b2 "${BOUND_B2:-}";
+elif [ "$MODE" = live-b3 ]; then _live_b3 "${BOUND_B3:-}";
+elif [ "$MODE" = live-b4 ]; then _live_b4 "${BOUND_B4:-}";
+elif [ "$MODE" = live-b5 ]; then _live_b5 "${BOUND_B5:-}";
 else _self_test; fi
 say "verdicts: PASS=$PASS FAIL=$FAIL SKIP=$SKIP"
 # Negative mode inverts the bar: success is the proof going red.
