@@ -143,7 +143,11 @@ def stream_rewrite(src, dst, drop, add):
 
 idx_path = d + "model.safetensors.index.json"
 _orig_index = open(idx_path, "rb").read()
-open(idx_path + ".bak-quant", "wb").write(_orig_index)
+# F04: the rollback asset is written atomically too — a truncated .bak is
+# as useless as no .bak.
+_tmp_bak = idx_path + ".bak-quant.tmp"
+open(_tmp_bak, "wb").write(_orig_index)
+os.replace(_tmp_bak, idx_path + ".bak-quant")
 idx = json.loads(_orig_index)
 wm = idx["weight_map"]
 
@@ -214,15 +218,19 @@ if not os.path.exists(d + mtp_shard + ".bak-orig"):
     os.replace(d + mtp_shard, d + mtp_shard + ".bak-orig")
 else:
     os.remove(d + mtp_shard)
-save_file(tensors, d + mtp_shard, metadata=mtp_meta or {"format": "pt"})
+save_file(tensors, d + mtp_shard + ".tmp", metadata=mtp_meta or {"format": "pt"})
+os.replace(d + mtp_shard + ".tmp", d + mtp_shard)
 del tensors
-
-json.dump(idx, open(idx_path, "w"), indent=2)
+# F04: atomic index publication (the commit point — replaced last).
+_tmp_idx = d + "model.safetensors.index.json.tmp"
+json.dump(idx, open(_tmp_idx, "w"), indent=2)
+os.replace(_tmp_idx, d + "model.safetensors.index.json")
 
 # ---- config.json ----
 cfg_path = d + "config.json"
 c = json.load(open(cfg_path))
-json.dump(c, open(cfg_path + ".bak-quant", "w"), indent=2)
+json.dump(c, open(cfg_path + ".bak-quant.tmp", "w"), indent=2)
+os.replace(cfg_path + ".bak-quant.tmp", cfg_path + ".bak-quant")
 qc = c["quantization_config"]
 
 
@@ -247,5 +255,8 @@ qc["config_groups"]["group_2"] = group(HEAD_BITS, ["re:.*embed_tokens$"])
 qc["config_groups"]["group_3"] = group(
     MTP_BITS, ["re:^mtp\\.layers\\..*"] if KEEP_FC else ["re:^mtp\\..*"]
 )
-json.dump(c, open(cfg_path, "w"), indent=2)
+# F04: atomic config publication.
+_tmp_cfg = d + "config.json.tmp"
+json.dump(c, open(_tmp_cfg, "w"), indent=2)
+os.replace(_tmp_cfg, d + "config.json")
 print("done")
