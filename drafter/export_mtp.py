@@ -56,10 +56,11 @@ for k, v in trained.items():
     assert k in base, ("unexpected key", k)
     assert v.shape == base[k].shape, (k, v.shape, base[k].shape)
     out[k] = v.to(torch.bfloat16).contiguous(); n_new += 1
-for f in ["model_extra_tensors.safetensors", "mtp_draft_vocab_ids.pt"]:
-    if os.path.exists(D + f):
-        os.remove(D + f)   # never truncate a hardlink
-save_file(out, D + "model_extra_tensors.safetensors", metadata={"format": "pt"})
+# F04: fresh-inode publication — no remove-then-write window, no hardlink
+# truncation. Write to tmp and atomically replace.
+_tmp_extra = D + "model_extra_tensors.safetensors.tmp"
+save_file(out, _tmp_extra, metadata={"format": "pt"})
+os.replace(_tmp_extra, D + "model_extra_tensors.safetensors")
 print(f"wrote {n_new} trained tensors (+{len(out) - n_new} kept) to {D}model_extra_tensors.safetensors")
 
 GPTQ = sys.argv[sys.argv.index("--gptq") + 1] if "--gptq" in sys.argv else None
@@ -96,9 +97,13 @@ else:
         for s_ in ("weight_packed", "weight_scale", "weight_shape"):
             wm[f"{m}.{s_}"] = shard
     shutil.copy(D + shard, D + shard + ".bak-mtp")
-    save_file(tensors, D + shard, metadata=meta or {"format": "pt"})
+    # F04: atomic publication — tmp + os.replace for shard, index, config.
+    save_file(tensors, D + shard + ".tmp", metadata=meta or {"format": "pt"})
+    os.replace(D + shard + ".tmp", D + shard)
     shutil.copy(D + "model.safetensors.index.json", D + "model.safetensors.index.json.bak-mtp")
-    json.dump(idx, open(D + "model.safetensors.index.json", "w"), indent=2)
+    _tmp_idx = D + "model.safetensors.index.json.tmp"
+    json.dump(idx, open(_tmp_idx, "w"), indent=2)
+    os.replace(_tmp_idx, D + "model.safetensors.index.json")
     c = json.load(open(D + "config.json"))
     shutil.copy(D + "config.json", D + "config.json.bak-mtp")
     qc = c["quantization_config"]
@@ -107,7 +112,9 @@ else:
     g["targets"] = ["re:^mtp\\..*"]
     g["weights"]["num_bits"] = BITS
     qc["config_groups"]["group_3"] = g
-    json.dump(c, open(D + "config.json", "w"), indent=2)
+    _tmp_cfg = D + "config.json.tmp"
+    json.dump(c, open(_tmp_cfg, "w"), indent=2)
+    os.replace(_tmp_cfg, D + "config.json")
 
 if head is None:
     subprocess.check_call([sys.executable, f"{QS}/prepare/build_draft_vocab.py", D, "--ids",
@@ -130,11 +137,15 @@ else:
     tensors["mtp.draft_lm_head.weight_packed"] = pack_to_int32(q, HBITS, packed_dim=1).contiguous()
     tensors["mtp.draft_lm_head.weight_scale"] = scale.squeeze(-1).to(torch.float16).contiguous()
     tensors["mtp.draft_lm_head.weight_shape"] = torch.tensor([out_f, in_f], dtype=torch.int64)
-    save_file(tensors, extra, metadata=meta or {"format": "pt"})
+    # F04: atomic publication — tmp + os.replace; index is the commit point.
+    save_file(tensors, extra + ".tmp", metadata=meta or {"format": "pt"})
+    os.replace(extra + ".tmp", extra)
     idx = json.load(open(D + "model.safetensors.index.json"))
     for s in ("weight_packed", "weight_scale", "weight_shape"):
         idx["weight_map"][f"mtp.draft_lm_head.{s}"] = "model_extra_tensors.safetensors"
-    json.dump(idx, open(D + "model.safetensors.index.json", "w"), indent=2)
+    _tmp_idx = D + "model.safetensors.index.json.tmp"
+    json.dump(idx, open(_tmp_idx, "w"), indent=2)
+    os.replace(_tmp_idx, D + "model.safetensors.index.json")
     shutil.copy(S + "mtp_draft_vocab_ids.pt", D + "mtp_draft_vocab_ids.pt")
     # F14: the trained head's rows ARE these IDs. Prefer the checkpoint's own
     # draft_vocab_ids.json (bundled by train_mtp.py); whatever the source, the
@@ -145,7 +156,9 @@ else:
         ck_ids = json.load(open(os.path.join(ck_dir, "draft_vocab_ids.json")))
         if isinstance(ck_ids, dict) and ck_ids.get("vocab") == "draft":
             ids = sorted(set(ck_ids["ids"]))
-            torch.save(torch.tensor(ids, dtype=torch.int64), D + "mtp_draft_vocab_ids.pt")
+            _tmp_ids = D + "mtp_draft_vocab_ids.pt.tmp"
+            torch.save(torch.tensor(ids, dtype=torch.int64), _tmp_ids)
+            os.replace(_tmp_ids, D + "mtp_draft_vocab_ids.pt")
             print(f"row identity: {len(ids)} ids from {ck_dir}draft_vocab_ids.json "
                   f"(source: {ck_ids.get('source')})")
         else:
@@ -171,5 +184,8 @@ else:
         g = copy.deepcopy(qc["config_groups"]["group_3"]); g["targets"] = ["re:^mtp\\.draft_lm_head$"]
         g["weights"]["num_bits"] = HBITS
         qc["config_groups"]["group_4"] = g
-        json.dump(c, open(D + "config.json", "w"), indent=2)
+        # F04: atomic config publication.
+        _tmp_cfg = D + "config.json.tmp"
+        json.dump(c, open(_tmp_cfg, "w"), indent=2)
+        os.replace(_tmp_cfg, D + "config.json")
 print("export done:", D)
