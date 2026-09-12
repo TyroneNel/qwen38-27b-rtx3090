@@ -62,7 +62,7 @@ VLLM_VISION_CPU_OFFLOAD_GB is a dedicated tower-only budget. It uses UVAOffloade
  
          self.deepstack_merger_list = nn.ModuleList(
              [
-@@ -649,19 +663,22 @@
+@@ -649,19 +663,26 @@
              dtype=torch.get_default_dtype(),
          )
  
@@ -78,6 +78,10 @@ VLLM_VISION_CPU_OFFLOAD_GB is a dedicated tower-only budget. It uses UVAOffloade
 +            )
 +            for layer_idx in range(vision_config.depth)
 +        )
++        if vision_offloader is None:
++            blocks = list(blocks_iter)
++        else:
++            blocks = vision_offloader.wrap_modules(blocks_iter)
          self.blocks = nn.ModuleList(
 -            [
 -                Qwen3_VisionBlock(
@@ -91,8 +95,6 @@ VLLM_VISION_CPU_OFFLOAD_GB is a dedicated tower-only budget. It uses UVAOffloade
 -                )
 -                for layer_idx in range(vision_config.depth)
 -            ]
-+            vision_offloader.wrap_modules(blocks_iter)
-+            if vision_offloader is not None
-+            else list(blocks_iter)
++            blocks
          )
      @property
