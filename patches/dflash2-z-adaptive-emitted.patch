@@ -1,3 +1,10 @@
+# DFlash2 emitted-token accounting: num_sampled already IS emitted
+# (bonus + accepted drafts); subtracting num_rejected double-counts.
+# Applies the one-line fix at every dflash2/ site this series creates:
+# propose()'s base path (after dflash2-lookup-drafting.patch) and
+# _chain_generate's path (after dflash2-ngram-chains.patch), in glob
+# order -- which is why this patch sorts last in the DFlash2 family.
+# The dflash/ site is fixed by the hunk below it.
 --- a/v1/worker/gpu/spec_decode/dflash/speculator.py	2026-09-05 00:21:38.703248441 +0000
 +++ b/v1/worker/gpu/spec_decode/dflash/speculator.py	2026-09-05 00:21:38.735250379 +0000
 @@ -358,11 +358,12 @@
@@ -28,6 +35,17 @@
 -            (num_sampled - num_rejected) if num_sampled is not None else None
 -        )
 +        self.last_num_emitted = num_sampled if num_sampled is not None else None
- 
++
+         if aux_hidden_states:
+             hidden_states = self.model.combine_hidden_states(
+@@ -540,9 +538,7 @@
+         self.draft_max_seq_len = min(
+             max_seq_len + self.num_query_per_req, self.max_model_len
+         )
+-        self.last_num_emitted = (
+-            (num_sampled - num_rejected) if num_sampled is not None else None
+-        )
++        self.last_num_emitted = num_sampled if num_sampled is not None else None
++
          if aux_hidden_states:
              hidden_states = self.model.combine_hidden_states(
