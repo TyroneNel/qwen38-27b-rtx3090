@@ -87,7 +87,7 @@ if git -C "$GIT_ROOT" diff --quiet; then
 fi
 echo "   $count patches applied, $offset with an offset"
 
-echo "== pass 2: the ordered DFlash patches, git apply --check"
+echo "== pass 2: the ordered DFlash+Gumbel patches, git apply --check"
 git -C "$GIT_ROOT" checkout -q -- . && git -C "$GIT_ROOT" clean -qfd
 # These five patches' order and hunk metadata are part of the 0.28.0 contract.
 # The set is fixed here; their relative order is taken from patches/series so
@@ -98,6 +98,7 @@ CONTRACTUAL=(
   dflash2-ngram-chains.patch
   dflash2-prewarm.patch
   dflash2-z-adaptive-emitted.patch
+  vllm-pr54282-draft-gumbel-salt.patch
 )
 PATCHES=()
 for name in "${SERIES[@]}"; do
