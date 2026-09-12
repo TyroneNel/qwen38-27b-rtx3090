@@ -35,7 +35,7 @@
 -            (num_sampled - num_rejected) if num_sampled is not None else None
 -        )
 +        self.last_num_emitted = num_sampled if num_sampled is not None else None
-+
+ 
          if aux_hidden_states:
              hidden_states = self.model.combine_hidden_states(
 @@ -540,9 +538,7 @@
@@ -46,6 +46,6 @@
 -            (num_sampled - num_rejected) if num_sampled is not None else None
 -        )
 +        self.last_num_emitted = num_sampled if num_sampled is not None else None
-+
+ 
          if aux_hidden_states:
              hidden_states = self.model.combine_hidden_states(
