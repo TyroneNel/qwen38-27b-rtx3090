@@ -1,3 +1,8 @@
+DFlash2 ngram-chain drafting + chain-path emitted-token accounting
+(carries the same num_sampled-is-emitted fix as
+dflash2-z-adaptive-emitted.patch on its own hunks; both patches stay
+installed -- z-adaptive still owns the dflash/ site).
+
 diff --git a/v1/worker/gpu/spec_decode/dflash2/speculator.py b/v1/worker/gpu/spec_decode/dflash2/speculator.py
 index 9d299de5a..1371aab30 100644
 --- a/v1/worker/gpu/spec_decode/dflash2/speculator.py
@@ -89,7 +94,7 @@ index 9d299de5a..1371aab30 100644
          if not self._adaptive:
              return None
          emitted = getattr(self, "last_num_emitted", None)
-@@ -314,6 +371,251 @@ class DFlash2Speculator(DFlashSpeculator):
+@@ -314,6 +371,252 @@ class DFlash2Speculator(DFlashSpeculator):
          self._prev_want = want
          return self.num_speculative_steps if long_block else self.draft_block
  
@@ -238,10 +243,10 @@ index 9d299de5a..1371aab30 100644
 +        self.draft_max_seq_len = min(
 +            max_seq_len + self.num_query_per_req, self.max_model_len
 +        )
-        # num_sampled is the count the sampler EMITTED (bonus + accepted drafts);
-        # num_rejected = num_logits - num_sampled, so subtracting it would
-        # double-count rejections (same fix as dflash2-z-adaptive-emitted).
-        self.last_num_emitted = num_sampled if num_sampled is not None else None
++        # num_sampled is the count the sampler EMITTED (bonus + accepted drafts);
++        # num_rejected = num_logits - num_sampled, so subtracting it would
++        # double-count rejections (same fix as dflash2-z-adaptive-emitted).
++        self.last_num_emitted = num_sampled if num_sampled is not None else None
 +
 +        if aux_hidden_states:
 +            hidden_states = self.model.combine_hidden_states(
