@@ -21,6 +21,10 @@ Corpus files: .txt/.jsonl (uses "prompt"/"response"/"messages"/"text" fields)/.p
 The shipped draft_vocab_ids.json was counted over Danish web text (fineweb-2),
 English Wikipedia, Python source and the model's own chat outputs (8.8M tokens);
 held-out coverage 95%.
+
+Write safety (F04): the extras file is written to tmp and atomically replaced,
+never truncated in place — variant dirs used to hardlink this path, and
+truncating a hardlink mutates the source model dir through the shared inode.
 """
 import glob, json, os, sys, shutil, collections
 import torch
@@ -119,7 +123,12 @@ if os.path.exists(d + extra):
 tensors["mtp.draft_lm_head.weight_packed"] = sub_p
 tensors["mtp.draft_lm_head.weight_scale"] = sub_s
 tensors["mtp.draft_lm_head.weight_shape"] = sub_shape
-save_file(tensors, d + extra, metadata=meta or {"format": "pt"})
+# F04: never truncate a possibly hardlinked extras file in place (gptq variants
+# used to hardlink this path; truncating would mutate the source dir). Write to
+# a temp file and atomically replace so the output always gets a fresh inode.
+_tmp_extra = d + extra + ".tmp"
+save_file(tensors, _tmp_extra, metadata=meta or {"format": "pt"})
+os.replace(_tmp_extra, d + extra)
 for s in ("weight_packed", "weight_scale", "weight_shape"):
     wm[f"mtp.draft_lm_head.{s}"] = extra
 json.dump(idx, open(d + "model.safetensors.index.json", "w"), indent=2)
