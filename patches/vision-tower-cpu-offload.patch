@@ -62,7 +62,7 @@ VLLM_VISION_CPU_OFFLOAD_GB is a dedicated tower-only budget. It uses UVAOffloade
  
          self.deepstack_merger_list = nn.ModuleList(
              [
-@@ -649,19 +663,26 @@
+@@ -649,18 +663,23 @@
              dtype=torch.get_default_dtype(),
          )
  
