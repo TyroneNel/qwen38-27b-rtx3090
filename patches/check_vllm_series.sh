@@ -97,7 +97,6 @@ CONTRACTUAL=(
   dflash2-lookup-drafting.patch
   dflash2-ngram-chains.patch
   dflash2-prewarm.patch
-  dflash2-z-adaptive-emitted.patch
   vllm-pr54282-draft-gumbel-salt.patch
 )
 PATCHES=()
