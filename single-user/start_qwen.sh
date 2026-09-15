@@ -65,10 +65,19 @@ export FLASHINFER_DISABLE_VERSION_CHECK=1
 # process maps. VLLM_OFFLOAD_KEEP_SHM=1 skips this (several engines sharing
 # /dev/shm across namespaces, where the liveness scan cannot see the owner).
 if [ "${VLLM_OFFLOAD_KEEP_SHM:-0}" != 1 ]; then
-  for f in /dev/shm/vllm_offload_*.mmap; do
-    [ -e "$f" ] || continue
-    grep -lqs "$f" /proc/[0-9]*/maps 2>/dev/null || { echo "[start_qwen] removing stale offload region $f"; rm -f "$f"; }
-  done
+  # F10: absence of a mapping is not proof of staleness when /proc visibility
+  # itself is incomplete (containers, hidepid, other namespaces). If no numeric
+  # /proc entries are visible at all, the liveness scan cannot see owners, so
+  # keep every region and warn instead of deleting possibly-live state.
+  _nproc=$(ls /proc 2>/dev/null | grep -cE '^[0-9]+$' || true)
+  if [ "${_nproc:-0}" -lt 1 ]; then
+    echo "[start_qwen] WARN: /proc visibility incomplete; keeping /dev/shm offload regions (set VLLM_OFFLOAD_KEEP_SHM=1 to silence)"
+  else
+    for f in /dev/shm/vllm_offload_*.mmap; do
+      [ -e "$f" ] || continue
+      grep -lqs "$f" /proc/[0-9]*/maps 2>/dev/null || { echo "[start_qwen] removing stale offload region $f"; rm -f "$f"; }
+    done
+  fi
 fi
 REPO="$(dirname "$DIR")"
 cd "$REPO"
@@ -163,6 +172,8 @@ SPEC=${SPEC:-mtp}
 # engine's args line (#25, item 13). Precedence on that path is now
 # DFLASH_MAX_LEN > MAX_LEN > the profile default.
 USER_MAX_LEN=${MAX_LEN:-}
+# F13: unknown CTX used to fall into the `else` (= long) profile silently.
+# Refuse instead — a typo'd profile must never boot the wrong geometry.
 if [ "$CTX" = "fast" ]; then
   MAX_LEN=${MAX_LEN:-65536}
   DRAFT_TOKENS=${DRAFT_TOKENS:-4}
@@ -173,10 +184,13 @@ elif [ "$CTX" = "huge" ]; then
   DRAFT_TOKENS=${DRAFT_TOKENS:-3}
   ATTN_ARGS="--kv-cache-dtype kvarn_k4v2_g128 --block-size 128"
   export KVARN_POOL_MEM_FRAC=${KVARN_POOL_MEM_FRAC:-0.15}
-else
+elif [ "$CTX" = "long" ]; then
   MAX_LEN=${MAX_LEN:-150000}
   DRAFT_TOKENS=${DRAFT_TOKENS:-3}
   ATTN_ARGS="--kv-cache-dtype fp8"
+else
+  echo "unknown CTX=$CTX (want fast|long|huge); refusing to boot a guess" >&2
+  exit 1
 fi
 if [ "$SPEC" = "dflash2" ] && [ "$CTX" = "long" ]; then
   # int8 per-token-head KV on the Triton backend: the same 5.2 GiB pool holds 136,429
