@@ -11,6 +11,10 @@ cd /app
 export PATH=/app/venv/bin:$PATH
 BASE=${BASE_MODEL_DIR:-/app/models/Qwen3.8-27B-W4A16-AutoRound}
 HF_REPO=${HF_REPO:-dbirks/Qwen3.8-27B-W4A16-AutoRound}
+# F04: serialize preparation. Two concurrent prepares mutating one model dir
+# can leave shards/index/config inconsistent.
+exec 9>"${BASE_MODEL_DIR:-/app/models}/.prepare.lock"
+flock -n 9 || { echo "prepare: another preparation holds ${BASE_MODEL_DIR:-/app/models}/.prepare.lock; refusing to run concurrently"; exit 1; }
 
 state() {  # prints the steps still to do
 python - "$BASE" <<'EOF'
