@@ -16,14 +16,16 @@
 name: docker image
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
-  schedule:
-    - cron: '17 4 * * 1'
+  # Local builds only for now (no publishing): auto-builds disabled 2026-09-15.
+  # Re-enable push/schedule when ready to publish again.
+  # push:
+  #   branches: [main]
+  #   paths-ignore:
+  #     - '**.md'
+  #     - 'docs/**'
+  #     - '.gitignore'
+  # schedule:
+  #   - cron: '17 4 * * 1'
   workflow_dispatch:
 
 concurrency:
