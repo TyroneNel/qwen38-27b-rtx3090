@@ -82,6 +82,12 @@ fi
 REPO="$(dirname "$DIR")"
 cd "$REPO"
 
+# Backlog 6 / F13: one validated resolver — refuses unknown CTX/SPEC, warns on
+# ignored (KV) and EXTRA_ARGS-shadowed controls, prints the redacted effective
+# config. Refusal exits here, before anything boots.
+source "$REPO/resolve_config.sh"
+resolve_effective_config single
+
 if [ -z "$MODEL" ] && [ -d "$REPO/models/Qwen3.8-27B-W4A16-AutoRound-fast" ]; then
   MODEL=$REPO/models/Qwen3.8-27B-W4A16-AutoRound-fast
 fi
@@ -172,8 +178,9 @@ SPEC=${SPEC:-mtp}
 # engine's args line (#25, item 13). Precedence on that path is now
 # DFLASH_MAX_LEN > MAX_LEN > the profile default.
 USER_MAX_LEN=${MAX_LEN:-}
-# F13: unknown CTX used to fall into the `else` (= long) profile silently.
-# Refuse instead — a typo'd profile must never boot the wrong geometry.
+# CTX validation lives in resolve_config.sh (called above), which refuses
+# unknown values before anything boots — so every arm here is reachable and
+# no silent else-fallthrough exists.
 if [ "$CTX" = "fast" ]; then
   MAX_LEN=${MAX_LEN:-65536}
   DRAFT_TOKENS=${DRAFT_TOKENS:-4}
