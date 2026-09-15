@@ -53,6 +53,12 @@ fi
 REPO="$(dirname "$DIR")"
 cd "$REPO"
 
+# Backlog 6 / F13: one validated resolver — refuses unknown KV, warns on
+# ignored (CTX/SPEC) and EXTRA_ARGS-shadowed controls, prints the redacted
+# effective config. Refusal exits here, before anything boots.
+source "$REPO/resolve_config.sh"
+resolve_effective_config batch
+
 MODEL=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}
 PORT=${PORT:-18020}
 MAX_SEQS=${MAX_SEQS:-64}
