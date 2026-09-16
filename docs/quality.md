@@ -8,7 +8,7 @@ Three checks against this exact serving stack:
 
 **IFBench** ([AllenAI's](https://github.com/allenai/IFBench) out-of-distribution
 instruction-following benchmark, 299 prompts, official eval scripts), thinking
-enabled at `reasoning_effort: xhigh` (the model default), model-default
+enabled at `reasoning_effort: xhigh` (pinned explicitly — it was the template default before the effort translation, gotcha 58; the serving default is now `medium`), model-default
 sampling:
 
 | accuracy | prompt-level | instruction-level |

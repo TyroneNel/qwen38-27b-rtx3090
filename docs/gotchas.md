@@ -1277,3 +1277,26 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     not stack the two until the memory-pressure question behind it is
     understood; the measured rows in `docs/long-context.md` are fp8 KV with
     bf16 activations.
+
+58. **`reasoning_effort: "minimal"` from an OpenAI-protocol client 400s every
+    request that carries it.** The shipped `chat_template.jinja` accepts only
+    xhigh/medium/low and defaults to xhigh, while gpt-5-era clients speak the
+    OpenAI vocabulary (none/minimal/low/medium/high/xhigh/max). vLLM's
+    `ChatCompletionRequest.reasoning_effort` accepts all seven and passes the
+    value verbatim into `apply_chat_template` (`vllm/renderers/hf.py`
+    `safe_apply_chat_template`), so `minimal` reaches the template's
+    `raise_exception` and comes back as a 400 Bad Request. Headroom passes it
+    through untouched — its effort router only rewrites Responses-API turns and
+    deliberately does not run on chat/completions (`shape_openai_chat_request`,
+    headroom `proxy/output_shaper.py`). First seen 2026-09-15: one 400 among
+    eleven requests, session otherwise healthy.
+    Fix: `prepare/translate_chat_template.py` rewrites the effort block in
+    place — default `medium` (the serving default since; was xhigh),
+    minimal→low and high/max→xhigh aliases, and unknown values fall back to
+    `medium` instead of raising. Idempotent (marker comment) and self-healing:
+    `docker/prepare.sh` re-runs it on every boot, including on the model
+    actually served (`MODEL`), so a re-download that clobbers the template is
+    re-translated. It refuses to blind-edit a template whose effort block
+    changed shape, and leaves `chat_template.jinja.bak-effort` beside the
+    original. A running server loads the template at startup — restart to pick
+    up a translation.
