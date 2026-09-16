@@ -218,3 +218,15 @@ Rules found the hard way:
   fully understood, so keep the full pin unless the tower needs the room.
 - `.env` for this setup: `VISION=1`, `VISION_OFFLOAD=0`, `MAX_LEN=98304`,
   `KV_MEM=5583457484`, `GPU_UTIL=0.88`, `SPEC=dflash2`, `CTX=long`.
+
+## Long re-baseline, 2026-09-16 night (`CTX=long`, profile defaults, vision on)
+
+Short story probe, idle box, thinking off: **76.8 tok/s** (221 tokens in 2.9 s), clearing
+the 65 tok/s bar. Fast mode on the same model and drafter managed only 17 to 19 tok/s
+idle, so the per-forward cost there is the open question, not speculation (acceptance
+sits near one third in both modes) and not the pool (full pin in both).
+
+Boot lesson: the 131k plus resident tower fit is marginal. One boot OOMed allocating
+12 MiB with 23.12 GiB held by PyTorch; the identical config booted clean on retry.
+That matches the launcher's note that the profiled activation peak swings about
+1 GiB between starts. If a boot OOMs at the margin, retry before resizing.
