@@ -101,6 +101,12 @@ services:
     <<: *serve
     profiles: [single]
     command: single
+    ports:
+      # 18020 from the anchor, plus the headroom proxy port: headroom shares
+      # this service's network namespace (network_mode below), so its 8787
+      # must be published here. Host side stays loopback via BIND.
+      - "${BIND:-127.0.0.1}:${PORT:-18020}:${PORT:-18020}"
+      - "${BIND:-127.0.0.1}:${HEADROOM_PORT:-8787}:8787"
 
   batch:
     <<: *serve
@@ -108,11 +114,14 @@ services:
     command: batch
 
   # Headroom: OpenAI-compatible compression proxy in front of `single`.
-  # Clients point at :8787 with the same VLLM_API_KEY; it compresses/aligns the
-  # context (HEADROOM_MODE=cache keeps vLLM prefix-cache hits stable) and
-  # forwards to http://single:18020. CPU-only, no GPU pinning needed.
-  # First start downloads its Kompress/embedding models from HF, so the
-  # healthcheck allows a long start period.
+  # Clients point at 127.0.0.1:8787 with the same VLLM_API_KEY; it
+  # compresses/aligns the context (HEADROOM_MODE=cache keeps vLLM prefix-cache
+  # hits stable) and forwards to the local vLLM. CPU-only, no GPU pinning.
+  # Shares `single`'s network namespace, so 127.0.0.1 inside this container IS
+  # the vLLM: --openai-api-url http://127.0.0.1:PORT works with no Docker DNS.
+  # Consequence: `ports:` is incompatible with that network_mode, so 8787 is
+  # published on the `single` service above. First start downloads
+  # Kompress/embedding models from HF, so the healthcheck allows a long start.
   headroom:
     # F06: opt-in profile. Headroom used to share the `single` profile while
     # requiring VLLM_API_KEY, so `compose --profile single config` failed with
@@ -121,17 +130,15 @@ services:
     profiles: [headroom]
     image: ghcr.io/headroomlabs-ai/headroom:latest
     pull_policy: missing
+    network_mode: service:single
     depends_on:
       single:
         condition: service_healthy
     # Image entrypoint is already `headroom proxy`, so command supplies flags
-    # only. Bind all interfaces so Docker's publish (via the container's eth0
-    # IP) reaches the proxy; upstream is the local vLLM passed explicitly with
-    # --openai-api-url (env equivalent: OPENAI_TARGET_API_URL). No relay,
-    # no port remap: 8787 straight through, host side via HEADROOM_PORT.
-    command: ["--host", "0.0.0.0", "--port", "8787", "--openai-api-url", "http://single:${PORT:-18020}"]
-    ports:
-      - "${BIND:-127.0.0.1}:${HEADROOM_PORT:-8787}:8787"
+    # only. --host 0.0.0.0 binds every interface in the shared namespace, so
+    # the 8787 published on `single` reaches the proxy; upstream is the local
+    # vLLM on loopback, passed explicitly (env equivalent below).
+    command: ["--host", "0.0.0.0", "--port", "8787", "--openai-api-url", "http://127.0.0.1:${PORT:-18020}"]
     environment:
       HEADROOM_MODE: ${HEADROOM_MODE:-cache}
       HEADROOM_TELEMETRY: "off"
@@ -140,9 +147,10 @@ services:
       HEADROOM_PROXY_TOKEN: ${VLLM_API_KEY:-}
       # Custom OpenAI-compatible backend: current var is OPENAI_TARGET_API_URL
       # (OPENAI_BASE_URL is the legacy name; set both, same value).
+      # Loopback: valid only because of network_mode: service:single above.
       # Follows PORT instead of a hardcoded 18020.
-      OPENAI_TARGET_API_URL: http://single:${PORT:-18020}
-      OPENAI_BASE_URL: http://single:${PORT:-18020}
+      OPENAI_TARGET_API_URL: http://127.0.0.1:${PORT:-18020}
+      OPENAI_BASE_URL: http://127.0.0.1:${PORT:-18020}
       OPENAI_API_KEY: ${VLLM_API_KEY:-}
     restart: unless-stopped
     stop_grace_period: 30s
