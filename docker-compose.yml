@@ -124,10 +124,14 @@ services:
     depends_on:
       single:
         condition: service_healthy
+    # Bind all interfaces so Docker's publish (via the container's eth0 IP)
+    # reaches the proxy; upstream is the local vLLM passed explicitly with
+    # --openai-api-url (env equivalent: OPENAI_TARGET_API_URL). No relay,
+    # no port remap: 8787 straight through, host side via HEADROOM_PORT.
+    command: ["proxy", "--host", "0.0.0.0", "--port", "8787", "--openai-api-url", "http://single:${PORT:-18020}"]
     ports:
       - "${BIND:-127.0.0.1}:${HEADROOM_PORT:-8787}:8787"
     environment:
-      HEADROOM_HOST: 0.0.0.0
       HEADROOM_MODE: ${HEADROOM_MODE:-cache}
       HEADROOM_TELEMETRY: "off"
       # Proxy auth: reuse the client key when set; empty stays keyless-local.
