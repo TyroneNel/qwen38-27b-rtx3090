@@ -135,9 +135,10 @@ services:
     environment:
       HEADROOM_MODE: ${HEADROOM_MODE:-cache}
       HEADROOM_TELEMETRY: "off"
-      # Proxy auth: reuse the client key when set; empty stays keyless-local.
-      # (Was a mandatory interpolation, which broke key-optional local use.)
-      HEADROOM_PROXY_TOKEN: ${VLLM_API_KEY:-}
+      # Proxy auth: keyless-local by default. The publish is host-loopback bound,
+      # so only local processes reach it; set HEADROOM_PROXY_TOKEN to require a
+      # bearer token (browsers cannot send one, which 401s the dashboard).
+      HEADROOM_PROXY_TOKEN: ${HEADROOM_PROXY_TOKEN:-}
       # Custom OpenAI-compatible backend: current var is OPENAI_TARGET_API_URL
       # (OPENAI_BASE_URL is the legacy name; set both, same value).
       # Docker DNS: reachable because both services share the compose network.
