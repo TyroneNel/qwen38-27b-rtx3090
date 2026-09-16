@@ -34,3 +34,11 @@ docs/*
 !docs/spec-decode-scratch-token-units.md
 !docs/ubuntu-3090.md
 !docs/wsl2-4090.md
+# Host-specific env (Windows/WSL paths, local CUDA layout) — never commit.
+.env.host
+# Eval run outputs (timestamped results/samples) — regenerate, don't version.
+evals/
+# Scratch handoff docs — working notes, not repo history.
+handoff-*.md
+# Local-only quant runner (machine-specific paths) — quant pipeline lives in prepare/.
+/run_quant.sh
