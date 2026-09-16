@@ -191,3 +191,30 @@ the int8 kernel's padded-stride penalty (its head dim is 260 B, so odd KV heads 
 16-byte boundary; ~13% end to end, and reading the cache as int32 instead would recover most
 of it). Prefill is the larger cost and this kernel cannot help there — a prefill chunk is 2048
 query tokens, far above the block sizes it is for.
+
+## Vision serving on one 3090 (`VISION=1 SPEC=dflash2 CTX=long`)
+
+The 0.85 GiB tower fits resident next to the full pool. Measured 2026-09-16 on the W4A16
+uncensored quant, DFlash2 k=7, int8 KV, TRITON_ATTN, `GPU_UTIL=0.88`:
+
+| `MAX_LEN` | `KV_MEM` pin | result |
+|---|---|---|
+| 131072 (profile default) | 5583457484 (5.2 GiB) | boots, vision live (`SEEN` on image input) |
+| 98304 | 4529848320 (4.2 GiB) | boots, tower fits |
+| 65536 | 3758096384 (3.5 GiB) | boots, tower fits |
+| 98304 | 5583457484 (5.2 GiB, oversized) | boots, short prompts avg ~84 tok/s |
+
+Rules found the hard way:
+
+- `VISION_OFFLOAD=0`. The offload path pins each tower module with `pin_memory()` in
+  `wrap_modules` (`vllm/model_executor/offloader/uva.py`), and that call OOMs on WSL2 even
+  with gigabytes free. Resident (0.85 GiB) just works.
+- Do not set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` on WSL2. It breaks the Marlin
+  custom ops during weight processing (`CUDA driver error: device not ready` right after the
+  shards load). The default (False on WSL2) is correct here.
+- A pool smaller than the context need refuses to boot (`KV cache needed larger than
+  available`), it does not slow down. Note: a 16 tok/s episode during tuning resolved after
+  restoring the full 5.2 GiB pin (short prompts back to ~84 tok/s avg); the mechanism is not
+  fully understood, so keep the full pin unless the tower needs the room.
+- `.env` for this setup: `VISION=1`, `VISION_OFFLOAD=0`, `MAX_LEN=98304`,
+  `KV_MEM=5583457484`, `GPU_UTIL=0.88`, `SPEC=dflash2`, `CTX=long`.
