@@ -67,6 +67,26 @@ done
 if [ "${HARDEN_TEMPLATES:-1}" != "0" ]; then
   python prepare/harden_chat_template.py
 fi
+# Gotcha 58: the shipped chat template accepts only xhigh/medium/low, so the
+# gpt-5 vocabulary clients speak (`minimal`, `high`, `max`) raises inside the
+# template and vLLM returns 400 for every request carrying one. Translate in
+# place: map only the names the template does not know (minimal -> low,
+# high/max -> xhigh); every other value falls through unchanged, so the
+# template's own levels keep their behaviour and an omitted effort keeps the
+# template default (xhigh). Idempotent (marker in the rewritten block, with a
+# v1 -> v2 upgrade) and self-healing: a re-download that clobbers
+# chat_template.jinja is re-translated on the next prepare. Also covers the
+# model actually served (MODEL) when it was prepared outside this script.
+# A template whose effort block matches no known shape warns and is left alone;
+# TRANSLATE_EFFORT=0 skips the step.
+if [ "${TRANSLATE_EFFORT:-1}" != "0" ]; then
+  DIRS=("$BASE")
+  [ -d "$BASE-fast" ] && DIRS+=("$BASE-fast")
+  if [ -n "${MODEL:-}" ] && [ -d "$MODEL" ] && [ "$MODEL" != "$BASE" ] && [ "$MODEL" != "$BASE-fast" ]; then
+    DIRS+=("$MODEL")
+  fi
+  python prepare/translate_chat_template.py "${DIRS[@]}"
+fi
 LEFT=$(state | sed 's/\bdflash2\b//')
 [ -z "${LEFT// /}" ] || { echo "prepare: steps still missing after run: $LEFT"; exit 1; }
 echo "prepare: model ready at $BASE$([ "${FAST_VARIANT:-1}" != 0 ] && echo " (+ $BASE-fast)")"

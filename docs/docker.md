@@ -53,9 +53,11 @@ difference is gotcha 16 below.
 - Every start-script knob works from `.env`, which is passed straight into the
   container: `CTX=long`, `KV=kvarn`, `SPEC=dflash2`, `PREFIX_CACHE=1`, `MAX_LEN=`,
   `MAX_SEQS=`, `SPEC_ATTN=0`, `EXTRA_ARGS=...` (`prepare` also fetches the DFlash2 drafter;
-  `DFLASH2=0` skips it). `PORT` (default 18020) and `MODELS_DIR` (default `./models`,
-  so a venv install and the container can share one download) are read by
-  compose itself.
+  `DFLASH2=0` skips it). The two chat-template steps have knobs of their own:
+  `HARDEN_TEMPLATES=0` skips the array-argument hardening, `TRANSLATE_EFFORT=0`
+  the effort-vocabulary translation (gotcha 58). `PORT` (default 18020) and
+  `MODELS_DIR` (default `./models`, so a venv install and the container can
+  share one download) are read by compose itself.
 - `docker compose run --rm single verify` runs `verify.sh` inside the container
   (GPU, patches, model). The entrypoint runs the idempotent `prepare` and then
   `verify.sh --no-server` before every start — so a missing or half-prepared
