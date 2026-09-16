@@ -63,6 +63,21 @@ for step in $TODO; do
                || echo "prepare: DFlash2 drafter not fetched (optional: SPEC=dflash2 unavailable; DFLASH2=0 silences this)" ;;
   esac
 done
+# Gotcha 58: the shipped chat template accepts only xhigh/medium/low and
+# defaults to xhigh, so gpt-5-vocabulary client values (`minimal`, `high`,
+# `max`) raise inside the template and vLLM returns 400 for every request
+# carrying one. Translate in place: default medium, alias the OpenAI
+# vocabulary, fall back to medium on unknown values. Idempotent (marker in
+# the rewritten block) and self-healing: a re-download that clobbers
+# chat_template.jinja is re-translated on the next prepare. Also covers the
+# model actually served (MODEL) when it was prepared outside this script.
+echo "== translate_chat_template.py (effort vocabulary -> template levels, default medium)"
+DIRS="$BASE"
+if [ -d "$BASE-fast" ]; then DIRS="$DIRS $BASE-fast"; fi
+if [ -n "${MODEL:-}" ] && [ -d "$MODEL" ] && [ "$MODEL" != "$BASE" ] && [ "$MODEL" != "$BASE-fast" ]; then
+  DIRS="$DIRS $MODEL"
+fi
+python prepare/translate_chat_template.py $DIRS
 LEFT=$(state | sed 's/\bdflash2\b//')
 [ -z "${LEFT// /}" ] || { echo "prepare: steps still missing after run: $LEFT"; exit 1; }
 echo "prepare: model ready at $BASE$([ "${FAST_VARIANT:-1}" != 0 ] && echo " (+ $BASE-fast)")"
