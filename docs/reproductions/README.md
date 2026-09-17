@@ -6,6 +6,13 @@ full reproductions; the list below collects the shorter reports from issues.
 [← back to the main README](../../README.md)
 
 - [native-3090.md](native-3090.md) — the reference bare-metal 3090 run
+  (Python 3.14, no container): hardware table, README-parity benches, needle
+  recall, the prompt-shape finding
+- [../ubuntu-3090.md](../ubuntu-3090.md) — the later campaign on that same box:
+  the offload-fix control arm, retention bisection, the MAX_SEQS ladder, and the
+  batch arm only a headless box can run
+- [../wsl2-4090.md](../wsl2-4090.md) — RTX 4090 under Windows 11 / WSL2, the
+  cross-platform half of the same campaign
 
 ## Results from other hardware
 
@@ -24,7 +31,7 @@ noise.
 
 | card | power | C1 decode | notes | source |
 |---|---|---|---|---|
-| RTX 3090 (reference) | 250 W | 133 tok/s | pool 57,669 tok, ppl 8.09 | this README |
+| RTX 3090 (reference) | 250 W | 133 tok/s | pool 57,669 tok, ppl 8.09 | [main README](../../README.md) |
 | RTX 4090 | 450 W | **135.5 tok/s** | pool 57,669 and ppl 8.0921 reproduce exactly; no-spec control 60.3 (DFlash2 worth 2.31x); +1.9% from ~8% more bandwidth — batch-1 decode is bandwidth-bound, the extra compute has nothing to bite on | [#32](https://github.com/syv-ai/HyperQwen/issues/32) |
 
 Measured with their own clients rather than the harness — comparable to each
@@ -60,5 +67,5 @@ other only loosely, and not rows for the table above:
   161.6 C1 greedy at 275 W, PCIe x8 without NVLink; independently reproduced
   in-thread at 153.6/250 W by a second dual-3090 box), the NVLink dual 3090 in
   [#7](https://github.com/syv-ai/HyperQwen/issues/7), dual 5060 Ti in
-  [#22](https://github.com/syv-ai/HyperQwen/issues/22). See "More
-  than one GPU" above for what transfers.
+  [#22](https://github.com/syv-ai/HyperQwen/issues/22).
+  [multi-gpu.md](../multi-gpu.md) has what transfers.
