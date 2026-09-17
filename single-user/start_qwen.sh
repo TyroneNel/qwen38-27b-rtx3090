@@ -87,7 +87,6 @@ cd "$REPO"
 # config. Refusal exits here, before anything boots.
 source "$REPO/resolve_config.sh"
 resolve_effective_config single
-
 source "$REPO/single-user/select_model.sh"
 PORT=${PORT:-18020}
 MAX_SEQS=${MAX_SEQS:-}

@@ -18,9 +18,13 @@ Upstream's other test file exercises PR #53017 (draft logits cache column stride
 well, which this tree does not carry; that one test is the only failure left and is
 unrelated to this patch.
 
+--- exported from cpuchip/vllm a724ea427 (vllm-pr54282-draft-gumbel-salt); regenerate with scripts/export-patch.sh, do not edit ---
+
+diff --git a/v1/worker/gpu/sample/gumbel.py b/v1/worker/gpu/sample/gumbel.py
+index 28c6e0f40..9b74c9f65 100644
 --- a/v1/worker/gpu/sample/gumbel.py
 +++ b/v1/worker/gpu/sample/gumbel.py
-@@ -13,6 +13,12 @@ from vllm.triton_utils import HAS_TRITON, tl, tldevice, triton
+@@ -13,6 +13,12 @@
  # attribute is `None`, and `tl.constexpr(...)` would crash at import time.
  _TL_RAND_MIN = tl.constexpr(4.6566127342e-10) if HAS_TRITON else 4.6566127342e-10
  
@@ -33,7 +37,7 @@ unrelated to this patch.
  
  @triton.jit
  def _temperature_kernel(
-@@ -89,6 +95,7 @@ def gumbel_noised_argmax(
+@@ -89,6 +95,7 @@
      seed,
      pos,
      temp,
@@ -41,7 +45,7 @@ unrelated to this patch.
      USE_FP64: tl.constexpr,
      APPLY_TEMPERATURE: tl.constexpr = True,
  ):
-@@ -108,6 +115,8 @@ def gumbel_noised_argmax(
+@@ -108,6 +115,8 @@
      if USE_FP64:
          logits = logits.to(tl.float64)
      if temp != 0.0:
@@ -50,7 +54,7 @@ unrelated to this patch.
          gumbel_seed = tl.randint(seed, pos)
          if USE_FP64:
              u = tl_rand64(gumbel_seed, keys, includes_zero=False)
-@@ -135,6 +144,7 @@ def gumbel_block_argmax(
+@@ -135,6 +144,7 @@
      logits_cache_stride,
      logits_cache_col_ptr,
      vocab_size,
@@ -58,7 +62,7 @@ unrelated to this patch.
      APPLY_TEMPERATURE: tl.constexpr,
      USE_FP64: tl.constexpr,
      PER_TOKEN_COL: tl.constexpr = False,
-@@ -171,6 +181,7 @@ def gumbel_block_argmax(
+@@ -171,6 +181,7 @@
          seed,
          pos,
          temp,
@@ -66,7 +70,7 @@ unrelated to this patch.
          USE_FP64=USE_FP64,
          APPLY_TEMPERATURE=APPLY_TEMPERATURE,
      )
-@@ -193,6 +204,7 @@ def _gumbel_sample_kernel(
+@@ -193,6 +204,7 @@
      temp_ptr,
      vocab_size,
      BLOCK_SIZE: tl.constexpr,
@@ -74,7 +78,7 @@ unrelated to this patch.
      APPLY_TEMPERATURE: tl.constexpr,
      USE_FP64: tl.constexpr,
      PER_TOKEN_COL: tl.constexpr,
-@@ -221,6 +233,7 @@ def _gumbel_sample_kernel(
+@@ -221,6 +233,7 @@
          logits_cache_stride,
          logits_cache_col_ptr,
          vocab_size,
@@ -82,7 +86,7 @@ unrelated to this patch.
          APPLY_TEMPERATURE=APPLY_TEMPERATURE,
          USE_FP64=USE_FP64,
          PER_TOKEN_COL=PER_TOKEN_COL,
-@@ -237,6 +250,7 @@ def gumbel_sample(
+@@ -237,6 +250,7 @@
      seed: torch.Tensor,  # [max_num_reqs]
      pos: torch.Tensor,  # [num_tokens]
      apply_temperature: bool,
@@ -90,7 +94,7 @@ unrelated to this patch.
      logits_cache: torch.Tensor | None = None,  # [max_num_reqs, num_cols, vocab_size]
      logits_cache_col: torch.Tensor | None = None,  # scalar or [num_tokens]
      use_fp64: bool = False,
-@@ -269,6 +283,7 @@ def gumbel_sample(
+@@ -269,6 +283,7 @@
          temperature,
          vocab_size,
          BLOCK_SIZE=BLOCK_SIZE,
@@ -98,9 +102,11 @@ unrelated to this patch.
          APPLY_TEMPERATURE=apply_temperature,
          USE_FP64=use_fp64,
          PER_TOKEN_COL=per_token_col,
+diff --git a/v1/worker/gpu/sample/sampler.py b/v1/worker/gpu/sample/sampler.py
+index 26371f014..be95bf366 100644
 --- a/v1/worker/gpu/sample/sampler.py
 +++ b/v1/worker/gpu/sample/sampler.py
-@@ -291,6 +291,7 @@ class Sampler:
+@@ -291,6 +291,7 @@
                  self.sampling_states.seeds.gpu,
                  pos,
                  apply_temperature=False,
@@ -108,9 +114,11 @@ unrelated to this patch.
                  use_fp64=self.use_fp64_gumbel,
              )
          return sampled, processed_logits
+diff --git a/v1/worker/gpu/spec_decode/autoregressive/speculator.py b/v1/worker/gpu/spec_decode/autoregressive/speculator.py
+index 57430529f..c080420db 100644
 --- a/v1/worker/gpu/spec_decode/autoregressive/speculator.py
 +++ b/v1/worker/gpu/spec_decode/autoregressive/speculator.py
-@@ -37,6 +37,9 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -37,6 +37,9 @@
          self.last_token_indices = torch.zeros(
              self.max_num_reqs, dtype=torch.int64, device=device
          )
@@ -120,7 +128,7 @@ unrelated to this patch.
  
          self.inputs_embeds: torch.Tensor | None = None
  
-@@ -321,6 +324,7 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -321,6 +324,7 @@
              input_batch.seq_lens,
              num_rejected,
              self.input_buffers,
@@ -128,7 +136,7 @@ unrelated to this patch.
              self.max_model_len,
              self.max_num_reqs,
              advance_draft_positions=self.advance_draft_positions,
-@@ -428,6 +432,10 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -428,6 +432,10 @@
      ) -> None:
          last_token_indices = self.last_token_indices[:num_reqs]
          positions = self.input_buffers.positions[last_token_indices]
@@ -139,7 +147,7 @@ unrelated to this patch.
          idx_mapping = self.idx_mapping[:num_reqs]
  
          last_hidden_states, hidden_states = self._run_model(
-@@ -438,11 +446,11 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -438,11 +446,11 @@
              cudagraph_runtime_mode=cudagraph_runtime_mode,
              mm_inputs=mm_inputs,
          )
@@ -153,7 +161,7 @@ unrelated to this patch.
              idx_mapping,
              self.temperature,
              self.seeds,
-@@ -454,6 +462,7 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -454,6 +462,7 @@
          else:
              self.hidden_states[:num_reqs] = hidden_states[last_token_indices]
          self.input_buffers.positions[:num_reqs] = positions
@@ -161,7 +169,7 @@ unrelated to this patch.
  
      def _multi_step_decode(
          self,
-@@ -606,7 +615,6 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -606,7 +615,6 @@
          self._prepare_eplb_forward(num_reqs)
  
          idx_mapping = self.idx_mapping[:num_reqs]
@@ -169,7 +177,7 @@ unrelated to this patch.
          # Run the draft model forward pass.
          last_hidden_states, hidden_states = self._run_model(
              num_tokens_padded,
-@@ -615,18 +623,13 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -615,18 +623,13 @@
              num_tokens_across_dp,
              cudagraph_runtime_mode,
          )
@@ -192,7 +200,7 @@ unrelated to this patch.
              idx_mapping,
              self.temperature,
              self.seeds,
-@@ -642,6 +645,7 @@ class AutoRegressiveSpeculator(DraftModelSpeculator):
+@@ -642,6 +645,7 @@
              self.draft_tokens,
              self.hidden_states,
              self.input_buffers,
@@ -200,7 +208,7 @@ unrelated to this patch.
              num_reqs,
              self.max_model_len,
              self.num_speculative_steps,
-@@ -779,6 +783,7 @@ def _prepare_decode_inputs_kernel(
+@@ -779,6 +783,7 @@
      num_rejected_ptr,
      input_ids_ptr,
      positions_ptr,
@@ -208,7 +216,7 @@ unrelated to this patch.
      query_start_loc_ptr,
      seq_lens_ptr,
      max_model_len,
-@@ -807,6 +812,10 @@ def _prepare_decode_inputs_kernel(
+@@ -807,6 +812,10 @@
      draft_token = tl.load(draft_tokens_ptr + req_idx * draft_tokens_stride)
      tl.store(input_ids_ptr + req_idx, draft_token)
  
@@ -219,7 +227,7 @@ unrelated to this patch.
      target_seq_len = tl.load(target_seq_lens_ptr + req_idx)
      num_rejected = tl.load(num_rejected_ptr + req_idx)
      seq_len = target_seq_len - num_rejected
-@@ -826,6 +835,7 @@ def prepare_decode_inputs(
+@@ -826,6 +835,7 @@
      target_seq_lens: torch.Tensor,
      num_rejected: torch.Tensor,
      input_buffers: InputBuffers,
@@ -227,7 +235,7 @@ unrelated to this patch.
      max_model_len: int,
      max_num_reqs: int,
      advance_draft_positions: bool = True,
-@@ -838,6 +848,7 @@ def prepare_decode_inputs(
+@@ -838,6 +848,7 @@
          num_rejected,
          input_buffers.input_ids,
          input_buffers.positions,
@@ -235,7 +243,7 @@ unrelated to this patch.
          input_buffers.query_start_loc,
          input_buffers.seq_lens,
          max_model_len,
-@@ -855,6 +866,7 @@ def _update_draft_inputs_kernel(
+@@ -855,6 +866,7 @@
      next_input_hidden_states_stride,
      input_ids_ptr,
      positions_ptr,
@@ -243,7 +251,7 @@ unrelated to this patch.
      seq_lens_ptr,
      draft_tokens_ptr,
      current_draft_step_ptr,
-@@ -880,6 +892,10 @@ def _update_draft_inputs_kernel(
+@@ -880,6 +892,10 @@
          # This is the final step. Skip updating draft forward inputs.
          return
  
@@ -254,7 +262,7 @@ unrelated to this patch.
      # Write the sampled draft token into the input ids tensor for the next
      # forward pass.
      tl.store(input_ids_ptr + req_idx, draft_token)
-@@ -921,6 +937,7 @@ def update_draft_inputs(
+@@ -921,6 +937,7 @@
      output_draft_tokens: torch.Tensor,
      next_input_hidden_states: torch.Tensor,
      input_buffers: InputBuffers,
@@ -262,7 +270,7 @@ unrelated to this patch.
      num_reqs: int,
      max_model_len: int,
      num_speculative_steps: int,
-@@ -934,6 +951,7 @@ def update_draft_inputs(
+@@ -934,6 +951,7 @@
          next_input_hidden_states.stride(0),
          input_buffers.input_ids,
          input_buffers.positions,
@@ -270,9 +278,11 @@ unrelated to this patch.
          input_buffers.seq_lens,
          draft_tokens,
          current_draft_step,
+diff --git a/v1/worker/gpu/spec_decode/dflash/speculator.py b/v1/worker/gpu/spec_decode/dflash/speculator.py
+index 8aaf9f3c1..4ef2a6f1f 100644
 --- a/v1/worker/gpu/spec_decode/dflash/speculator.py
 +++ b/v1/worker/gpu/spec_decode/dflash/speculator.py
-@@ -289,11 +289,11 @@ class DFlashSpeculator(DraftModelSpeculator):
+@@ -289,11 +289,11 @@
          )
          num_sample = num_reqs * self.draft_block
          sample_hidden_states = last_hidden_states[self.sample_indices[:num_sample]]
@@ -287,9 +297,11 @@ unrelated to this patch.
              self.sample_idx_mapping[:num_sample],
              self.temperature,
              self.seeds,
+diff --git a/v1/worker/gpu/spec_decode/dflash2/speculator.py b/v1/worker/gpu/spec_decode/dflash2/speculator.py
+index f067ff16d..3d532f105 100644
 --- a/v1/worker/gpu/spec_decode/dflash2/speculator.py
 +++ b/v1/worker/gpu/spec_decode/dflash2/speculator.py
-@@ -84,14 +84,17 @@ def _selector_walk_kernel(
+@@ -84,14 +84,17 @@
              keep = mask & (rank < req_top_k) & (mass_before < req_top_p)
              scores = tl.where(keep, scores, -float("inf"))
  
@@ -309,9 +321,11 @@ unrelated to this patch.
              USE_FP64=USE_FP64,
          )
          # vLLM 0.28.0's rejection sampler expects pre-temperature logits. With TRUNCATE
+diff --git a/v1/worker/gpu/spec_decode/dspark/speculator.py b/v1/worker/gpu/spec_decode/dspark/speculator.py
+index 19fc45201..e9eca550c 100644
 --- a/v1/worker/gpu/spec_decode/dspark/speculator.py
 +++ b/v1/worker/gpu/spec_decode/dspark/speculator.py
-@@ -135,8 +135,8 @@ class DSparkSpeculator(DFlashSpeculator):
+@@ -135,8 +135,8 @@
              buf.index_copy_(1, self._d2t_scatter_index, logits.to(buf.dtype))
              logits = buf
  
@@ -322,7 +336,7 @@ unrelated to this patch.
          return gumbel_sample(
              logits,
              idx_map,
-@@ -144,6 +144,7 @@ class DSparkSpeculator(DFlashSpeculator):
+@@ -144,6 +144,7 @@
              self.seeds,
              sample_pos - 1,
              apply_temperature=True,
@@ -330,9 +344,11 @@ unrelated to this patch.
              logits_cache=self.draft_logits,
              logits_cache_col=self._step_cols[step],
              use_fp64=self.use_fp64_gumbel,
+diff --git a/v1/worker/gpu/spec_decode/multi_module_mtp/speculator.py b/v1/worker/gpu/spec_decode/multi_module_mtp/speculator.py
+index fc147b3f4..fed009159 100644
 --- a/v1/worker/gpu/spec_decode/multi_module_mtp/speculator.py
 +++ b/v1/worker/gpu/spec_decode/multi_module_mtp/speculator.py
-@@ -375,7 +375,11 @@ class MultiModuleMTPSpeculator(DraftModelSpeculator):
+@@ -375,7 +375,11 @@
          cudagraph_runtime_mode: CUDAGraphMode = CUDAGraphMode.NONE,
      ) -> None:
          last_token_indices = self.last_token_indices[:num_reqs]
@@ -345,7 +361,7 @@ unrelated to this patch.
          idx_mapping = self.idx_mapping[:num_reqs]
  
          # Cache the trailing token's ids, hidden states (and embeddings for
-@@ -413,7 +417,7 @@ class MultiModuleMTPSpeculator(DraftModelSpeculator):
+@@ -413,7 +417,7 @@
              sample_hidden_states = last_hidden_states[last_token_indices]
              draft_tokens = self.sample_draft(
                  sample_hidden_states,
@@ -354,7 +370,7 @@ unrelated to this patch.
                  idx_mapping,
                  self.temperature,
                  self.seeds,
-@@ -444,7 +448,8 @@ class MultiModuleMTPSpeculator(DraftModelSpeculator):
+@@ -444,7 +448,8 @@
                      idx_mapping,
                      num_reqs,
                  )
@@ -364,9 +380,11 @@ unrelated to this patch.
  
  
  @triton.jit
+diff --git a/v1/worker/gpu/spec_decode/rejection_sampler_utils.py b/v1/worker/gpu/spec_decode/rejection_sampler_utils.py
+index 3ea9f35ee..bc0cc304d 100644
 --- a/v1/worker/gpu/spec_decode/rejection_sampler_utils.py
 +++ b/v1/worker/gpu/spec_decode/rejection_sampler_utils.py
-@@ -836,6 +836,7 @@ def _resample_kernel(
+@@ -836,6 +836,7 @@
          0,  # logits_cache_stride
          None,  # logits_cache_col_ptr
          vocab_size,
@@ -374,9 +392,11 @@ unrelated to this patch.
          APPLY_TEMPERATURE=False,
          USE_FP64=USE_FP64,
      )
+diff --git a/v1/worker/gpu/spec_decode/speculator.py b/v1/worker/gpu/spec_decode/speculator.py
+index fc4f78a81..2170be4d1 100644
 --- a/v1/worker/gpu/spec_decode/speculator.py
 +++ b/v1/worker/gpu/spec_decode/speculator.py
-@@ -326,7 +326,7 @@ class DraftModelSpeculator(BaseSpeculator):
+@@ -326,7 +326,7 @@
      def sample_draft(
          self,
          hidden_states: torch.Tensor,
@@ -385,7 +405,7 @@ unrelated to this patch.
          idx_mapping: torch.Tensor,
          temperature: torch.Tensor,
          seeds: torch.Tensor,
-@@ -335,15 +335,14 @@ class DraftModelSpeculator(BaseSpeculator):
+@@ -335,15 +335,14 @@
      ) -> torch.Tensor:
          if draft_logits is not None:
              logits = self.model.compute_logits(hidden_states)
