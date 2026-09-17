@@ -40,5 +40,3 @@ docs/*
 evals/
 # Scratch handoff docs — working notes, not repo history.
 handoff-*.md
-# Local-only quant runner (machine-specific paths) — quant pipeline lives in prepare/.
-/run_quant.sh
