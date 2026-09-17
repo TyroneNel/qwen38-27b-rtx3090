@@ -5,12 +5,23 @@
 # requantization; a fast-variant download of ~1 GB unless FAST_VARIANT=0, and the
 # ~1 GB W4A16 DFlash2 drafter (SPEC=dflash2) unless DFLASH2=0.
 #
+# Serialised with flock: a second concurrent prepare waits for the holder
+# (PREPARE_LOCK_WAIT, default 600 s) instead of mutating the same model dir.
+#
 #   docker compose run --rm prepare      (also runs automatically before single/batch)
 set -e
 cd /app
 export PATH=/app/venv/bin:$PATH
 BASE=${BASE_MODEL_DIR:-/app/models/Qwen3.8-27B-W4A16-AutoRound}
 HF_REPO=${HF_REPO:-dbirks/Qwen3.8-27B-W4A16-AutoRound}
+# Two prepares racing one model dir can interleave a shard rewrite with an index
+# write and leave the dir inconsistent, and the entrypoint runs prepare before
+# every start, so a booting container races `compose run prepare`. The lock sits
+# beside the model dir, not inside it, so BASE_MODEL_DIR cannot move it out of
+# the volume. Waiting is the normal case; only a timeout fails.
+MODELS_ROOT=$(dirname "$BASE")
+exec 9>"$MODELS_ROOT/.prepare.lock"
+flock -w "${PREPARE_LOCK_WAIT:-600}" 9 || { echo "prepare: another preparation still holds $MODELS_ROOT/.prepare.lock after ${PREPARE_LOCK_WAIT:-600}s; refusing to run concurrently"; exit 1; }
 
 state() {  # prints the steps still to do
 python - "$BASE" <<'EOF'
