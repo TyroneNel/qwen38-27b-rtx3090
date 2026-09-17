@@ -1299,11 +1299,12 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     instruction, the same outcome as `medium`. Idempotent (v2 marker, with a
     v1→v2 upgrade so a dir translated by the first cut does not keep its
     `medium` default) and self-healing: `docker/prepare.sh` re-runs it on every
-    boot, including on the model actually served (`MODEL`), so a re-download
-    that clobbers the template is re-translated. A template whose effort block
-    matches no known shape warns and is left alone — this runs under `set -e`
-    after the download, so it must not fail a ready model dir. A running server
-    loads the template at startup — restart to pick up a translation.
+boot (`TRANSLATE_EFFORT=0` skips the step), including on the model actually
+    served (`MODEL`), so a re-download that clobbers the template is
+    re-translated. A template whose effort block matches no known shape warns
+    and is left alone — this runs under `set -e` after the download, so it must
+    not fail a ready model dir. A running server loads the template at startup
+    — restart to pick up a translation.
 59. **Two prepares at once leave a model dir half-written.** Every step of
     `docker/prepare.sh` is idempotent, but the script is not concurrency-safe:
     two runs against one model dir can interleave a shard rewrite with an index
