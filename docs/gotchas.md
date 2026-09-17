@@ -1304,3 +1304,19 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     matches no known shape warns and is left alone — this runs under `set -e`
     after the download, so it must not fail a ready model dir. A running server
     loads the template at startup — restart to pick up a translation.
+59. **Two prepares at once leave a model dir half-written.** Every step of
+    `docker/prepare.sh` is idempotent, but the script is not concurrency-safe:
+    two runs against one model dir can interleave a shard rewrite with an index
+    write, and the damage surfaces much later — a shard missing from
+    `model.safetensors.index.json`, a config that disagrees with the tensors on
+    disk, or a half-fetched fast variant that `verify.sh` then reports far from
+    its cause. It happens without anyone typing two commands: the entrypoint
+    runs `prepare` before every start, so a booting container races
+    `docker compose run --rm prepare`, and two servers starting together after a
+    crash race each other. Fix: the script takes an exclusive `flock` on
+    `<models dir>/.prepare.lock` — beside the model dir rather than inside it,
+    so `BASE_MODEL_DIR` cannot move it out of the volume — and waits up to
+    `PREPARE_LOCK_WAIT` seconds (default 600) for a holder before refusing to
+    run. The lock is advisory and is released when the holder exits, so a
+    leftover `.prepare.lock` file is inert: it is a lock, not a marker, and
+    nothing has to clean it up.
