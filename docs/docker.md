@@ -67,6 +67,14 @@ difference is gotcha 16 below.
   8-bit head and the fast variant's packed 4-bit head. The standalone `verify`
   command still defaults to the base model; set `MODEL` explicitly to check
   another directory.
+- **Concurrent prepares are serialised.** Because the entrypoint calls `prepare`
+  before every start, a booting container can race a `docker compose run --rm
+  prepare`, or two containers can start together; `docker/prepare.sh` takes an
+  exclusive `flock` on `<models dir>/.prepare.lock` and waits up to
+  `PREPARE_LOCK_WAIT` seconds (default 600) for a holder before refusing. The
+  lock sits beside the model dir rather than inside it, so `BASE_MODEL_DIR`
+  cannot move it, and it is advisory — a leftover `.prepare.lock` file is inert
+  and is not a marker.
 - **More than one GPU:** `GPU_COUNT` in `.env` sets how many cards the
   container gets (default 1, which is whichever card the runtime enumerates
   first — GPU 0), and `EXTRA_ARGS="--tensor-parallel-size 2"` sets how many the
