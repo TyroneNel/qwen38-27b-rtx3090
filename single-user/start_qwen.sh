@@ -84,8 +84,10 @@ cd "$REPO"
 
 # Backlog 6 / F13: one validated resolver — refuses unknown CTX/SPEC, warns on
 # ignored (KV) and EXTRA_ARGS-shadowed controls, prints the redacted effective
-# config. Refusal exits here, before anything boots.
-source "$REPO/resolve_config.sh"
+# config. Refusal exits here, before anything boots. The launcher does not run
+# under `set -e`, so a missing file would otherwise skip the check silently.
+source "$REPO/resolve_config.sh" \
+  || { echo "start_qwen: cannot source $REPO/resolve_config.sh - refusing to boot unvalidated" >&2; exit 1; }
 resolve_effective_config single
 source "$REPO/single-user/select_model.sh"
 PORT=${PORT:-18020}
@@ -739,9 +741,8 @@ esac
 export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-$ALLOC_DEFAULT}
 export VLLM_USE_FLASHINFER_SAMPLER=0
 
-if [ -z "$VLLM_API_KEY" ] && [ -f "$REPO/api_key.txt" ]; then
-  export VLLM_API_KEY="$(cat "$REPO/api_key.txt")"
-fi
+source "$REPO/resolve_api_key.sh"
+resolve_vllm_key
 
 exec venv/bin/vllm serve "$MODEL" \
   --served-model-name qwen3.8-27b \
