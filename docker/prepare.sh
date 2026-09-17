@@ -11,10 +11,6 @@ cd /app
 export PATH=/app/venv/bin:$PATH
 BASE=${BASE_MODEL_DIR:-/app/models/Qwen3.8-27B-W4A16-AutoRound}
 HF_REPO=${HF_REPO:-dbirks/Qwen3.8-27B-W4A16-AutoRound}
-# F04: serialize preparation. Two concurrent prepares mutating one model dir
-# can leave shards/index/config inconsistent.
-exec 9>"${BASE_MODEL_DIR:-/app/models}/.prepare.lock"
-flock -n 9 || { echo "prepare: another preparation holds ${BASE_MODEL_DIR:-/app/models}/.prepare.lock; refusing to run concurrently"; exit 1; }
 
 state() {  # prints the steps still to do
 python - "$BASE" <<'EOF'
@@ -63,28 +59,35 @@ for step in $TODO; do
                || echo "prepare: DFlash2 drafter not fetched (optional: SPEC=dflash2 unavailable; DFLASH2=0 silences this)" ;;
   esac
 done
-# Gotcha 58: the shipped chat template accepts only xhigh/medium/low and
-# defaults to xhigh, so gpt-5-vocabulary client values (`minimal`, `high`,
-# `max`) raise inside the template and vLLM returns 400 for every request
-# carrying one. Translate in place: default medium, alias the OpenAI
-# vocabulary, fall back to medium on unknown values. Idempotent (marker in
-# the rewritten block) and self-healing: a re-download that clobbers
-# chat_template.jinja is re-translated on the next prepare. Also covers the
-# model actually served (MODEL) when it was prepared outside this script.
-echo "== translate_chat_template.py (effort vocabulary -> template levels, default medium)"
-DIRS="$BASE"
-if [ -d "$BASE-fast" ]; then DIRS="$DIRS $BASE-fast"; fi
+# Every dir this script prepares, plus the model actually served (MODEL) when
+# it was prepared elsewhere. An array, so a path containing a space works.
+DIRS=("$BASE")
+[ -d "$BASE-fast" ] && DIRS+=("$BASE-fast")
 if [ -n "${MODEL:-}" ] && [ -d "$MODEL" ] && [ "$MODEL" != "$BASE" ] && [ "$MODEL" != "$BASE-fast" ]; then
-  DIRS="$DIRS $MODEL"
+  DIRS+=("$MODEL")
 fi
-python prepare/translate_chat_template.py $DIRS
 # Some clients (JetBrains AI Assistant) send tool-call arguments as a JSON
 # array instead of an object; harden the templates so `|items` does not blow up
 # ("Can only get item pairs from a mapping.") once for every prepared model.
 # A template that does not match the known pattern warns and is left alone;
 # only an unreadable one fails prepare. HARDEN_TEMPLATES=0 skips the step.
 if [ "${HARDEN_TEMPLATES:-1}" != "0" ]; then
-  python prepare/harden_chat_template.py $DIRS
+  python prepare/harden_chat_template.py "${DIRS[@]}"
+fi
+# Gotcha 58: the shipped chat template accepts only xhigh/medium/low, so the
+# gpt-5 vocabulary clients speak (`minimal`, `high`, `max`) raises inside the
+# template and vLLM returns 400 for every request carrying one. Translate in
+# place: map only the names the template does not know (minimal -> low,
+# high/max -> xhigh); every other value falls through unchanged, so the
+# template's own levels keep their behaviour and an omitted effort keeps the
+# template default (xhigh). Idempotent (marker in the rewritten block, with a
+# v1 -> v2 upgrade) and self-healing: a re-download that clobbers
+# chat_template.jinja is re-translated on the next prepare. Also covers the
+# model actually served (MODEL) when it was prepared outside this script.
+# A template whose effort block matches no known shape warns and is left alone;
+# TRANSLATE_EFFORT=0 skips the step.
+if [ "${TRANSLATE_EFFORT:-1}" != "0" ]; then
+  python prepare/translate_chat_template.py "${DIRS[@]}"
 fi
 LEFT=$(state | sed 's/\bdflash2\b//')
 [ -z "${LEFT// /}" ] || { echo "prepare: steps still missing after run: $LEFT"; exit 1; }
