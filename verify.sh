@@ -112,9 +112,12 @@ def ok(m): print("  PASS ", m)
 def fail(m):
     global F
     print("  FAIL ", m); F += 1
-# lm_head / embed int8
-if "lm_head.weight_packed" in idx and any(g["targets"] == ["re:.*lm_head$"] and g["weights"]["num_bits"] == 8 for g in groups.values()): ok("lm_head requantized to int8 (prepare/quant_lm_head.py)")
-else: fail("lm_head not requantized: run prepare/quant_lm_head.py")
+# Base model: int8 head; fast variant: int4-GPTQ head. Both must be packed.
+head_bits = [g.get("weights", {}).get("num_bits") for g in groups.values()
+             if g.get("targets") == ["re:.*lm_head$"]]
+if "lm_head.weight_packed" in idx and head_bits and all(bits in (4, 8) for bits in head_bits):
+    ok(f"lm_head quantized to {head_bits[0]} bits")
+else: fail("lm_head must have packed weights and a supported 4-bit or 8-bit quantization group")
 if any(k.endswith("embed_tokens.weight_packed") for k in idx) and any(g["targets"] == ["re:.*embed_tokens$"] for g in groups.values()): ok("embed_tokens requantized to int8 (prepare/quant_embed.py)")
 else: fail("embed_tokens not requantized: run prepare/quant_embed.py")
 if "mtp.layers.0.mlp.down_proj.weight_packed" in idx and "mtp.layers.0.mlp.down_proj" not in ign: ok("MTP draft module quantized (prepare/quant_mtp.py)")
