@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Validate the patch series against a pristine vLLM 0.28.0 checkout.
+# Validate the patch series against a pristine checkout of the pinned vLLM (docker/requirements.txt).
 #
 # Two passes, because two tools are in play and they answer different questions:
 #
@@ -19,7 +19,7 @@ set -euo pipefail
 # patch: the installed tree is produced by GNU patch, so GNU patch defines
 # "applies", and git apply stays on the five where hunk metadata is contractual.
 HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-VLLM_SOURCE=${1:?usage: bash patches/check_vllm_series.sh /path/to/vllm-v0.28.0}
+VLLM_SOURCE=${1:?usage: bash patches/check_vllm_series.sh /path/to/vllm-<pinned tag>/vllm  (the package directory inside the checkout, not its root)}
 VLLM_SOURCE=$(cd -- "$VLLM_SOURCE" && pwd)
 
 git -C "$VLLM_SOURCE" rev-parse --is-inside-work-tree >/dev/null
@@ -32,23 +32,6 @@ git -C "$VLLM_SOURCE" rev-parse --is-inside-work-tree >/dev/null
 GIT_ROOT=$(git -C "$VLLM_SOURCE" rev-parse --show-toplevel)
 PREFIX=${VLLM_SOURCE#"$GIT_ROOT"/}
 if [ "$PREFIX" = "$VLLM_SOURCE" ]; then PREFIX=.; fi
-
-# F10: this script runs `git checkout -- . && git clean -qfd` — destructive to
-# whatever tree it points at. Refuse the two unsafe targets outright:
-#  - this repo itself (must never be reset/cleaned by a helper);
-#  - any tree without explicit opt-in (env ALLOW_TREE_RESET=1) or a
-#   `.qwen-disposable-series-target` sentinel (which CI stamps into its
-#   throwaway checkout). Pass a disposable worktree, not your workspace.
-if [ "$GIT_ROOT" = "$HERE" ]; then
-  echo "REFUSING: VLLM_SOURCE resolves into this repo ($HERE)." >&2
-  echo "Create a disposable checkout/worktree of vLLM 0.28.0 and point here." >&2
-  exit 1
-fi
-if [ "${ALLOW_TREE_RESET:-0}" != 1 ] && [ ! -f "$GIT_ROOT/.qwen-disposable-series-target" ]; then
-  echo "REFUSING: $GIT_ROOT has no .qwen-disposable-series-target sentinel." >&2
-  echo "Set ALLOW_TREE_RESET=1 to confirm destructive reset+clean of that tree." >&2
-  exit 1
-fi
 
 # DFlash2 is native in 0.28.0; the backport patch is kept for older pins.
 SKIP=(dflash2-backport.patch)
@@ -70,24 +53,29 @@ IN_SERIES=$(printf '%s\n' "${SERIES[@]}" | sort)
 
 echo "== pass 1: the whole series, GNU patch, patches/series order"
 git -C "$GIT_ROOT" checkout -q -- . && git -C "$GIT_ROOT" clean -qfd
+# --fuzz 0: an offset means the context matched exactly and the file merely grew around it; fuzz means the
+# context did NOT match and GNU patch accepted an approximate anchor. The first is benign and reported, the
+# second is a patch cut against a tree that no longer exists, and it fails here instead of landing by guess
+# (the same flag is on the Dockerfile's apply loop, so the image cannot carry what this check would refuse).
 count=0; offset=0
 for name in "${SERIES[@]}"; do
   for s in "${SKIP[@]}"; do [ "$name" = "$s" ] && continue 2; done
   p="$HERE/patches/$name"
-  out=$(patch -p1 --forward --no-backup-if-mismatch -d "$VLLM_SOURCE" < "$p" 2>&1) || {
-    echo "FAILED: $name"; echo "$out" | sed 's/^/    /'; exit 1
+  out=$(patch -p1 --forward --no-backup-if-mismatch --fuzz 0 -d "$VLLM_SOURCE" < "$p" 2>&1) || {
+    echo "FAILED: $name (a hunk's context does not exist in this tree; regenerate the patch against the pin)"
+    echo "$out" | sed 's/^/    /'; exit 1
   }
-  n=$(printf '%s\n' "$out" | grep -c "offset\|with fuzz" || true)
-  [ "$n" -gt 0 ] && { echo "   $name (applied, $n hunk(s) with offset)"; offset=$((offset+1)); }
+  n=$(printf '%s\n' "$out" | grep -c "offset" || true)
+  [ "$n" -gt 0 ] && { echo "   $name (applied, $n hunk(s) with an offset, context exact)"; offset=$((offset+1)); }
   count=$((count+1))
 done
 if git -C "$GIT_ROOT" diff --quiet; then
   echo "ERROR: the series applied but changed nothing -- the paths did not resolve." >&2
   exit 1
 fi
-echo "   $count patches applied, $offset with an offset"
+echo "   $count patches applied with exact context, $offset of them at an offset, 0 with fuzz"
 
-echo "== pass 2: the ordered DFlash+Gumbel patches, git apply --check"
+echo "== pass 2: the ordered DFlash patches, git apply --check"
 git -C "$GIT_ROOT" checkout -q -- . && git -C "$GIT_ROOT" clean -qfd
 # These five patches' order and hunk metadata are part of the 0.28.0 contract.
 # The set is fixed here; their relative order is taken from patches/series so
@@ -97,7 +85,7 @@ CONTRACTUAL=(
   dflash2-lookup-drafting.patch
   dflash2-ngram-chains.patch
   dflash2-prewarm.patch
-  vllm-pr54282-draft-gumbel-salt.patch
+  dflash2-z-adaptive-emitted.patch
 )
 PATCHES=()
 for name in "${SERIES[@]}"; do

@@ -46,12 +46,12 @@ x-qwen: &qwen
   # first `up` pulls it (~9.5 GB, pull_policy below) instead of the 20-minute
   # local build. `docker compose build` (or `up --build`) still builds the
   # identical image under the same tag name. Immutable per-commit tags:
-  # ghcr.io/syv-ai/qwen38-27b-rtx3090:sha-<7>.
-  # F12 traceability: the image running here (2026-09-08) resolves to
+  # ghcr.io/syv-ai/hyperqwen:sha-<7>.
+  # F12 traceability: the image running here on 2026-09-08 resolved to
   # ghcr.io/syv-ai/qwen38-27b-rtx3090@sha256:86ecc9adb54ed76f0ccbebbdb7916490f918e42d2ac2a2ed8c0d50cc25323a57.
   # `latest` is a moving tag — quote the digest, not the tag, when reporting
   # benchmark provenance (bench/run_benchmarks.sh manifest).
-  image: ghcr.io/syv-ai/qwen38-27b-rtx3090:latest
+  image: ghcr.io/syv-ai/hyperqwen:latest
   build: .
   pull_policy: missing
   ipc: host
