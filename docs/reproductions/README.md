@@ -62,6 +62,37 @@ other only loosely, and not rows for the table above:
   attention adding +1.8% at 21k and +6.3% at 66k on top, against this repo's
   +2.7% at 16k and +5.3% at 51k. Plus the power-limit ladder quoted above —
   [#62](https://github.com/syv-ai/HyperQwen/issues/62).
+- **4x RTX 5060 Ti 16 GB (sm120, TP4)**: the canonical harness at TP4, and the
+  cleanest multi-arm A/B this project has received --- four arms on one box,
+  `PREFIX_CACHE=1` throughout, one variable apart. C1 greedy decode 72.8
+  (`SPEC=mtp` k=3, fp8/FlashInfer) -> 137.6 (`SPEC=mtp`, int8 KV on
+  `TRITON_ATTN`) -> 154.3 (`SPEC=dflash2` k=7, same KV). So the headline 2.37x
+  from the first round is **1.89x KV dtype and attention backend, 1.12x
+  drafter**, and the drafter's advantage is gone by C4. `DFLASH_TOKENS=15` at
+  TP4 is a clear loss (154.3 -> 89.4 at C1, TTFT 3.3x at C8), which is the TP4
+  half the launcher's keep-it-at-7 warning was missing. Also the source of the
+  `curand` headers gotcha and the `NCCL_P2P_LEVEL=SYS` note ---
+  [#105](https://github.com/syv-ai/HyperQwen/issues/105).
+- **2x RTX 3060 12 GB**: 24 GB of VRAM in two 12 GB cards, which forces a
+  tensor-parallel split the single-card path never takes. Two independent boxes
+  in the thread, both on the Docker path at `SPEC=mtp CTX=long`, one reporting
+  ~50 tok/s at 49k and ~35 at 80k context at a 130 W per-card cap. Measured with
+  their own clients, so not comparable to the table above --- a harness run on
+  this pair is the open ask in
+  [#68](https://github.com/syv-ai/HyperQwen/issues/68).
+- **3x RTX 3090**: confirms TP=3 is refused by the checkpoint rather than by this
+  repo (4 KV heads, 64 layers: neither TP=3 nor an even PP=3 split exists), so
+  the third card idles under `--tensor-parallel-size 2` by construction. The
+  thread's workaround --- a second independent engine on the spare card, with
+  `VLLM_OFFLOAD_KEEP_SHM=1` on both containers --- is the shape a triple-card
+  owner wants: [#104](https://github.com/syv-ai/HyperQwen/issues/104).
+- **2x RTX 3090 (TP=2), native Ubuntu**: batch harness at 917 decode / 861 e2e
+  at 64 concurrent against the single card's ~1,035 / 948, and 60.1 tok/s at C1
+  against 46 --- two cards giving less aggregate throughput and ~30% more
+  single-stream, the same shape as [#40](https://github.com/syv-ai/HyperQwen/issues/40).
+  Run with `KV=kvarn VISION=1` rather than the reference batch profile, so
+  indicative rather than a controlled row:
+  [#135](https://github.com/syv-ai/HyperQwen/issues/135).
 - **Dual-GPU reports**: the controlled 1-vs-2×3090 A/B in
   [#40](https://github.com/syv-ai/HyperQwen/issues/40) (+16–35%,
   161.6 C1 greedy at 275 W, PCIe x8 without NVLink; independently reproduced
