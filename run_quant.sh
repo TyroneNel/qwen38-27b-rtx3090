@@ -48,6 +48,32 @@ export CUDA_DEVICE_ORDER=PCI_BUS_ID
 # the first-listed device first, so "1,0" prioritizes the 3090 (~21.6 GB of
 # layers at the 0.9 ratio) and spills the remainder to the 3080 Ti.
 export CUDA_VISIBLE_DEVICES=0,1
+DEVICE_MAP="${DEVICE_MAP:-1,0}"
+
+# Preflight: fail fast if the primary quant GPU is short on free VRAM.
+# accelerate packs the FIRST device in DEVICE_MAP first; if that card is
+# already occupied, layers silently spill onto the next card and OOM there
+# (2026-09-17: an idle server held 23.4 GiB on the 3090, so everything
+# landed on the 12 GB 3080 Ti and died on block 0).
+map_cuda_to_phys() { # logical cuda idx -> physical GPU idx via CUDA_VISIBLE_DEVICES
+  local i="${1:-0}"
+  local -a vis=()
+  if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then
+    IFS=',' read -r -a vis <<< "$CUDA_VISIBLE_DEVICES"
+    echo "${vis[$i]:-$i}"
+  else
+    echo "$i"
+  fi
+}
+PRIMARY_PHYS="$(map_cuda_to_phys "${DEVICE_MAP%%,*}")"
+PRIMARY_FREE_MIB="$(nvidia-smi -i "$PRIMARY_PHYS" --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | tr -dc '0-9')"
+PRIMARY_MIN_FREE_MIB="${PRIMARY_MIN_FREE_MIB:-21000}"
+if [ -n "$PRIMARY_FREE_MIB" ] && [ "$PRIMARY_FREE_MIB" -lt "$PRIMARY_MIN_FREE_MIB" ]; then
+  echo "ERROR: primary quant GPU (physical $PRIMARY_PHYS) has ${PRIMARY_FREE_MIB} MiB free; need >= ${PRIMARY_MIN_FREE_MIB}." >&2
+  echo "       Free that GPU first, or override DEVICE_MAP / PRIMARY_MIN_FREE_MIB." >&2
+  exit 1
+fi
+echo "Preflight: primary quant GPU (physical $PRIMARY_PHYS) free=${PRIMARY_FREE_MIB:-unknown} MiB (threshold ${PRIMARY_MIN_FREE_MIB})."
 export AR_DISK_STREAM_MODEL=1
 export AR_WORK_SPACE="$MODELS_DIR/.quant-work/ar_work_space"
 export AR_RESUME_DIR="$MODELS_DIR/.quant-work/.quant_checkpoint"
@@ -65,7 +91,7 @@ venv/bin/auto_round quantize "$MODEL_SRC" \
   --bits 4 \
   --group_size 128 \
   --format auto_round:llm_compressor \
-  --device_map "1,0" \
+  --device_map "$DEVICE_MAP" \
   --low_gpu_mem_usage \
   --nsamples 128 \
   --seqlen 2048 \
