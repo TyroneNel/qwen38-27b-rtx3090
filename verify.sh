@@ -264,21 +264,28 @@ if [ $NOSRV = 0 ]; then
       curl -s "$1" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$2" \
         | $PY -c 'import json,sys
 print(",".join(map(str, json.load(sys.stdin).get("tokens", ()))))' 2>/dev/null; }
-    TOK_LOC=$($PY - "$MODEL" <<'EOF'
+    # The prompt rides as argv[2]; stderr is dropped so a tokenizer that will
+    # not load leaves the row empty (and the row below fails) instead of
+    # printing a traceback into the report.
+    TOK_LOC=$($PY - "$MODEL" "$TOKP" <<'EOF' 2>/dev/null
 import sys
 from transformers import AutoTokenizer
 tok = AutoTokenizer.from_pretrained(sys.argv[1])
 print(",".join(map(str, tok.encode(sys.argv[2], add_special_tokens=False))))
 EOF
 )
-    TOK_CHAT_LOC=$($PY - "$MODEL" <<'EOF'
+    # Render the template to text and encode it, the way bench/bugb_sweep.py
+    # and bench/residue_sweep.py do: apply_chat_template(tokenize=True) returns
+    # a BatchEncoding on transformers 5.x and a bare list on 4.x, and this form
+    # is the same ids on both.
+    TOK_CHAT_LOC=$($PY - "$MODEL" "$TOKP" <<'EOF' 2>/dev/null
 import sys
 from transformers import AutoTokenizer
 tok = AutoTokenizer.from_pretrained(sys.argv[1])
-ids = tok.apply_chat_template(
-    [{"role": "user", "content": sys.argv[2]}],
+text = tok.apply_chat_template(
+    [{"role": "user", "content": sys.argv[2]}], tokenize=False,
     add_generation_prompt=True, enable_thinking=False)
-print(",".join(map(str, ids)))
+print(",".join(map(str, tok.encode(text, add_special_tokens=False))))
 EOF
 )
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
@@ -286,7 +293,7 @@ EOF
       && ok "/tokenize with the served id returns the checkpoint tokenizer's ids" \
       || fail "/tokenize disagrees with the checkpoint tokenizer (server='$TOK_S' local='$TOK_LOC')"
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
-    [ "$TOK_S" = "$TOK_LOC" ] \
+    [ -n "$TOK_S" ] && [ "$TOK_S" = "$TOK_LOC" ] \
       && ok "/tokenize with the model omitted returns the same ids" \
       || fail "/tokenize model-omitted disagrees ('$TOK_S' vs '$TOK_LOC')"
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"model\":\"qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"$TOKP\"}],\"chat_template_kwargs\":{\"enable_thinking\":false}}")
@@ -305,7 +312,7 @@ EOF
         || fail "keyless /tokenize -> $TOK_CODE (expected 401: it renders arbitrary text through the chat template)"
     else warn "no API key configured — the keyless-401 row cannot run"; fi
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/v1/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
-    [ "$TOK_S" = "$TOK_LOC" ] \
+    [ -n "$TOK_S" ] && [ "$TOK_S" = "$TOK_LOC" ] \
       && ok "/v1/tokenize answers with the same ids (OpenAI-SDK base_url .../v1)" \
       || fail "/v1/tokenize unavailable or disagrees ('$TOK_S')"
     LOG=$HERE/qwen.log
