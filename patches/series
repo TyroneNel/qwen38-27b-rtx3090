@@ -55,3 +55,4 @@ bench-probe-errors.patch
 serve-404-served-names.patch
 serve-model-path-match.patch
 tokenize-v1-route.patch
+auth-deny-default.patch
