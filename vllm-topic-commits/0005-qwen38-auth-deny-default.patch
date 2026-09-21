@@ -1,0 +1,88 @@
+From 5dc51310d8f88dbf31f2a1bcd60ab8ebdc38ce08 Mon Sep 17 00:00:00 2001
+From: cline <cline@users.noreply.github.com>
+Date: Mon, 21 Sep 2026 21:17:36 +0000
+Subject: [PATCH 5/5] [qwen38] auth-deny-default
+
+--api-key: deny by default, allow liveness paths.
+
+The old guard authenticated only the /v1, /v2, /inference and /cohere
+prefixes, which left /tokenize, /detokenize, /metrics, /docs and
+/server_info answerable without the key -- /tokenize renders arbitrary
+text through the model's chat template, so that is template exposure,
+not just metadata. The --api-key help text warned about exactly this
+class of hole. Today only loopback binding stands between those routes
+and the network.
+
+With --api-key bound, every path now requires the bearer token except
+/health, /ping, /load and /version -- the allowlist liveness probes and
+load balancers need, nothing else. A route added tomorrow is guarded by
+default instead of staying open until someone remembers to extend a
+prefix list. Prometheus scrapers that cannot carry the key belong on a
+separate listener, not on this allowlist. The --api-key help text now
+describes the allowlist instead of the old prefix limitation.
+---
+ vllm/entrypoints/openai/cli_args.py          | 10 +++++-----
+ vllm/entrypoints/serve/utils/server_utils.py | 12 +++++++++---
+ 2 files changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/vllm/entrypoints/openai/cli_args.py b/vllm/entrypoints/openai/cli_args.py
+index 6372355..646531e 100644
+--- a/vllm/entrypoints/openai/cli_args.py
++++ b/vllm/entrypoints/openai/cli_args.py
+@@ -291,11 +291,11 @@ class FrontendArgs(BaseFrontendArgs):
+     """If provided, the server will require one of these keys to be presented in
+     the header.
+ 
+-    Warning: this only authenticates endpoints under the `/v1`, `/v2`, and
+-    `/inference` path prefixes. Other endpoints on the same server, including
+-    `/invocations` (which exposes the same inference capabilities as `/v1`),
+-    remain unauthenticated. Do not rely on `--api-key` alone to secure vLLM;
+-    see
++    Warning: this authenticates every endpoint on the server except a small
++    liveness allowlist (`/health`, `/ping`, `/load`, `/version`); everything
++    else, including `/tokenize` and `/metrics`, requires the key. Scrapers
++    that must reach `/metrics` without a key should put it on a separate
++    listener. See
+     https://docs.vllm.ai/en/latest/usage/security.html#api-key-authentication-limitations
+     for what it does and does not protect."""
+     ssl_keyfile: str | None = None
+diff --git a/vllm/entrypoints/serve/utils/server_utils.py b/vllm/entrypoints/serve/utils/server_utils.py
+index 9eba5d3..0f56fbc 100644
+--- a/vllm/entrypoints/serve/utils/server_utils.py
++++ b/vllm/entrypoints/serve/utils/server_utils.py
+@@ -24,7 +24,13 @@ from vllm.utils.gc_utils import freeze_gc_heap
+ logger = init_logger("vllm.entrypoints.openai.server_utils")
+ 
+ 
+-GUARDED_PREFIX = ("/v1", "/v2", "/inference", "/cohere")
++# Paths that answer without the API key: the liveness/readiness probes and
++# the load/version endpoints. Everything else on the app -- inference routes,
++# /tokenize (it renders arbitrary text through the chat template), /metrics,
++# the docs -- requires a bearer token, so a route added tomorrow is guarded
++# by default instead of staying open until someone extends a prefix list.
++# Scrapers that cannot carry the key belong on a separate listener, not here.
++UNGUARDED_PATHS = frozenset({"/health", "/ping", "/load", "/version"})
+ 
+ 
+ class AuthenticationMiddleware:
+@@ -36,7 +42,7 @@ class AuthenticationMiddleware:
+     -----
+     There are two cases in which authentication is skipped:
+         1. The HTTP method is OPTIONS.
+-        2. The request path doesn't start with GUARDED_PREFIX (e.g. /health).
++        2. The request path is one of UNGUARDED_PATHS (e.g. /health).
+     """
+ 
+     def __init__(self, app: ASGIApp, tokens: list[str]) -> None:
+@@ -72,7 +78,7 @@ class AuthenticationMiddleware:
+         url_path = scope["path"].removeprefix(root_path)
+         headers = Headers(scope=scope)
+         # Type narrow to satisfy mypy.
+-        if url_path.startswith(GUARDED_PREFIX) and not self.verify_token(headers):
++        if url_path not in UNGUARDED_PATHS and not self.verify_token(headers):
+             response = JSONResponse(content={"error": "Unauthorized"}, status_code=401)
+             return response(scope, receive, send)
+         return self.app(scope, receive, send)
+-- 
+2.39.5
+

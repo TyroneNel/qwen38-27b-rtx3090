@@ -1,0 +1,40 @@
+From 1c5d4906dafee7a7bacdff3f5e7ac27adae3a6bd Mon Sep 17 00:00:00 2001
+From: cline <cline@users.noreply.github.com>
+Date: Mon, 21 Sep 2026 21:15:07 +0000
+Subject: [PATCH 2/5] [qwen38] serve-404-served-names
+
+The model-not-found 404 now lists the served names.
+
+"The model `X` does not exist." sends the reader to the server log to find
+out what WOULD have been accepted. /v1/models already knows; the 404 body
+now carries the same list, so a misnamed model becomes a one-read response
+body instead of an incident:
+
+    The model `X` does not exist. Served models: qwen3.8-27b.
+---
+ vllm/entrypoints/serve/engine/serving.py | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/vllm/entrypoints/serve/engine/serving.py b/vllm/entrypoints/serve/engine/serving.py
+index a31e47d..ada47d6 100644
+--- a/vllm/entrypoints/serve/engine/serving.py
++++ b/vllm/entrypoints/serve/engine/serving.py
+@@ -60,8 +60,14 @@ class BaseServing:
+             ):
+                 error_response = load_result
+ 
++        served_names = ", ".join(
++            model.name for model in self.models.base_model_paths
++        )
+         return error_response or self.create_error_response(
+-            message=f"The model `{request.model}` does not exist.",
++            message=(
++                f"The model `{request.model}` does not exist. "
++                f"Served models: {served_names}."
++            ),
+             err_type="NotFoundError",
+             status_code=HTTPStatus.NOT_FOUND,
+             param="model",
+-- 
+2.39.5
+

@@ -1,0 +1,115 @@
+From 813321bc8ed99cbadb98947c073714b1e641282e Mon Sep 17 00:00:00 2001
+From: cline <cline@users.noreply.github.com>
+Date: Mon, 21 Sep 2026 21:14:16 +0000
+Subject: [PATCH 1/5] [qwen38] bench-probe-errors
+
+Name the alignment probe's real failure instead of one wrong message.
+
+`vllm bench serve` re-aligns random/prefix_repetition prompts to the server's
+tokenizer through /tokenize and /detokenize. Every failure of that probe --
+a 404 model check (it posts `--model` verbatim as the request's model, so a
+checkpoint path 404s), a 401 on a keyed server (it sent no Authorization
+header at all), a missing route, a timeout, an unreachable host -- collapsed
+into the same "WARNING: /tokenize unavailable, skipping alignment." line,
+which sends the operator hunting a broken server when the server is fine.
+
+The probe now:
+  - sends the same Authorization the benchmark requests carry (Bearer from
+    OPENAI_API_KEY, unless --header already supplied one);
+  - classifies the first failure: 401 names the key, 404 names both possible
+    causes (no /tokenize route at this base_url, or the model name was
+    rejected -- GET /v1/models lists the names the server serves), connection
+    errors name the host, timeouts say so, and anything else prints the real
+    exception.
+
+Alignment behaviour is unchanged: it still runs only for str prompts, still
+skips on failure rather than failing the run.
+---
+ vllm/benchmarks/serve.py | 36 ++++++++++++++++++++++++++++++++----
+ 1 file changed, 32 insertions(+), 4 deletions(-)
+
+diff --git a/vllm/benchmarks/serve.py b/vllm/benchmarks/serve.py
+index 9b99368..e5de133 100644
+--- a/vllm/benchmarks/serve.py
++++ b/vllm/benchmarks/serve.py
+@@ -76,6 +76,7 @@ async def _align_prompts_to_server_tokenizer(
+     model_id: str,
+     input_requests: list[SampleRequest],
+     ssl_context: ssl.SSLContext | bool | None = None,
++    headers: dict[str, str] | None = None,
+ ) -> list[SampleRequest]:
+     """Re-align prompts if local/server tokenizers disagree."""
+     if not input_requests or not isinstance(input_requests[0].prompt, str):
+@@ -83,6 +84,11 @@ async def _align_prompts_to_server_tokenizer(
+ 
+     tok_url = f"{base_url}/tokenize"
+     detok_url = f"{base_url}/detokenize"
++    # The benchmark requests carry the key from OPENAI_API_KEY; this probe
++    # must too, or a server bound with --api-key rejects it with a 401.
++    probe_headers = dict(headers or {})
++    if api_key := os.environ.get("OPENAI_API_KEY"):
++        probe_headers.setdefault("Authorization", f"Bearer {api_key}")
+     connector = aiohttp.TCPConnector(ssl=ssl_context)
+ 
+     async with aiohttp.ClientSession(connector=connector) as session:
+@@ -98,6 +104,7 @@ async def _align_prompts_to_server_tokenizer(
+                         "prompt": prompt,
+                         "add_special_tokens": False,
+                     },
++                    headers=probe_headers,
+                 ) as r,
+             ):
+                 r.raise_for_status()
+@@ -107,7 +114,9 @@ async def _align_prompts_to_server_tokenizer(
+             async with (
+                 sem,
+                 session.post(
+-                    detok_url, json={"model": model_id, "tokens": tokens}
++                    detok_url,
++                    json={"model": model_id, "tokens": tokens},
++                    headers=probe_headers,
+                 ) as r,
+             ):
+                 r.raise_for_status()
+@@ -115,8 +124,27 @@ async def _align_prompts_to_server_tokenizer(
+ 
+         try:
+             first_tokens = await _tokenize(input_requests[0].prompt)
+-        except Exception:
+-            print("WARNING: /tokenize unavailable, skipping alignment.")
++        except asyncio.TimeoutError:
++            print("WARNING: /tokenize probe timed out, skipping alignment.")
++            return input_requests
++        except aiohttp.ClientConnectionError as e:
++            print(f"WARNING: {base_url} unreachable ({e!r}), skipping alignment.")
++            return input_requests
++        except aiohttp.ClientResponseError as e:
++            if e.status == 401:
++                hint = "401 Unauthorized: the server requires an API key"
++            elif e.status == 404:
++                hint = (
++                    "404 Not Found: either this server has no /tokenize route,"
++                    f" or it does not serve a model named `{model_id}`"
++                    " (its served names are listed by GET /v1/models)"
++                )
++            else:
++                hint = f"HTTP {e.status}"
++            print(f"WARNING: /tokenize unavailable ({hint}), skipping alignment.")
++            return input_requests
++        except Exception as e:
++            print(f"WARNING: /tokenize probe failed ({e!r}), skipping alignment.")
+             return input_requests
+ 
+         expected = input_requests[0].prompt_len
+@@ -2124,7 +2152,7 @@ async def main_async(args: argparse.Namespace) -> dict[str, Any]:
+ 
+     if args.dataset_name in ("random", "prefix_repetition"):
+         input_requests = await _align_prompts_to_server_tokenizer(
+-            base_url, model_id, input_requests, ssl_context
++            base_url, model_id, input_requests, ssl_context, headers=headers
+         )
+ 
+     goodput_config_dict = check_goodput_args(args)
+-- 
+2.39.5
+
