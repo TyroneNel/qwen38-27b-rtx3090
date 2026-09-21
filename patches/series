@@ -52,3 +52,4 @@ sse-keep-alive.patch
 int4-mq3d-envs.patch
 triton-spec-attn-fp8-kv.patch
 bench-probe-errors.patch
+serve-404-served-names.patch
