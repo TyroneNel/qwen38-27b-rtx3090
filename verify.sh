@@ -233,6 +233,13 @@ echo "== keys / units"
 [ -s api_key.txt ] || [ -n "${VLLM_API_KEY:-}" ] && ok "API key configured (api_key.txt or VLLM_API_KEY)" \
   || warn "no API key — the server will accept any request, and it listens on 0.0.0.0. Fine behind a firewall; otherwise: openssl rand -hex 24 > api_key.txt"
 if [ -f /.dockerenv ]; then :; elif systemctl --user is-active qwen-serving >/dev/null 2>&1; then ok "systemd user unit qwen-serving active"; else warn "qwen-serving unit not active (fine if you launch the scripts by hand)"; fi
+# VLLM_SKIP_MODEL_NAME_VALIDATION looks like a fix for model-name 404s, but it
+# disables the check on every endpoint (/v1/chat/completions included): a
+# typo'd name then silently serves the wrong checkpoint. Benchmark provenance
+# depends on it staying unset.
+[ -n "${VLLM_SKIP_MODEL_NAME_VALIDATION:-}" ] \
+  && fail "VLLM_SKIP_MODEL_NAME_VALIDATION is set — unset it" \
+  || ok "model-name validation on (VLLM_SKIP_MODEL_NAME_VALIDATION unset)"
 fi  # INSTALL
 
 if [ $NOSRV = 0 ]; then
@@ -244,6 +251,63 @@ if [ $NOSRV = 0 ]; then
     R=$(curl -s http://127.0.0.1:$PORT/v1/chat/completions -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
         -d '{"model":"qwen3.8-27b","messages":[{"role":"user","content":"Hvad er hovedstaden i Danmark? Svar med ét ord."}],"max_tokens":8,"temperature":0,"chat_template_kwargs":{"enable_thinking":false}}')
     echo "$R" | grep -qi "københavn\|copenhagen" && ok "chat completion answers ('$(echo "$R" | $PY -c 'import json,sys; print(json.load(sys.stdin)["choices"][0]["message"]["content"].strip())' 2>/dev/null)')" || fail "chat completion wrong/failed: $(echo "$R" | head -c 200)"
+    # /tokenize contract — the endpoint exists to prove the client's and the
+    # server's tokenizers agree, and nothing asserted it. These rows catch
+    # gotcha 32 (an empty-vocab dir encodes everything to []) and chat-template
+    # drift at the HTTP boundary the bench client's alignment probe uses. The
+    # 404-names / keyless-401 / /v1 rows go green once the serving patches
+    # (serve-404-served-names, auth-deny-default, tokenize-v1-route) are in the
+    # installed tree and the server is rebuilt; until then they state the
+    # contract this repo expects.
+    TOKP="Hvad er hovedstaden i Danmark? Svar med ét ord."
+    ids_of() { # url json-body -> token ids, one row
+      curl -s "$1" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$2" \
+        | $PY -c 'import json,sys
+print(",".join(map(str, json.load(sys.stdin).get("tokens", ()))))' 2>/dev/null; }
+    TOK_LOC=$($PY - "$MODEL" <<'EOF'
+import sys
+from transformers import AutoTokenizer
+tok = AutoTokenizer.from_pretrained(sys.argv[1])
+print(",".join(map(str, tok.encode(sys.argv[2], add_special_tokens=False))))
+EOF
+)
+    TOK_CHAT_LOC=$($PY - "$MODEL" <<'EOF'
+import sys
+from transformers import AutoTokenizer
+tok = AutoTokenizer.from_pretrained(sys.argv[1])
+ids = tok.apply_chat_template(
+    [{"role": "user", "content": sys.argv[2]}],
+    add_generation_prompt=True, enable_thinking=False)
+print(",".join(map(str, ids)))
+EOF
+)
+    TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
+    [ -n "$TOK_LOC" ] && [ "$TOK_S" = "$TOK_LOC" ] \
+      && ok "/tokenize with the served id returns the checkpoint tokenizer's ids" \
+      || fail "/tokenize disagrees with the checkpoint tokenizer (server='$TOK_S' local='$TOK_LOC')"
+    TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
+    [ "$TOK_S" = "$TOK_LOC" ] \
+      && ok "/tokenize with the model omitted returns the same ids" \
+      || fail "/tokenize model-omitted disagrees ('$TOK_S' vs '$TOK_LOC')"
+    TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"model\":\"qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"$TOKP\"}],\"chat_template_kwargs\":{\"enable_thinking\":false}}")
+    [ -n "$TOK_CHAT_LOC" ] && [ "$TOK_S" = "$TOK_CHAT_LOC" ] \
+      && ok "/tokenize chat form (enable_thinking:false) matches apply_chat_template" \
+      || fail "/tokenize chat form disagrees (server='$TOK_S' template='$TOK_CHAT_LOC')"
+    TOK_R=$(curl -s -w '\n%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"model":"not-a-served-model","prompt":"x"}')
+    TOK_CODE=${TOK_R##*$'\n'}; TOK_BODY=${TOK_R%$'\n'*}
+    [ "$TOK_CODE" = 404 ] && printf '%s' "$TOK_BODY" | grep -q "Served models" \
+      && ok "unknown model name -> 404 whose body lists the served names" \
+      || fail "unknown model name -> $TOK_CODE, body lists nothing usable: $(printf '%s' "$TOK_BODY" | head -c 120)"
+    if [ -n "$KEY" ]; then
+      TOK_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Content-Type: application/json" -d "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
+      [ "$TOK_CODE" = 401 ] \
+        && ok "keyless /tokenize -> 401" \
+        || fail "keyless /tokenize -> $TOK_CODE (expected 401: it renders arbitrary text through the chat template)"
+    else warn "no API key configured — the keyless-401 row cannot run"; fi
+    TOK_S=$(ids_of "http://127.0.0.1:$PORT/v1/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
+    [ "$TOK_S" = "$TOK_LOC" ] \
+      && ok "/v1/tokenize answers with the same ids (OpenAI-SDK base_url .../v1)" \
+      || fail "/v1/tokenize unavailable or disagrees ('$TOK_S')"
     LOG=$HERE/qwen.log
     if [ -f "$LOG" ]; then
       grep -oE "Using [A-Z_]+ attention backend" "$LOG" | tail -1 | sed 's/^/  INFO  /'
