@@ -254,11 +254,19 @@ if [ $NOSRV = 0 ]; then
     # /tokenize contract — the endpoint exists to prove the client's and the
     # server's tokenizers agree, and nothing asserted it. These rows catch
     # gotcha 32 (an empty-vocab dir encodes everything to []) and chat-template
-    # drift at the HTTP boundary the bench client's alignment probe uses. The
-    # 404-names / keyless-401 / /v1 rows go green once the serving patches
-    # (serve-404-served-names, auth-deny-default, tokenize-v1-route) are in the
-    # installed tree and the server is rebuilt; until then they state the
-    # contract this repo expects.
+    # drift at the HTTP boundary the bench client's alignment probe uses.
+    #
+    # The 404-names / keyless-401 / /v1 rows describe behaviour three serving
+    # patches add, so they are graded against the installed tree instead of
+    # asserted unconditionally: FAIL once the patch is in $SP (the contract is
+    # real and the server breaks it), WARN while it is not (nothing is wrong
+    # with this install — the image predates the patch). Without the gate every
+    # live box reads red between merging the patches and rebuilding the image,
+    # which is how a verify script stops being believed.
+    graded() { # patch file-under-$SP marker message — FAIL if installed, else WARN
+      if grep -q "$3" "$SP/$2" 2>/dev/null; then fail "$4"
+      else warn "$4 [pending: $1 is not in $SP — rebuild the image]"; fi
+    }
     TOKP="Hvad er hovedstaden i Danmark? Svar med ét ord."
     ids_of() { # url json-body -> token ids, one row
       curl -s "$1" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$2" \
@@ -304,17 +312,20 @@ EOF
     TOK_CODE=${TOK_R##*$'\n'}; TOK_BODY=${TOK_R%$'\n'*}
     [ "$TOK_CODE" = 404 ] && printf '%s' "$TOK_BODY" | grep -q "Served models" \
       && ok "unknown model name -> 404 whose body lists the served names" \
-      || fail "unknown model name -> $TOK_CODE, body lists nothing usable: $(printf '%s' "$TOK_BODY" | head -c 120)"
+      || graded serve-404-served-names entrypoints/serve/engine/serving.py "Served models:" \
+           "unknown model name -> $TOK_CODE, body lists nothing usable: $(printf '%s' "$TOK_BODY" | head -c 120)"
     if [ -n "$KEY" ]; then
       TOK_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Content-Type: application/json" -d "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
       [ "$TOK_CODE" = 401 ] \
         && ok "keyless /tokenize -> 401" \
-        || fail "keyless /tokenize -> $TOK_CODE (expected 401: it renders arbitrary text through the chat template)"
+        || graded auth-deny-default entrypoints/serve/utils/server_utils.py "UNGUARDED_PATHS" \
+             "keyless /tokenize -> $TOK_CODE (expected 401: it renders arbitrary text through the chat template)"
     else warn "no API key configured — the keyless-401 row cannot run"; fi
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/v1/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
     [ -n "$TOK_S" ] && [ "$TOK_S" = "$TOK_LOC" ] \
       && ok "/v1/tokenize answers with the same ids (OpenAI-SDK base_url .../v1)" \
-      || fail "/v1/tokenize unavailable or disagrees ('$TOK_S')"
+      || graded tokenize-v1-route entrypoints/serve/tokenize/api_router.py 'prefix="/v1"' \
+           "/v1/tokenize unavailable or disagrees ('$TOK_S')"
     LOG=$HERE/qwen.log
     if [ -f "$LOG" ]; then
       grep -oE "Using [A-Z_]+ attention backend" "$LOG" | tail -1 | sed 's/^/  INFO  /'
