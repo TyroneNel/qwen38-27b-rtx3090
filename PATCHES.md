@@ -45,6 +45,7 @@ build by name instead of landing by guess. Regenerate a file with `bash scripts/
 | qwen3_5-embed-quant | fix | pass `quant_config` to the token embedding (main model and MTP module) | none yet | 0.28.0 | upstream PR |
 | qwen3_5-mtp-draft-vocab | feature | vocab-truncated draft head for MTP | none | 0.28.0 | upstreamed |
 | sampler-small-topk-fast-softmax | feature | sort-free top-k/top-p for small k, multi-block row softmax; registers `VLLM_DRAFT_TOPK_TOPP` and `VLLM_DRAFT_TEMP_SCALE` (both read once at import) | none | 0.28.0 | upstreamed or superseded |
+| serve-404-served-names | fix | the model-not-found 404 lists the served names (`Served models: ...`) so a misnamed model is a one-read response body | none yet | 0.28.0 | upstream PR |
 | spec-decode-attn | feature | split-KV verify attention on FLASH_ATTN with query-row tiling; registers `VLLM_SPEC_DECODE_ATTN`, `VLLM_SPEC_DECODE_ATTN_QMAX`, `VLLM_SPEC_ATTN_BLOCK_M` (#114) | none | 0.28.0 | upstreamed |
 | spec-decode-int4-kv-mq3d | feature | multi-query 3D int4 verify path | none | 0.28.0 | rides with int4-kv-per-token-head |
 | spec-decode-int8-kv | feature | split-KV verify attention over an int8 per-token-head cache | none | 0.28.0 | rides with spec-decode-attn |
