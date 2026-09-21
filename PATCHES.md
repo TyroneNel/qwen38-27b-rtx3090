@@ -19,7 +19,7 @@ build by name instead of landing by guess. Regenerate a file with `bash scripts/
 
 | patch | kind | what | upstream | cut against | retires when |
 |---|---|---|---|---|---|
-| bench-probe-errors | fix | `vllm bench serve`'s /tokenize alignment probe sends the API key (Bearer from OPENAI_API_KEY, --header wins) and classifies its failure (404 route-or-name vs 401 vs unreachable vs timeout) instead of one "endpoint unavailable" line for every cause | none yet | 0.28.0 | upstream PR |
+| bench-probe-errors | fix | `vllm bench serve`'s /tokenize alignment probe sends the API key (Bearer from OPENAI_API_KEY, --header wins) and classifies its failure (404 route-or-name vs 401 vs unreachable vs timeout) instead of one "endpoint unavailable" line for every cause | vllm #58024 | 0.28.0 | upstream PR |
 | dflash2-backport | backport, RETIRED | DFlash2 speculator on 0.27.1 | vllm #52816 (in 0.28.0) | 0.27.1 | done; kept for history, skipped by the Dockerfile |
 | dflash2-lookup-drafting | feature | lookup-augmented drafting for DFlash2 (n-gram search over the context); registers its `VLLM_DFLASH2_LOOKUP*`, `VLLM_DFLASH2_GRAPH_BOTH`, `VLLM_DFLASH2_DRAFT_TOPK_TOPP` knobs | none | 0.28.0 | upstreamed |
 | dflash2-ngram-chains | feature | quantized candidate chains for the drafter; `propose` override; registers `VLLM_DFLASH2_CHAIN*` | none | 0.28.0 | upstreamed |
