@@ -51,4 +51,8 @@ engine-stall-sentinel.patch
 sse-keep-alive.patch
 int4-mq3d-envs.patch
 triton-spec-attn-fp8-kv.patch
+<<<<<<< HEAD
 bench-probe-errors.patch
+=======
+serve-404-served-names.patch
+>>>>>>> 48e63ae (patches: serve-404-served-names — the model-not-found 404 lists the served names)
