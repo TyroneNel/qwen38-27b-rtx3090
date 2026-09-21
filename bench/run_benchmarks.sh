@@ -27,7 +27,12 @@ export PATH="$REPO/venv/bin:$PATH"
 export OPENAI_API_KEY=${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}
 HOST=${HOST:-127.0.0.1}; PORT=${PORT:-18020}
 MODEL=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}
-B="venv/bin/vllm bench serve --host $HOST --port $PORT --model $MODEL --served-model-name qwen3.8-27b"
+# --model must be the SERVED name, not the checkpoint path: vllm bench serve's
+# tokenizer-alignment probe posts it to /tokenize as the request's model, and a
+# filesystem path 404s the model check there — the run then logs "WARNING:
+# /tokenize unavailable" and silently skips alignment. --tokenizer keeps
+# loading the tokenizer from the checkpoint dir, which is what the path is for.
+B="venv/bin/vllm bench serve --host $HOST --port $PORT --model qwen3.8-27b --tokenizer $MODEL --served-model-name qwen3.8-27b"
 # F05: immutable per-run directory + manifest. OUT may be overridden, but the
 # default is a fresh timestamped dir so runs never overwrite each other.
 OUT=${OUT:-$HERE/results/run-$(date +%Y%m%d-%H%M%S)}; mkdir -p "$OUT"
