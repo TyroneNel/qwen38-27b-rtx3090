@@ -56,6 +56,7 @@ build by name instead of landing by guess. Regenerate a file with `bash scripts/
 | spec-sampler-prewarm | fix | compile the rejection sampler's Triton kernels at boot (fork #48) | none yet | 0.28.0 | upstream PR |
 | speed-knobs-envs | local | registers `VLLM_MARLIN_TUNE` and `VLLM_MARLIN_TUNE_DIR` for marlin-tune-table (the other knobs it used to register now live in the patches that read them) | none | 0.28.0 | stays while marlin-tune-table does |
 | sse-keep-alive | backport | SSE keep-alive comments on idle streaming responses so a proxy's idle timer does not drop a long prefill (#85, #115) | vllm #51034 | 0.28.0 | the pin that carries #51034 |
+| tokenize-v1-route | feature | /tokenize and /detokenize also served under /v1 for OpenAI-SDK base_urls; operation ids stay unique (name+path+method) | none yet | 0.28.0 | upstream PR |
 | triton-spec-attn-fp8-kv | feature | split-KV verify attention on the per-tensor fp8 KV cache (TRITON_ATTN, sm89+); registers `VLLM_SPEC_ATTN_DEBUG` (#90) | none | 0.28.0 | upstreamed |
 | vision-tower-cpu-offload | local | Qwen3 vision tower bulk weights in host RAM; registers `VLLM_VISION_CPU_OFFLOAD_GB` | none | 0.28.0 | stays |
 | vllm-pr50021-gdn-spec-bounds | backport | bounds checks in GDN/KDA spec-decode state lookups | vllm #50021 (open) | 0.28.0 | the pin that carries #50021 |

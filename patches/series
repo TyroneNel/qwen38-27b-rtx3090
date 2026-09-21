@@ -54,3 +54,4 @@ triton-spec-attn-fp8-kv.patch
 bench-probe-errors.patch
 serve-404-served-names.patch
 serve-model-path-match.patch
+tokenize-v1-route.patch
