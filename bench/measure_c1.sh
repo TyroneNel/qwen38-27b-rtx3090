@@ -21,7 +21,10 @@ export PATH="$REPO/venv/bin:$PATH"
 export OPENAI_API_KEY=${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}
 PORT=${PORT:-18020}
 MODEL=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}
-B="venv/bin/vllm bench serve --host 127.0.0.1 --port $PORT --model $MODEL --served-model-name qwen3.8-27b"
+# --model is the served name (the bench client's /tokenize alignment probe
+# posts it as the request's model; a checkpoint path 404s there); the
+# checkpoint dir rides --tokenizer, which is what actually reads it.
+B="venv/bin/vllm bench serve --host 127.0.0.1 --port $PORT --model qwen3.8-27b --tokenizer $MODEL --served-model-name qwen3.8-27b"
 T=${T:-}
 [ -n "$T" ] && TA="--temperature $T" || TA=""
 
