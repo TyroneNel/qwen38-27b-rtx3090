@@ -1,4 +1,5 @@
-Name the alignment probe's real failure instead of one wrong message.
+Name the alignment probe's real failure instead of one wrong message, and
+send the key on the metrics scrapes too.
 
 `vllm bench serve` re-aligns random/prefix_repetition prompts to the server's
 tokenizer through /tokenize and /detokenize. Every failure of that probe --
@@ -17,16 +18,28 @@ The probe now:
     errors name the host, timeouts say so, and anything else prints the real
     exception.
 
+`fetch_spec_decode_metrics` and `fetch_diffusion_metrics` had the same
+omission with a quieter symptom: both GET /metrics with no headers, and both
+return None on any non-200. Against a server bound with --api-key that 401 is
+indistinguishable from "speculative decoding is off", so the benchmark's
+spec-decode block -- acceptance length, accepted/drafted counts, per-position
+acceptance -- silently disappears from every run on a keyed server, and the
+operator reads acceptance out of the engine log instead. Both fetchers now
+take the headers the benchmark already built and pass them to the GET; the
+four call sites in `benchmark()` hand over `extra_headers`, which is the same
+dict the request path uses. Behaviour against an unkeyed server, and the
+None-on-missing-metrics contract, are unchanged.
+
 Alignment behaviour is unchanged: it still runs only for str prompts, still
 skips on failure rather than failing the run.
 
 --- exported from cpuchip/vllm 813321b (bench-probe-errors); regenerate with scripts/export-patch.sh, do not edit ---
 
 diff --git a/benchmarks/serve.py b/benchmarks/serve.py
-index 9b99368..e5de133 100644
+index 9b99368..f284f4a 100644
 --- a/benchmarks/serve.py
 +++ b/benchmarks/serve.py
-@@ -76,6 +76,7 @@
+@@ -76,6 +76,7 @@ async def _align_prompts_to_server_tokenizer(
      model_id: str,
      input_requests: list[SampleRequest],
      ssl_context: ssl.SSLContext | bool | None = None,
@@ -34,7 +47,7 @@ index 9b99368..e5de133 100644
  ) -> list[SampleRequest]:
      """Re-align prompts if local/server tokenizers disagree."""
      if not input_requests or not isinstance(input_requests[0].prompt, str):
-@@ -83,6 +84,11 @@
+@@ -83,6 +84,11 @@ async def _align_prompts_to_server_tokenizer(
  
      tok_url = f"{base_url}/tokenize"
      detok_url = f"{base_url}/detokenize"
@@ -46,7 +59,7 @@ index 9b99368..e5de133 100644
      connector = aiohttp.TCPConnector(ssl=ssl_context)
  
      async with aiohttp.ClientSession(connector=connector) as session:
-@@ -98,6 +104,7 @@
+@@ -98,6 +104,7 @@ async def _align_prompts_to_server_tokenizer(
                          "prompt": prompt,
                          "add_special_tokens": False,
                      },
@@ -54,7 +67,7 @@ index 9b99368..e5de133 100644
                  ) as r,
              ):
                  r.raise_for_status()
-@@ -107,7 +114,9 @@
+@@ -107,7 +114,9 @@ async def _align_prompts_to_server_tokenizer(
              async with (
                  sem,
                  session.post(
@@ -65,7 +78,7 @@ index 9b99368..e5de133 100644
                  ) as r,
              ):
                  r.raise_for_status()
-@@ -115,8 +124,27 @@
+@@ -115,8 +124,27 @@ async def _align_prompts_to_server_tokenizer(
  
          try:
              first_tokens = await _tokenize(input_requests[0].prompt)
@@ -95,7 +108,84 @@ index 9b99368..e5de133 100644
              return input_requests
  
          expected = input_requests[0].prompt_len
-@@ -2124,7 +2152,7 @@
+@@ -187,7 +215,9 @@ class SpecDecodeMetrics:
+ 
+ 
+ async def fetch_spec_decode_metrics(
+-    base_url: str, session: aiohttp.ClientSession
++    base_url: str,
++    session: aiohttp.ClientSession,
++    headers: dict[str, str] | None = None,
+ ) -> SpecDecodeMetrics | None:
+     """Fetch speculative decoding metrics from the server's Prometheus endpoint.
+ 
+@@ -195,7 +225,7 @@ async def fetch_spec_decode_metrics(
+     """
+     metrics_url = f"{base_url}/metrics"
+     try:
+-        async with session.get(metrics_url) as response:
++        async with session.get(metrics_url, headers=headers) as response:
+             if response.status != 200:
+                 return None
+             text = await response.text()
+@@ -260,7 +290,9 @@ class DiffusionMetrics:
+ 
+ 
+ async def fetch_diffusion_metrics(
+-    base_url: str, session: aiohttp.ClientSession
++    base_url: str,
++    session: aiohttp.ClientSession,
++    headers: dict[str, str] | None = None,
+ ) -> DiffusionMetrics | None:
+     """Fetch diffusion decoding metrics from the server's Prometheus endpoint.
+ 
+@@ -269,7 +301,7 @@ async def fetch_diffusion_metrics(
+     """
+     metrics_url = f"{base_url}/metrics"
+     try:
+-        async with session.get(metrics_url) as response:
++        async with session.get(metrics_url, headers=headers) as response:
+             if response.status != 200:
+                 return None
+             text = await response.text()
+@@ -955,8 +987,12 @@ async def benchmark(
+     else:
+         print("Self timing is set, using the timestamps from the trace file.")
+ 
+-    spec_decode_metrics_before = await fetch_spec_decode_metrics(base_url, session)
+-    diffusion_metrics_before = await fetch_diffusion_metrics(base_url, session)
++    spec_decode_metrics_before = await fetch_spec_decode_metrics(
++        base_url, session, headers=extra_headers
++    )
++    diffusion_metrics_before = await fetch_diffusion_metrics(
++        base_url, session, headers=extra_headers
++    )
+ 
+     pbar = None if disable_tqdm else tqdm(total=len(input_requests))
+ 
+@@ -1076,7 +1112,9 @@ async def benchmark(
+ 
+     benchmark_duration = time.perf_counter() - benchmark_start_time
+ 
+-    spec_decode_metrics_after = await fetch_spec_decode_metrics(base_url, session)
++    spec_decode_metrics_after = await fetch_spec_decode_metrics(
++        base_url, session, headers=extra_headers
++    )
+     spec_decode_stats: dict[str, Any] | None = None
+     if spec_decode_metrics_before is not None and spec_decode_metrics_after is not None:
+         delta_drafts = (
+@@ -1118,7 +1156,9 @@ async def benchmark(
+                 "per_position_acceptance_rates": per_pos_rates,
+             }
+ 
+-    diffusion_metrics_after = await fetch_diffusion_metrics(base_url, session)
++    diffusion_metrics_after = await fetch_diffusion_metrics(
++        base_url, session, headers=extra_headers
++    )
+     diffusion_stats: dict[str, Any] | None = None
+     if diffusion_metrics_before is not None and diffusion_metrics_after is not None:
+         delta_steps = (
+@@ -2124,7 +2164,7 @@ async def main_async(args: argparse.Namespace) -> dict[str, Any]:
  
      if args.dataset_name in ("random", "prefix_repetition"):
          input_requests = await _align_prompts_to_server_tokenizer(
