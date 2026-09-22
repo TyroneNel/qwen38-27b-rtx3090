@@ -11,8 +11,15 @@ export PATH="$REPO/venv/bin:$PATH"
 # One precedence chain for every caller (#113): an explicit OPENAI_API_KEY
 # wins, else the server key, else api_key.txt, else the EMPTY placeholder --
 # never a bare "Bearer " against a server that bound a key.
-source "$REPO/resolve_api_key.sh"
-resolve_client_key
+# Guarded: only bench/ is bind-mounted into the container, and images built
+# before the resolver landed have no /app/resolve_api_key.sh, so a hard source
+# would break every run against an older image.
+if [ -f "$REPO/resolve_api_key.sh" ]; then
+  source "$REPO/resolve_api_key.sh"
+  resolve_client_key
+else
+  export OPENAI_API_KEY=${OPENAI_API_KEY:-${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}}
+fi
 M=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}; TAG=$1; N=${2:-3}; T=${3:-}
 # --model is the served name (the /tokenize alignment probe posts it as the
 # request's model; a checkpoint path 404s there); --tokenizer loads locally.
