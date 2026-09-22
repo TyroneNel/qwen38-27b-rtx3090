@@ -24,7 +24,11 @@ MODE=${1:-batch}; shift || true
 DO_PREFILL=0; DO_LONG=0
 for a in "$@"; do case $a in --prefill) DO_PREFILL=1;; --long) DO_LONG=1;; esac; done
 export PATH="$REPO/venv/bin:$PATH"
-export OPENAI_API_KEY=${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}
+# One precedence chain for every caller (#113): an explicit OPENAI_API_KEY
+# wins, else the server key, else api_key.txt, else the EMPTY placeholder --
+# never a bare "Bearer " against a server that bound a key.
+source "$REPO/resolve_api_key.sh"
+resolve_client_key
 HOST=${HOST:-127.0.0.1}; PORT=${PORT:-18020}
 MODEL=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}
 # --model must be the SERVED name, not the checkpoint path: vllm bench serve's

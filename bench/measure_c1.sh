@@ -18,7 +18,11 @@ RESULT=${1:?usage: measure_c1.sh <result.json>}
 # /e/-style paths, so normalize argv once (identity on Linux).
 command -v cygpath >/dev/null 2>&1 && RESULT=$(cygpath -m "$RESULT")
 export PATH="$REPO/venv/bin:$PATH"
-export OPENAI_API_KEY=${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}
+# One precedence chain for every caller (#113): an explicit OPENAI_API_KEY
+# wins, else the server key, else api_key.txt, else the EMPTY placeholder --
+# never a bare "Bearer " against a server that bound a key.
+source "$REPO/resolve_api_key.sh"
+resolve_client_key
 PORT=${PORT:-18020}
 MODEL=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}
 # --model is the served name (the bench client's /tokenize alignment probe

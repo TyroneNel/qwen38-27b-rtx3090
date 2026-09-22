@@ -8,7 +8,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$(dirname "$HERE")";
 set -u
 : "${1:?usage: bash bench/real_rep.sh <tag> [reps] [temperature]}"
 export PATH="$REPO/venv/bin:$PATH"
-export OPENAI_API_KEY=${VLLM_API_KEY:-$(cat "$REPO/api_key.txt" 2>/dev/null)}
+# One precedence chain for every caller (#113): an explicit OPENAI_API_KEY
+# wins, else the server key, else api_key.txt, else the EMPTY placeholder --
+# never a bare "Bearer " against a server that bound a key.
+source "$REPO/resolve_api_key.sh"
+resolve_client_key
 M=${MODEL:-$REPO/models/Qwen3.8-27B-W4A16-AutoRound}; TAG=$1; N=${2:-3}; T=${3:-}
 # --model is the served name (the /tokenize alignment probe posts it as the
 # request's model; a checkpoint path 404s there); --tokenizer loads locally.
