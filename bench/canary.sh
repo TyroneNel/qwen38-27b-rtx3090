@@ -43,6 +43,14 @@ fi
 REQ=$(printf '{"model":"%s","prompt":"Count slowly and describe each number.","max_tokens":%d,"min_tokens":%d,"temperature":0,"ignore_eos":true,"stream":false}' \
   "$MODEL_NAME" "$NTOK" "$NTOK")
 
+# The first request after a boot pays for CUDA-graph capture and the compile
+# warmup, which reads as ~30 ms TPOT on a server that is in fact healthy --
+# measured against a campaign arm that immediately benched at 118 tok/s. Burn a
+# short one before timing anything.
+WARM=$(printf '{"model":"%s","prompt":"hi","max_tokens":16,"min_tokens":16,"temperature":0,"ignore_eos":true,"stream":false}' "$MODEL_NAME")
+curl -fsS --max-time 120 "${AUTH[@]}" -H 'Content-Type: application/json' \
+  -d "$WARM" "$BASE/v1/completions" >/dev/null 2>&1 || true
+
 START=$(date +%s.%N)
 RESP=$(curl -fsS --max-time 180 "${AUTH[@]}" -H 'Content-Type: application/json' \
   -d "$REQ" "$BASE/v1/completions") || { echo "canary: request failed" >&2; exit 2; }

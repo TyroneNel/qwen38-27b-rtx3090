@@ -16,13 +16,18 @@ prefix list. Prometheus scrapers that cannot carry the key belong on a
 separate listener, not on this allowlist. The --api-key help text now
 describes the allowlist instead of the old prefix limitation.
 
---- exported from cpuchip/vllm 5dc5131 (auth-deny-default); regenerate with scripts/export-patch.sh, do not edit ---
+The allowlist is matched on the path with any trailing slash removed.
+This middleware runs ahead of the router, so /health/ never reaches
+FastAPI's redirect_slashes and an exact-match test would answer a
+liveness probe configured with a trailing slash with 401.
+
+--- exported from cpuchip/vllm de545b9 (auth-deny-default); regenerate with scripts/export-patch.sh, do not edit ---
 
 diff --git a/entrypoints/openai/cli_args.py b/entrypoints/openai/cli_args.py
-index 6372355..646531e 100644
+index b387fb63573a..ed93aca0e496 100644
 --- a/entrypoints/openai/cli_args.py
 +++ b/entrypoints/openai/cli_args.py
-@@ -291,11 +291,11 @@
+@@ -284,11 +284,11 @@
      """If provided, the server will require one of these keys to be presented in
      the header.
  
@@ -40,7 +45,7 @@ index 6372355..646531e 100644
      for what it does and does not protect."""
      ssl_keyfile: str | None = None
 diff --git a/entrypoints/serve/utils/server_utils.py b/entrypoints/serve/utils/server_utils.py
-index 9eba5d3..0f56fbc 100644
+index 9eba5d3a674e..d3052d252c33 100644
 --- a/entrypoints/serve/utils/server_utils.py
 +++ b/entrypoints/serve/utils/server_utils.py
 @@ -24,7 +24,13 @@
@@ -58,21 +63,29 @@ index 9eba5d3..0f56fbc 100644
  
  
  class AuthenticationMiddleware:
-@@ -36,7 +42,7 @@
+@@ -36,7 +42,8 @@
      -----
      There are two cases in which authentication is skipped:
          1. The HTTP method is OPTIONS.
 -        2. The request path doesn't start with GUARDED_PREFIX (e.g. /health).
-+        2. The request path is one of UNGUARDED_PATHS (e.g. /health).
++        2. The request path, ignoring a trailing slash, is one of
++           UNGUARDED_PATHS (e.g. /health).
      """
  
      def __init__(self, app: ASGIApp, tokens: list[str]) -> None:
-@@ -72,7 +78,7 @@
+@@ -70,9 +77,14 @@
+             return self.app(scope, receive, send)
+         root_path = scope.get("root_path", "")
          url_path = scope["path"].removeprefix(root_path)
++        # This middleware runs ahead of the router, so a path that differs from
++        # an allowlisted one only by a trailing slash never reaches FastAPI's
++        # redirect_slashes: match on the normalized path, or a liveness probe
++        # configured as /health/ is answered with 401.
++        probe_path = url_path.rstrip("/") or "/"
          headers = Headers(scope=scope)
          # Type narrow to satisfy mypy.
 -        if url_path.startswith(GUARDED_PREFIX) and not self.verify_token(headers):
-+        if url_path not in UNGUARDED_PATHS and not self.verify_token(headers):
++        if probe_path not in UNGUARDED_PATHS and not self.verify_token(headers):
              response = JSONResponse(content={"error": "Unauthorized"}, status_code=401)
              return response(scope, receive, send)
          return self.app(scope, receive, send)
