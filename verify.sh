@@ -291,10 +291,27 @@ EOF
     [ -n "$TOK_S" ] && [ "$TOK_S" = "$TOK_LOC" ] \
       && ok "/tokenize with the model omitted returns the same ids" \
       || fail "/tokenize model-omitted disagrees ('$TOK_S' vs '$TOK_LOC')"
-    TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"model\":\"qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"$TOKP\"}],\"chat_template_kwargs\":{\"enable_thinking\":false}}")
-    [ -n "$TOK_CHAT_LOC" ] && [ "$TOK_S" = "$TOK_CHAT_LOC" ] \
-      && ok "/tokenize chat form (enable_thinking:false) matches apply_chat_template" \
-      || fail "/tokenize chat form disagrees (server='$TOK_S' template='$TOK_CHAT_LOC')"
+    # The chat form can fail for a reason that is not drift: a checkpoint whose
+    # template raise_exception()s on a kwarg it does not know answers 400
+    # (gotcha 58) and raises locally too, and docs/third-party-checkpoints.md
+    # lists several checkpoints with their own templates. "This checkpoint's
+    # template rejected the request" is a different finding from "the two
+    # tokenizers disagree", and only the second one should stop a boot — so the
+    # first warns with the body instead of failing.
+    TOK_R=$(curl -s -w '\n%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+      -d "{\"model\":\"qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"$TOKP\"}],\"chat_template_kwargs\":{\"enable_thinking\":false}}")
+    TOK_CODE=${TOK_R##*$'\n'}; TOK_BODY=${TOK_R%$'\n'*}
+    TOK_S=$(printf '%s' "$TOK_BODY" | $PY -c 'import json,sys
+print(",".join(map(str, json.load(sys.stdin).get("tokens", ()))))' 2>/dev/null)
+    if [ "$TOK_CODE" = 400 ]; then
+      warn "/tokenize chat form: this checkpoint's chat template rejected the request (400), which is not tokenizer drift: $(printf '%s' "$TOK_BODY" | head -c 200)"
+    elif [ -z "$TOK_CHAT_LOC" ]; then
+      warn "/tokenize chat form: apply_chat_template raised locally for this checkpoint, so there is nothing to compare the server against (server='$TOK_S')"
+    elif [ "$TOK_S" = "$TOK_CHAT_LOC" ]; then
+      ok "/tokenize chat form (enable_thinking:false) matches apply_chat_template"
+    else
+      fail "/tokenize chat form disagrees (server='$TOK_S' template='$TOK_CHAT_LOC')"
+    fi
     TOK_R=$(curl -s -w '\n%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"model":"not-a-served-model","prompt":"x"}')
     TOK_CODE=${TOK_R##*$'\n'}; TOK_BODY=${TOK_R%$'\n'*}
     [ "$TOK_CODE" = 404 ] && printf '%s' "$TOK_BODY" | grep -q "Served models" \
