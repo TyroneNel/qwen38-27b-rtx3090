@@ -25,10 +25,12 @@ indistinguishable from "speculative decoding is off", so the benchmark's
 spec-decode block -- acceptance length, accepted/drafted counts, per-position
 acceptance -- silently disappears from every run on a keyed server, and the
 operator reads acceptance out of the engine log instead. Both fetchers now
-take the headers the benchmark already built and pass them to the GET; the
-four call sites in `benchmark()` hand over `extra_headers`, which is the same
-dict the request path uses. Behaviour against an unkeyed server, and the
-None-on-missing-metrics contract, are unchanged.
+build their own scrape headers the way the probe does: start from whatever
+the caller passed, then add the Bearer from OPENAI_API_KEY unless one is
+already set. Threading `extra_headers` down to them is not enough on its own
+-- that dict only ever carries `--header` pairs, so on a keyed server with no
+`--header` it is empty and every scrape still 401s. Behaviour against an
+unkeyed server, and the None-on-missing-metrics contract, are unchanged.
 
 Alignment behaviour is unchanged: it still runs only for str prompts, still
 skips on failure rather than failing the run.
@@ -39,7 +41,7 @@ diff --git a/benchmarks/serve.py b/benchmarks/serve.py
 index 9b99368..f284f4a 100644
 --- a/benchmarks/serve.py
 +++ b/benchmarks/serve.py
-@@ -76,6 +76,7 @@ async def _align_prompts_to_server_tokenizer(
+@@ -76,6 +76,7 @@
      model_id: str,
      input_requests: list[SampleRequest],
      ssl_context: ssl.SSLContext | bool | None = None,
@@ -47,7 +49,7 @@ index 9b99368..f284f4a 100644
  ) -> list[SampleRequest]:
      """Re-align prompts if local/server tokenizers disagree."""
      if not input_requests or not isinstance(input_requests[0].prompt, str):
-@@ -83,6 +84,11 @@ async def _align_prompts_to_server_tokenizer(
+@@ -83,6 +84,11 @@
  
      tok_url = f"{base_url}/tokenize"
      detok_url = f"{base_url}/detokenize"
@@ -59,7 +61,7 @@ index 9b99368..f284f4a 100644
      connector = aiohttp.TCPConnector(ssl=ssl_context)
  
      async with aiohttp.ClientSession(connector=connector) as session:
-@@ -98,6 +104,7 @@ async def _align_prompts_to_server_tokenizer(
+@@ -98,6 +104,7 @@
                          "prompt": prompt,
                          "add_special_tokens": False,
                      },
@@ -67,7 +69,7 @@ index 9b99368..f284f4a 100644
                  ) as r,
              ):
                  r.raise_for_status()
-@@ -107,7 +114,9 @@ async def _align_prompts_to_server_tokenizer(
+@@ -107,7 +114,9 @@
              async with (
                  sem,
                  session.post(
@@ -78,7 +80,7 @@ index 9b99368..f284f4a 100644
                  ) as r,
              ):
                  r.raise_for_status()
-@@ -115,8 +124,27 @@ async def _align_prompts_to_server_tokenizer(
+@@ -115,8 +124,27 @@
  
          try:
              first_tokens = await _tokenize(input_requests[0].prompt)
@@ -108,7 +110,7 @@ index 9b99368..f284f4a 100644
              return input_requests
  
          expected = input_requests[0].prompt_len
-@@ -187,7 +215,9 @@ class SpecDecodeMetrics:
+@@ -187,15 +215,23 @@
  
  
  async def fetch_spec_decode_metrics(
@@ -119,16 +121,22 @@ index 9b99368..f284f4a 100644
  ) -> SpecDecodeMetrics | None:
      """Fetch speculative decoding metrics from the server's Prometheus endpoint.
  
-@@ -195,7 +225,7 @@ async def fetch_spec_decode_metrics(
+     Returns None if speculative decoding is not enabled or metrics are not available.
      """
      metrics_url = f"{base_url}/metrics"
++    # Same requirement as the /tokenize probe above: a server bound with
++    # --api-key rejects an unauthenticated scrape, and the caller's
++    # extra_headers only carries --header pairs, never the key.
++    scrape_headers = dict(headers or {})
++    if api_key := os.environ.get("OPENAI_API_KEY"):
++        scrape_headers.setdefault("Authorization", f"Bearer {api_key}")
      try:
 -        async with session.get(metrics_url) as response:
-+        async with session.get(metrics_url, headers=headers) as response:
++        async with session.get(metrics_url, headers=scrape_headers) as response:
              if response.status != 200:
                  return None
              text = await response.text()
-@@ -260,7 +290,9 @@ class DiffusionMetrics:
+@@ -260,7 +296,9 @@
  
  
  async def fetch_diffusion_metrics(
@@ -139,16 +147,23 @@ index 9b99368..f284f4a 100644
  ) -> DiffusionMetrics | None:
      """Fetch diffusion decoding metrics from the server's Prometheus endpoint.
  
-@@ -269,7 +301,7 @@ async def fetch_diffusion_metrics(
+@@ -268,8 +306,14 @@
+     available.
      """
      metrics_url = f"{base_url}/metrics"
++    # Same requirement as the /tokenize probe above: a server bound with
++    # --api-key rejects an unauthenticated scrape, and the caller's
++    # extra_headers only carries --header pairs, never the key.
++    scrape_headers = dict(headers or {})
++    if api_key := os.environ.get("OPENAI_API_KEY"):
++        scrape_headers.setdefault("Authorization", f"Bearer {api_key}")
      try:
 -        async with session.get(metrics_url) as response:
-+        async with session.get(metrics_url, headers=headers) as response:
++        async with session.get(metrics_url, headers=scrape_headers) as response:
              if response.status != 200:
                  return None
              text = await response.text()
-@@ -955,8 +987,12 @@ async def benchmark(
+@@ -955,8 +999,12 @@
      else:
          print("Self timing is set, using the timestamps from the trace file.")
  
@@ -163,7 +178,7 @@ index 9b99368..f284f4a 100644
  
      pbar = None if disable_tqdm else tqdm(total=len(input_requests))
  
-@@ -1076,7 +1112,9 @@ async def benchmark(
+@@ -1076,7 +1124,9 @@
  
      benchmark_duration = time.perf_counter() - benchmark_start_time
  
@@ -174,7 +189,7 @@ index 9b99368..f284f4a 100644
      spec_decode_stats: dict[str, Any] | None = None
      if spec_decode_metrics_before is not None and spec_decode_metrics_after is not None:
          delta_drafts = (
-@@ -1118,7 +1156,9 @@ async def benchmark(
+@@ -1118,7 +1168,9 @@
                  "per_position_acceptance_rates": per_pos_rates,
              }
  
@@ -185,7 +200,7 @@ index 9b99368..f284f4a 100644
      diffusion_stats: dict[str, Any] | None = None
      if diffusion_metrics_before is not None and diffusion_metrics_after is not None:
          delta_steps = (
-@@ -2124,7 +2164,7 @@ async def main_async(args: argparse.Namespace) -> dict[str, Any]:
+@@ -2124,7 +2176,7 @@
  
      if args.dataset_name in ("random", "prefix_repetition"):
          input_requests = await _align_prompts_to_server_tokenizer(
