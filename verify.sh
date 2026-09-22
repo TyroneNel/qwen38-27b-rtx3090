@@ -127,6 +127,10 @@ def fail(m):
 # own worked example, is symmetric=false on group_0 and serves fine. A body group
 # with symmetric=false is therefore legitimate and stays silent here; what must
 # not happen is a *head* group declaring zero points.
+#
+# An absent "symmetric" key means symmetric: QuantizationArgs declares
+# symmetric: bool = True (compressed_tensors quant_args.py), so a foreign
+# export that omits it must not be read as asymmetric.
 HEAD_TARGETS = {"re:.*lm_head$", "re:.*embed_tokens$", r"re:^mtp\..*"}
 def is_head_group(g):
     return bool(set(g.get("targets") or []) & HEAD_TARGETS)
@@ -135,7 +139,7 @@ def is_pack_quantized(g):
     return (g.get("format") or qc.get("format")) == "pack-quantized"
 asym_head = [(name, g.get("targets")) for name, g in groups.items()
              if is_pack_quantized(g) and g.get("weights") is not None
-             and is_head_group(g) and g["weights"].get("symmetric") is not True]
+             and is_head_group(g) and g["weights"].get("symmetric", True) is not True]
 if asym_head:
     for name, tgt in asym_head:
         fail(f"head group {name} ({tgt}) declares asymmetric weights (zero-point): prepare/ writes those tensors symmetric, so vLLM will look for weight_zero_point tensors that were never written. Requantize with prepare/quant_heads_stream.py")
