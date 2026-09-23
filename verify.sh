@@ -24,7 +24,7 @@ PY=${PY:-$HERE/venv/bin/python}
 echo "== environment"
 [ -x "$PY" ] && ok "python: $PY" || { fail "no $PY (see README Setup)"; exit 1; }
 VER=$($PY -c "import vllm; print(vllm.__version__)" 2>/dev/null | tail -n1)
-[ "$VER" = "0.28.0" ] && ok "vllm $VER" || warn "vllm ${VER:-missing} (patches were written against 0.28.0)"
+[ "$VER" = "0.29.0" ] && ok "vllm $VER" || warn "vllm ${VER:-missing} (patches were written against 0.29.0)"
 SP=$($PY -c "import vllm, os; print(os.path.dirname(vllm.__file__))" 2>/dev/null | tail -n1)
 [ -n "$SP" ] && [ -d "$SP" ] && ok "vllm package at $SP" || { fail "cannot import vllm with $PY"; exit 1; }
 if [ $INSTALL = 0 ]; then
@@ -75,7 +75,7 @@ superseded_by() {
 for name in "${SERIES[@]}"; do
   p="patches/$name"
   if [ "$name" = "dflash2-backport.patch" ]; then
-    ok "dflash2-backport.patch retired (DFlash2 is native in vLLM 0.28.0)"
+    ok "dflash2-backport.patch retired (DFlash2 is native since vLLM 0.28.0)"
     continue
   fi
   if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < "$p" >/dev/null 2>&1; then ok "$name applied"
@@ -90,12 +90,12 @@ $PY -c "import vllm.envs as e, sys; sys.exit(0 if 'VLLM_MARLIN_INT8_INCLUDE_RE' 
 
 echo "== KVarN (optional, kvarn/)"
 if [ -f "$SP/v1/attention/backends/kvarn_attn.py" ]; then
-  if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < kvarn/kvarn-0.28.0.patch >/dev/null 2>&1; then
+  if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < kvarn/kvarn-0.29.0.patch >/dev/null 2>&1; then
     $PY -c "from vllm.v1.attention.backends.registry import AttentionBackendEnum; AttentionBackendEnum.KVARN.get_class()" 2>/dev/null && ok "KVarN backend importable, patch applied (KV=kvarn / CTX=huge available)" || fail "KVarN files present but backend does not import"
-  else fail "KVarN modules present but kvarn-0.28.0.patch not applied (bash kvarn/install.sh)"; fi
-  if $PY patches/_check_applied.py kvarn/kvarn-v2-runner-0.28.0.patch "$SP" >/dev/null 2>&1; then
-    ok "kvarn-v2-runner-0.28.0.patch applied (SPEC=dflash2 + CTX=huge available)"
-  else warn "kvarn-v2-runner-0.28.0.patch not applied (re-run bash kvarn/install.sh for DFlash2 at 240k)"; fi
+  else fail "KVarN modules present but kvarn-0.29.0.patch not applied (bash kvarn/install.sh)"; fi
+  if $PY patches/_check_applied.py kvarn/kvarn-v2-runner-0.29.0.patch "$SP" >/dev/null 2>&1; then
+    ok "kvarn-v2-runner-0.29.0.patch applied (SPEC=dflash2 + CTX=huge available)"
+  else warn "kvarn-v2-runner-0.29.0.patch not applied (re-run bash kvarn/install.sh for DFlash2 at 240k)"; fi
 else warn "KVarN not installed (optional; bash kvarn/install.sh for 262k context)"; fi
 
 if [ $INSTALL = 0 ]; then
@@ -114,33 +114,86 @@ def ok(m): print("  PASS ", m)
 def fail(m):
     global F
     print("  FAIL ", m); F += 1
-# The packed tensors prepare/ writes are symmetric (no zero point), but a foreign
-# export can declare zero points over those head groups — vLLM then looks for
-# weight_zero_point tensors that were never written and dies far from the cause
-# (the failure mode prepare/quant_heads_stream.py exists to normalize away, and
-# the PR #139 field report).
+# Zero points. One check, in two halves; it replaces the head-group block #158 added
+# and keeps that block's rule and its advice.
 #
-# Scope: only the groups prepare/ writes. quant_heads_stream.py builds the head
-# groups from group_0 and forces symmetric=true / zp_dtype=null on them, and
-# deliberately leaves the body group alone, because an AWQ body carries real zero
-# points — philbert440/Qwen3.8-27B-Uncensored-Aggressive-W4A16-AWQ, this repo's
-# own worked example, is symmetric=false on group_0 and serves fine. A body group
-# with symmetric=false is therefore legitimate and stays silent here; what must
-# not happen is a *head* group declaring zero points.
+# Head groups (lm_head, embed_tokens, mtp) must be symmetric, whether or not their
+# weight_zero_point tensors were written. prepare/ writes those tensors symmetric --
+# quant_heads_stream.py builds the head groups from group_0 and forces
+# symmetric=true / zp_dtype=null on them -- and the paths that read them take no zero
+# point: the quantized embedding lookup (CompressedTensorsEmbeddingWNA16Int) registers
+# weight_packed, weight_scale and weight_shape and nothing else, and
+# build_draft_vocab.py copies the lm_head's packed rows and scales, nothing else, into
+# mtp.draft_lm_head. (The failure mode quant_heads_stream.py exists to normalize away,
+# and the PR #139 field report.)
+#
+# Every packed module: vLLM builds the layer from the group it resolves to. An
+# asymmetric group registers a weight_zero_point for the checkpoint to fill, and when
+# the tensor is not there nothing says so -- the loader's missing-weight check is off
+# for quantized models (model_loader/default_loader.py) -- so the layer serves on
+# uninitialized zero points. A symmetric group registers none, and a weight_zero_point
+# written for it is refused at load ("There is no module or parameter named ...").
+# An asymmetric *body* group is legitimate: an AWQ body carries real zero points --
+# philbert440/Qwen3.8-27B-Uncensored-Aggressive-W4A16-AWQ, this repo's own worked
+# example, is symmetric=false on group_0 and serves fine, and
+# patches/marlin-int8-asym-zp.patch runs such bodies on the INT8_ACT=int8 path too.
+# The group is resolved the way vLLM's find_matched_target does it: modules in
+# "ignore" are skipped, then the first target in config order that names the module
+# (exactly, or re: with re.match), else a "Linear" class target -- which never covers
+# the embedding or an LM head, since those are not Linear layers in vLLM.
+#
+# An absent "symmetric" key means symmetric: QuantizationArgs declares
+# symmetric: bool = True (compressed_tensors quant_args.py), so a foreign
+# export that omits it must not be read as asymmetric.
+import re
 HEAD_TARGETS = {"re:.*lm_head$", "re:.*embed_tokens$", r"re:^mtp\..*"}
 def is_head_group(g):
     return bool(set(g.get("targets") or []) & HEAD_TARGETS)
 def is_pack_quantized(g):
     # a group may leave format null and inherit quantization_config["format"]
     return (g.get("format") or qc.get("format")) == "pack-quantized"
-asym_head = [(name, g.get("targets")) for name, g in groups.items()
-             if is_pack_quantized(g) and g.get("weights") is not None
-             and is_head_group(g) and g["weights"].get("symmetric") is not True]
-if asym_head:
-    for name, tgt in asym_head:
+def is_asym(g):
+    return g.get("weights") is not None and g["weights"].get("symmetric", True) is not True
+def names(mod, t):
+    return bool(re.match(t[3:], mod)) if t.startswith("re:") else t == mod
+def group_of(mod):
+    if any(names(mod, t) for t in ign):
+        return None
+    for name, g in groups.items():
+        if any(names(mod, t) for t in g.get("targets") or []):
+            return name
+    if not mod.endswith(("embed_tokens", "lm_head")):
+        for name, g in groups.items():
+            if "Linear" in (g.get("targets") or []):
+                return name
+    return None
+packed = [k[:-len(".weight_packed")] for k in idx if k.endswith(".weight_packed")]
+of = {m: group_of(m) for m in packed}
+asym_head = [name for name, g in groups.items()
+             if is_pack_quantized(g) and is_head_group(g) and is_asym(g)]
+for name in asym_head:
+    tgt = groups[name].get("targets")
+    if any(of[m] == name and m + ".weight_zero_point" in idx for m in packed):
+        fail(f"head group {name} ({tgt}) declares asymmetric weights and its zero points are written, but the head paths read none: the quantized embedding lookup has no weight_zero_point (vLLM refuses it at load) and build_draft_vocab.py copies none into the draft head. Requantize with prepare/quant_heads_stream.py")
+    else:
         fail(f"head group {name} ({tgt}) declares asymmetric weights (zero-point): prepare/ writes those tensors symmetric, so vLLM will look for weight_zero_point tensors that were never written. Requantize with prepare/quant_heads_stream.py")
-else:
+if not asym_head:
     ok(f"no head group declares zero points ({len(groups)} groups; an asymmetric body group is expected for AWQ exports)")
+# the head groups failed above are not re-reported module by module
+checked = [m for m in packed if of[m] is not None and of[m] not in asym_head]
+zp_bad = [m for m in checked if is_asym(groups[of[m]]) != (m + ".weight_zero_point" in idx)]
+for m in zp_bad[:5]:
+    if is_asym(groups[of[m]]):
+        fail(f"{m}: group {of[m]} declares asymmetric weights but the index has no {m}.weight_zero_point, so vLLM would serve the layer on uninitialized zero points (its missing-weight check is off for quantized models). The export's config and tensors disagree: re-export it (prepare/quant_heads_stream.py rewrites only the head groups)")
+    else:
+        fail(f"{m}: group {of[m]} is symmetric but the index carries {m}.weight_zero_point, which vLLM refuses at load. The export's config and tensors disagree: re-export it (prepare/quant_heads_stream.py rewrites only the head groups)")
+if len(zp_bad) > 5:
+    fail(f"... {len(zp_bad)} packed modules whose zero points disagree with their group in total")
+if not zp_bad:
+    asym_groups = sorted({of[m] for m in checked if is_asym(groups[of[m]])})
+    ok(f"zero points match their group on all {len(checked)} packed modules"
+       + (" outside those head groups" if asym_head else "")
+       + (f" (asymmetric: {', '.join(asym_groups)}; INT8_ACT=int8 runs it through patches/marlin-int8-asym-zp.patch)" if asym_groups else " (all symmetric)"))
 # lm_head requantized to int8 (prepare/quant_lm_head.py), or int4-GPTQ as the
 # drafter/ pipeline writes it (the shipped ...-AutoRound-fast layout). The width
 # is whatever config declares; what must hold is the packed geometry it implies,
@@ -318,10 +371,27 @@ EOF
     [ -n "$TOK_S" ] && [ "$TOK_S" = "$TOK_LOC" ] \
       && ok "/tokenize with the model omitted returns the same ids" \
       || fail "/tokenize model-omitted disagrees ('$TOK_S' vs '$TOK_LOC')"
-    TOK_S=$(ids_of "http://127.0.0.1:$PORT/tokenize" "{\"model\":\"qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"$TOKP\"}],\"chat_template_kwargs\":{\"enable_thinking\":false}}")
-    [ -n "$TOK_CHAT_LOC" ] && [ "$TOK_S" = "$TOK_CHAT_LOC" ] \
-      && ok "/tokenize chat form (enable_thinking:false) matches apply_chat_template" \
-      || fail "/tokenize chat form disagrees (server='$TOK_S' template='$TOK_CHAT_LOC')"
+    # The chat form can fail for a reason that is not drift: a checkpoint whose
+    # template raise_exception()s on a kwarg it does not know answers 400
+    # (gotcha 58) and raises locally too, and docs/third-party-checkpoints.md
+    # lists several checkpoints with their own templates. "This checkpoint's
+    # template rejected the request" is a different finding from "the two
+    # tokenizers disagree", and only the second one should stop a boot — so the
+    # first warns with the body instead of failing.
+    TOK_R=$(curl -s -w '\n%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+      -d "{\"model\":\"qwen3.8-27b\",\"messages\":[{\"role\":\"user\",\"content\":\"$TOKP\"}],\"chat_template_kwargs\":{\"enable_thinking\":false}}")
+    TOK_CODE=${TOK_R##*$'\n'}; TOK_BODY=${TOK_R%$'\n'*}
+    TOK_S=$(printf '%s' "$TOK_BODY" | $PY -c 'import json,sys
+print(",".join(map(str, json.load(sys.stdin).get("tokens", ()))))' 2>/dev/null)
+    if [ "$TOK_CODE" = 400 ]; then
+      warn "/tokenize chat form: this checkpoint's chat template rejected the request (400), which is not tokenizer drift: $(printf '%s' "$TOK_BODY" | head -c 200)"
+    elif [ -z "$TOK_CHAT_LOC" ]; then
+      warn "/tokenize chat form: apply_chat_template raised locally for this checkpoint, so there is nothing to compare the server against (server='$TOK_S')"
+    elif [ "$TOK_S" = "$TOK_CHAT_LOC" ]; then
+      ok "/tokenize chat form (enable_thinking:false) matches apply_chat_template"
+    else
+      fail "/tokenize chat form disagrees (server='$TOK_S' template='$TOK_CHAT_LOC')"
+    fi
     TOK_R=$(curl -s -w '\n%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"model":"not-a-served-model","prompt":"x"}')
     TOK_CODE=${TOK_R##*$'\n'}; TOK_BODY=${TOK_R%$'\n'*}
     [ "$TOK_CODE" = 404 ] && printf '%s' "$TOK_BODY" | grep -q "Served models" \
@@ -332,7 +402,7 @@ EOF
       TOK_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Content-Type: application/json" -d "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
       [ "$TOK_CODE" = 401 ] \
         && ok "keyless /tokenize -> 401" \
-        || graded auth-deny-default entrypoints/serve/utils/server_utils.py "UNGUARDED_PATHS" \
+        || graded auth-deny-default entrypoints/serve/middleware/authenticate.py "UNGUARDED_PATHS" \
              "keyless /tokenize -> $TOK_CODE (expected 401: it renders arbitrary text through the chat template)"
     else warn "no API key configured — the keyless-401 row cannot run"; fi
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/v1/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")

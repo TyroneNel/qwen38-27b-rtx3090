@@ -216,13 +216,13 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     padded to `num_speculative_tokens` and a worker asking for fewer is ignored, silently.
     Adaptive block length (`LOOKUP=1` with `DFLASH_TOKENS > 7`) needs `ASYNC_SCHED=0`; at
     batch 1 that costs under 1%.
-    Still true on 0.28.0, and worth knowing *why*, because 0.28 looks like it
+    Still true on 0.29.0, and worth knowing *why*, because 0.29 looks like it
     handles this for you and does not: `VllmConfig` disables async scheduling
     automatically for speculative methods outside an allowlist, but that
     allowlist is `EagleModelTypes`, and `DFlashModelTypes` is inside it
-    (`config/speculative.py:66`). So dflash keeps async scheduling on unless
+    (`config/speculative.py:69` on 0.29.0, `:67` on 0.28.0). So dflash keeps async scheduling on unless
     something turns it off, and the launcher is that something.
-19. **`--async-scheduling` is already the default in 0.28.0.** The flag exists and passing it
+19. **`--async-scheduling` is already the default in 0.28.0 and 0.29.0.** The flag exists and passing it
     changes nothing; `--no-async-scheduling` is what turns it off. Two hours of "the adaptive
     block isn't working" was this.
 20. **The DFlash draft pass is a captured CUDA graph, so its Python runs once.**
@@ -654,7 +654,7 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     stored hits under `SPEC=mtp` and the cached count on a replay lands on the
     same block formula as the GPU path, one 832-token block more than before.
     **Sizing the tier, and why a default boot can show it doing nothing.**
-    Residency has no gauge in 0.28.0: both `kv_offload_cpu_cache_usage_perc`
+    Residency has no gauge in 0.28.0 or 0.29.0: both `kv_offload_cpu_cache_usage_perc`
     and its read twin count in-flight transfer pins (`num_used = allocated -
     free - evictable`, and `complete_store()` marks a block evictable the
     moment it lands), so a full tier reads 0.0 between transfers and a 0%
@@ -1344,3 +1344,27 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     run. The lock is advisory and is released when the holder exits, so a
     leftover `.prepare.lock` file is inert: it is a lock, not a marker, and
     nothing has to clean it up.
+60. **Two long conversations advanced in turn can evict each other completely at
+    `CTX=huge`, and the hit rate goes to 0, not to a remainder.** With DFlash2 and
+    `PREFIX_CACHE=1`, vLLM retains one Mamba state snapshot per attention block by
+    default ("dense"). Each long conversation then pins dozens of snapshots, and
+    once two of them no longer fit beside each other, whichever one ran last
+    evicts the other — every group, attention included, so `cached_tokens` reads
+    exactly 0 and every turn re-prefills the whole prompt. On the reference 3090
+    (pool 268,169) two ~32.6K chats alternating reused 0% and spent 31.8 s per
+    turn re-prefilling; two ~14.9K chats were fine; one ~103K chat alone was
+    fine. The knee scales with the pool (#174 found it at ~50-55K per side on a
+    542K pool, and halving `--kv-cache-memory` halved it), so it is capacity, not
+    a structural trigger. It is invisible in single-user benchmarks and is
+    exactly how a two-agent deployment runs. Fix: retain one snapshot in six
+    (`VLLM_PREFIX_CACHE_RETENTION_INTERVAL`, a CLI flag from 0.29 on), which the
+    launcher now sets at `CTX=huge` with DFlash2 — 93-99.5% reuse on the same
+    pair, no cost to a single long chat, and a reuse needle inside the restored
+    prefix still comes back right. The interval must be a multiple of the
+    attention block, and that block moves with the draft count (2176 at 7 drafts,
+    2432 at 15), so the launcher only sets it for measured counts; for any other,
+    `PREFIX_RETENTION` = 6 x the `attention block size` line the boot prints.
+    Upstream on 0.29, hybrid + EAGLE models are *forced* to dense unless the flag
+    is set explicitly, under a boot line ("defaulting prefix_cache_retention_interval
+    to dense checkpointing") that reads like a managed setting and is the arm that
+    fails ([#174](https://github.com/syv-ai/HyperQwen/issues/174)).
