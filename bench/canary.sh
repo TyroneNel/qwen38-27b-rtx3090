@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Fast health canary: is this boot decoding at full rate, or is it degraded?
 #
-# The full harness takes ~15 minutes and eight cohorts to say what one request
-# says in four seconds. The discriminator is per-token latency, not throughput:
-# a degraded boot on this box does identical work (same draft tokens, same
-# acceptance, same tok/step) at ~2.6x the time per token.
+# The full harness takes ~15 minutes and eight cohorts to say what the canary
+# says in ~50 s (mostly warmup, see below). The discriminator is per-token
+# latency, not throughput: a degraded boot on this box does identical work
+# (same draft tokens, same acceptance, same tok/step) at ~2.6x the time per
+# token.
 #
-#   healthy   TPOT ~7 ms    decode >110 tok/s
-#   degraded  TPOT ~19 ms   decode <60 tok/s
+#   healthy   TPOT ~9 ms    decode >100 tok/s
+#   degraded  TPOT ~20 ms   decode <60 tok/s
 #
 # Run it after every boot, before trusting any number from that server.
 #
@@ -97,11 +98,15 @@ printf 'canary: %s tokens in %ss  decode=%s tok/s  TPOT=%s ms  vram_free=%s MiB 
   "$OUT_TOK" "$WALL" "$TPS" "$TPOT" "${FREE:-?}" "$WARMUP"
 
 # Thresholds measured on this box, short-request canary (200 tokens):
-#   healthy   9.9-10.9 ms TPOT   (KV pool leaving >2 GiB VRAM free)
-#   degraded 18.9-30.6 ms TPOT   (pool pinned to ~800 MiB free, gotcha 43)
+#   healthy   8.6-10.5 ms TPOT   (3090 at 250 W, warmed; -fast variants sit at
+#                                 the top of the range on this prompt because
+#                                 it drafts poorly for them)
+#   degraded ~20 ms TPOT         (KV_MEM=5583457484 / MAX_LEN=65536, which the
+#                                 full harness confirms at ~46 tok/s C1)
 # The dead band between 13 and 18 keeps a merely-busy host from reading as
-# degraded. A full-harness C1 runs faster than this (~7 ms) because it reuses a
-# warm prefix; do not compare the two numbers directly.
+# degraded. Readings in it were all warmup artifacts before WARMUP existed; a
+# MARGINAL now is new information. A full-harness C1 runs faster than this
+# (~7 ms) because it reuses a warm prefix; do not compare the two directly.
 VERDICT=$(awk -v t="$TPOT" 'BEGIN{ if (t<=13) print "HEALTHY"; else if (t>=18) print "DEGRADED"; else print "MARGINAL" }')
 case "$VERDICT" in
   HEALTHY)  echo "canary: HEALTHY — decode at full rate"; exit 0;;
