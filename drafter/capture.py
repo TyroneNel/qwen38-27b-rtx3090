@@ -50,11 +50,20 @@ def main():
         off += len(ids)
     T = off
     print(f"{len(seqs)} sequences, {T} tokens -> {T * HID * 2 / 2**30:.1f} GiB", flush=True)
-    hid_mm = np.lib.format.open_memmap(f"{D}/hidden.npy", mode="w+", dtype=np.uint16, shape=(T, HID))
-    tok_mm = np.lib.format.open_memmap(f"{D}/tokens.npy", mode="w+", dtype=np.int32, shape=(T,))
-    for s in seqs:
-        tok_mm[s["off"]:s["off"] + s["n"]] = np.asarray(s["_ids"], dtype=np.int32)
-    tok_mm.flush()
+    # WSL2/9P: pre-allocating the 60 GB memmap before engine init starves the
+    # marlin repack's device allocs at weight load (aten::empty ->
+    # "device not ready"). Create the memmaps AFTER the LLM is up — the hook
+    # only writes rows during generate(), so nothing is lost by deferring.
+    hid_mm = tok_mm = None
+
+    def open_memmaps():
+        nonlocal hid_mm, tok_mm
+        if hid_mm is None:
+            hid_mm = np.lib.format.open_memmap(f"{D}/hidden.npy", mode="w+", dtype=np.uint16, shape=(T, HID))
+            tok_mm = np.lib.format.open_memmap(f"{D}/tokens.npy", mode="w+", dtype=np.int32, shape=(T,))
+            for s in seqs:
+                tok_mm[s["off"]:s["off"] + s["n"]] = np.asarray(s["_ids"], dtype=np.int32)
+            tok_mm.flush()
     # F14: the manifest is the publication event. Stage it until capture is
     # proven complete — publishing seqs.json up front lets train_mtp.py run on
     # a truncated corpus with no trace.
@@ -111,6 +120,7 @@ def main():
     )
     sp = SamplingParams(max_tokens=1, temperature=0.0)
     t0 = time.time()
+    open_memmaps()
     CH = 256
     for i in range(0, len(seqs), CH):
         batch = seqs[i:i + CH]
