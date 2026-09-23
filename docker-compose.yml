@@ -49,6 +49,13 @@ x-qwen: &qwen
   # ghcr.io/syv-ai/hyperqwen:sha-<7>.
   # F12 traceability: the image running here on 2026-09-08 resolved to
   # ghcr.io/syv-ai/qwen38-27b-rtx3090@sha256:86ecc9adb54ed76f0ccbebbdb7916490f918e42d2ac2a2ed8c0d50cc25323a57.
+  # 2026-09-20: that image repo has since moved to syv-ai/hyperqwen (the old
+  # name above still resolves to the same digests in the local image store).
+  # Digests actually run here since: the 2026-09-19 three-checkpoint campaign
+  # = ghcr.io/syv-ai/hyperqwen@sha256:1554a821ae1f17f76102fdad51454f41c56f4aada2fe932f49d88db9ca938defcf
+  # (pulled 2026-09-16); the 2026-09-20 fast-variant verification =
+  # ghcr.io/syv-ai/hyperqwen@sha256:061501740ddaad264fa3077e0b7c6f839199f24adce393a045c8979828fc1e8b
+  # (image created 2026-09-19T18:33Z).
   # `latest` is a moving tag — quote the digest, not the tag, when reporting
   # benchmark provenance (bench/run_benchmarks.sh manifest).
   image: ghcr.io/syv-ai/hyperqwen:latest
