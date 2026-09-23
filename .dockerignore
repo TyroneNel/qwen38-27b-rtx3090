@@ -3,7 +3,9 @@
 venv
 hfvenv
 models
-.env
+# every env file can carry VLLM_API_KEY; only the template may enter the image
+.env*
+!.env.example
 api_key.txt
 *.log
 __pycache__
