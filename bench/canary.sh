@@ -43,17 +43,29 @@ fi
 REQ=$(printf '{"model":"%s","prompt":"Count slowly and describe each number.","max_tokens":%d,"min_tokens":%d,"temperature":0,"ignore_eos":true,"stream":false}' \
   "$MODEL_NAME" "$NTOK" "$NTOK")
 
-# A fresh server does not reach steady decode on one request. Measured on a
-# single boot with no config change between passes:
+# A fresh server decodes at about half speed per step until it has done some
+# work, then drops to full speed in a single step. Idle time does not help: a
+# swift-base boot left idle 3 minutes was still slow on its first request.
+# Same prompt, same tok/step (3.39) on every pass:
 #
-#   pass1 28.35 ms   pass2 15.55 ms   pass3 7.89 ms   pass4 8.10 ms   pass5 8.38 ms
+#   pass1 19.14   pass2 17.70   pass3 16.74   pass4 13.33   pass5+ 8.81-8.90 ms
 #
-# One short warmup is not enough -- a single timed pass after it samples a
-# random point on that curve and will call a healthy server degraded. Measure
-# repeatedly instead and report the best, which is the steady state: warmup
-# only ever makes a pass slower, never faster, so the minimum is the honest
-# number and no averaging can recover it once a slow pass is in the mean.
-PASSES=${PASSES:-4}
+# The drop coincides with the server allocating ~430 MiB (2118 -> 1688 MiB
+# free) and nothing in the server log. Slow requests before the drop, observed
+# 2026-09-23: 1 on the -fast variants, 4, 7 and 10 on base checkpoints.
+#
+# The slow phase is a plateau, not a curve (~57 ms/step held for 8 passes), so
+# it cannot be detected by waiting for passes to agree -- a stuck-slow server
+# looks settled. A fixed best-of-4 or settle-on-stability both called healthy
+# base servers MARGINAL/DEGRADED. Instead do WARMUP untimed requests, above the
+# worst case seen, then time PASSES and report the best.
+WARMUP=${WARMUP:-15}
+PASSES=${PASSES:-3}
+
+for _w in $(seq 1 "$WARMUP"); do
+  curl -fsS --max-time 180 "${AUTH[@]}" -H 'Content-Type: application/json' \
+    -d "$REQ" "$BASE/v1/completions" >/dev/null || { echo "canary: warmup request failed" >&2; exit 2; }
+done
 
 best_wall=""; best_tok=0
 for _pass in $(seq 1 "$PASSES"); do
@@ -81,8 +93,8 @@ read -r WALL TPS TPOT <<<"$(awk -v w="$best_wall" -v n="$OUT_TOK" \
 GPU_SEL=${GPU_UUID:+-i $GPU_UUID}
 FREE=$(nvidia-smi ${GPU_SEL:-} --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1)
 
-printf 'canary: %s tokens in %ss  decode=%s tok/s  TPOT=%s ms  vram_free=%s MiB\n' \
-  "$OUT_TOK" "$WALL" "$TPS" "$TPOT" "${FREE:-?}"
+printf 'canary: %s tokens in %ss  decode=%s tok/s  TPOT=%s ms  vram_free=%s MiB  (after %s warmup requests)\n' \
+  "$OUT_TOK" "$WALL" "$TPS" "$TPOT" "${FREE:-?}" "$WARMUP"
 
 # Thresholds measured on this box, short-request canary (200 tokens):
 #   healthy   9.9-10.9 ms TPOT   (KV pool leaving >2 GiB VRAM free)
