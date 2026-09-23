@@ -9,16 +9,16 @@ qwen.log
 venv/
 drafter/data/
 drafter/runs/
-.env
+# Every env file holds local settings and usually VLLM_API_KEY (.env, .env.hf,
+# .env.bench, .env.long, .env.host, backups such as .env.keep-*). Only the
+# template is tracked.
+.env*
+!.env.example
 # NOTE: docker-compose.override.yml is TRACKED (portable, no host specifics).
 # Host-local overrides belong in docker-compose.override.local.yml (also ignored).
 docker-compose.override.local.yml
-.env.hf
-.env.bench
-.env.long
 .quant_checkpoint/
 prepare/logs/
-quant.log
 # Local/working docs stay uncommitted: only the docs tracked in upstream/main
 # are versioned. New local docs (investigation notes, handoffs, plans) are
 # ignored by default; anything meant for the repo must be added to the
@@ -36,8 +36,6 @@ docs/*
 !docs/spec-decode-scratch-token-units.md
 !docs/ubuntu-3090.md
 !docs/wsl2-4090.md
-# Host-specific env (Windows/WSL paths, local CUDA layout) — never commit.
-.env.host
 # Eval run outputs (timestamped results/samples) — regenerate, don't version.
 evals/
 # Scratch handoff docs — working notes, not repo history.
