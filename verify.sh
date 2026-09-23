@@ -402,7 +402,7 @@ print(",".join(map(str, json.load(sys.stdin).get("tokens", ()))))' 2>/dev/null)
       TOK_CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/tokenize" -H "Content-Type: application/json" -d "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
       [ "$TOK_CODE" = 401 ] \
         && ok "keyless /tokenize -> 401" \
-        || graded auth-deny-default entrypoints/serve/utils/server_utils.py "UNGUARDED_PATHS" \
+        || graded auth-deny-default entrypoints/serve/middleware/authenticate.py "UNGUARDED_PATHS" \
              "keyless /tokenize -> $TOK_CODE (expected 401: it renders arbitrary text through the chat template)"
     else warn "no API key configured — the keyless-401 row cannot run"; fi
     TOK_S=$(ids_of "http://127.0.0.1:$PORT/v1/tokenize" "{\"model\":\"qwen3.8-27b\",\"prompt\":\"$TOKP\",\"add_special_tokens\":false}")
