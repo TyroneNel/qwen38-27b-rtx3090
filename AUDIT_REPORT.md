@@ -1,0 +1,506 @@
+# Codebase Audit Report
+
+## 0. Document control
+
+- Repository: HyperQwen. Local copy at /workspace. Remote: https://github.com/syv-ai/HyperQwen, branch main.
+- Date: 2026-09-23.
+- Scope: the full repository. The audit read or searched every directory.
+- Revision: commit 9882fde, "bench: correct the canary's documented thresholds and runtime".
+- Limits of the review:
+  - The review host had no GPU. The audit executed no server, benchmark, or prepare run.
+  - The vLLM source tree is not in this repository. Patch review reads the diffs and their context lines only.
+  - The fork branches named in PATCHES.md (cpuchip/vllm) are external. The audit did not fetch them.
+  - Section 6 names every check the audit did not run.
+
+## 1. System map
+
+The repository ships a patch series against a pinned vLLM 0.29.0 and the scripts that prepare and serve one model. The product is an OpenAI-compatible server for Qwen3.8-27B on a single 24 GB GPU. Most production code lives in the vLLM tree after the patches apply. This repository holds the patches, the launchers, the prepare pipeline, the benchmarks, and the CI.
+
+Runtime parts:
+
+- A container image built by Dockerfile. The build applies all patches in patches/series order and runs verify.sh --install.
+- Two serve modes: single-user/start_qwen.sh and batch/start_qwen.sh. Both end in exec vllm serve.
+- An alternate profile: single-user/alternative.sh, an int4 KV cache without KVarN.
+- A prepare pipeline: docker/prepare.sh drives prepare/*.py to download and requantize the model.
+- A verify gate: the container entrypoint runs verify.sh before every serve start.
+- A benchmark harness in bench/. It starts servers, measures them, and writes verdicts.
+- An offline drafter pipeline in drafter/. It trains and quantizes the speculative drafters.
+- A KV cache port in kvarn/. It adds files and two more patches to the vLLM tree.
+
+Data stores:
+
+- Model directories under ./models: safetensors shards, an index file, config.json, a chat template, a draft id tensor.
+- The named volume qwen-cache: compile caches and the HuggingFace cache.
+- Shared memory maps under /dev/shm for the offload connector.
+
+External services:
+
+- HuggingFace Hub: the base model dbirks/Qwen3.8-27B-W4A16-AutoRound, the fast variant, and the drafters.
+- ghcr.io: the prebuilt image and the Headroom proxy image.
+- The flashinfer.ai wheel index, for flashinfer-cubin on the bare-metal path.
+
+Entry points:
+
+- docker/entrypoint.sh with the commands single, batch, prepare, and verify.
+- The two launchers and alternative.sh, for bare metal and systemd.
+- run_quant.sh for third-party quantization.
+- verify.sh for install and live checks.
+- bench/*.sh for measurement.
+
+Deploy paths:
+
+- docker compose profiles single and batch. The port publishes to 127.0.0.1 by default.
+- systemd user units run the launchers directly.
+- docs/install.md documents a bare venv install.
+
+## 2. Critical paths
+
+### Path: HTTP request to response
+- Start: vllm serve in the launcher exec line (single-user/start_qwen.sh:815, batch/start_qwen.sh:263).
+- End: the JSON or SSE response from the vLLM API server.
+- Trust boundary: the network port. The server trusts any caller that reaches it when no key is set.
+- Data in motion: prompts, generated tokens, chat template output, tool-call payloads.
+- Failure if the boundary breaks: an untrusted caller drives the GPU and reads model data with no record.
+
+### Path: authentication
+- Start: VLLM_API_KEY or api_key.txt, read by resolve_api_key.sh.
+- End: the AuthenticationMiddleware in vLLM, rewritten by patches/auth-deny-default.patch.
+- Trust boundary: the bearer token check on each request.
+- Data in motion: the key value and request paths.
+- Failure if the boundary breaks: every endpoint answers without a key. The patch guards paths only when a key exists.
+
+### Path: model download and requantization
+- Start: docker/prepare.sh state() and hf download.
+- End: the rewritten model directory (shards, index, config, draft ids).
+- Trust boundary: the model directory on disk is the contract between prepare and the server.
+- Data in motion: 19.5 GB of weights, the index weight_map, quantization groups.
+- Failure if the boundary breaks: the server loads corrupt or mixed weights, or the start loop stops (P-3).
+
+### Path: chat template rewrite
+- Start: docker/prepare.sh lines 85-102.
+- End: prepare/harden_chat_template.py and prepare/translate_chat_template.py rewrite chat_template.jinja in place.
+- Trust boundary: untrusted requests meet a mutated template at serve time.
+- Data in motion: the Jinja template text.
+- Failure if the boundary breaks: a truncated template makes every chat request fail (P-3).
+
+### Path: speculative decode
+- Start: SPEC_ARGS in the launchers.
+- End: the target model verifies draft tokens through rejection sampling.
+- Trust boundary: draft output is untrusted. Only verified tokens reach the client.
+- Data in motion: draft token ids, verify logits, the acceptance count.
+- Failure if the boundary breaks: exactness holds by construction, so defects cut acceptance silently (P-9, P-10) or crash the engine (P-13).
+
+### Path: KV geometry validation
+- Start: the asserts that kvarn-v2-runner-0.29.0.patch adds to kv_cache_coordinator.py.
+- End: the start proceeds or aborts.
+- Trust boundary: this check is the only guard between a bad hybrid geometry and live prefix caching.
+- Data in motion: block sizes per KV group and the hash block size.
+- Failure if the boundary breaks: a bad geometry passes, and later prefix hits serve wrong state (P-2).
+
+### Path: restart and repair loops
+- Start: compose restart unless-stopped, systemd Restart=on-failure, and the entrypoint prepare step.
+- End: a serving process or a stopped container.
+- Trust boundary: each restart trusts the model directory and the shm state the last run left.
+- Data in motion: the model directory, /dev/shm maps, the prepare lock.
+- Failure if the boundary breaks: a poisoned model directory wedges every later start (P-3).
+
+### Path: GPU memory budget
+- Start: KV_MEM, GPU_UTIL, MAX_LEN, and MAX_SEQS in the launchers.
+- End: vLLM splits the card into weights, KV pool, and graph capture.
+- Trust boundary: the launcher numbers decide what fits. Wrong numbers fail at capture or at the first request.
+- Data in motion: memory sizes in bytes.
+- Failure if the boundary breaks: the server aborts at start or on the first large request. This product has no money or billing path.
+
+### Path: secrets
+- Start: .env, api_key.txt, or the process environment.
+- End: the vLLM api-key binding and client Authorization headers.
+- Trust boundary: the key value must reach logs only as presence.
+- Data in motion: the key.
+- Failure if the boundary breaks: a leak gives full API access (P-18).
+
+### Path: benchmark measurement
+- Start: bench/*.sh starts or reuses a server.
+- End: a verdict (PASS, FAIL, INVALID) and a manifest.
+- Trust boundary: the measured server must be the started server, and successful requests must produce the numbers.
+- Data in motion: PORT, the served name qwen3.8-27b, /metrics series, bench summary lines.
+- Failure if the boundary breaks: the harness records evidence from the wrong server or from failed requests (P-4, P-15).
+
+### Path: tenant isolation
+- The product is single-tenant. No per-user isolation exists inside the server. The only isolation boundary is the network bind plus the key. P-1 holds all isolation risk.
+
+## 3. Critical problems
+
+This review found no CRITICAL defect. The findings below order HIGH first, then MEDIUM, then LOW.
+
+### P-1 [HIGH] Keyless server binds all interfaces outside Docker
+- Location: batch/start_qwen.sh:265, single-user/start_qwen.sh:817, single-user/alternative.sh:115, verify.sh:300-301.
+- Path: authentication.
+- What the code does: the launchers bind 0.0.0.0 by default. batch/start_qwen.sh hardcodes the value. resolve_api_key.sh exports nothing when no key exists. vLLM then serves without authentication. verify.sh prints a WARN and still exits 0.
+- Why this is a problem: any host that can reach the port gets the full API. That spends the GPU, reads model data, and drives tool calls. The README and .env.example document the exposure. The default still ships open, and the gate does not stop it.
+- Trigger: a bare-metal or systemd start with no api_key.txt and no VLLM_API_KEY. docs/install.md marks the key step optional.
+- Blast radius: every endpoint on the server, for every caller on the network. patches/auth-deny-default.patch does not help here. It guards paths only when a key exists.
+- Evidence: `--host 0.0.0.0 --port $PORT` in batch/start_qwen.sh:265. `--host ${HOST:-0.0.0.0}` in single-user/start_qwen.sh:817.
+- Close action: Refuse to start when the bind is 0.0.0.0 and no key is set. Add an explicit ALLOW_OPEN=1 escape. Make verify.sh fail, not warn, on a keyless 0.0.0.0 configuration.
+- Test that must exist after the fix: a launcher start with no key and a 0.0.0.0 bind must exit nonzero.
+
+### P-2 [HIGH] The KVarN boot check pairs the wrong lists
+- Location: kvarn/kvarn-v2-runner-0.29.0.patch, the hunk for v1/core/kv_cache_coordinator.py (patch lines 95-110).
+- Path: KV geometry validation.
+- What the code does: the patch builds group_block_sizes with a prefix_cacheable filter. The new assert zips that filtered list with the unfiltered kv_cache_groups. The zip stops at the shorter list. The hunk also adds a third pass condition, hash_block_size % block_size == 0.
+- Why this is a problem: when the two lists differ in membership or length, the pairs shift. The divisibility test then reads the wrong group. Groups past the short list get no test at all. The new condition also passes geometry that the assert message says it rejects.
+- Trigger: any group layout where the filtered list and the full list diverge before the last element. The served model is hybrid, so the filter is active on every KVarN start.
+- Blast radius: a misaligned geometry passes validation. Later prefix-cache hits then serve KV from a wrong layout, which corrupts answers silently. A valid geometry can also die in the assert at start. Only CTX=huge installs carry this code.
+- Evidence: `for g, block_size in zip(kv_cache_config.kv_cache_groups, group_block_sizes)` is three lines under the prefix_cacheable filter.
+- Close action: Rewrite the assert to walk kv_cache_groups and read each group's own block size. Exempt SlidingWindowSpec and non-prefix-cacheable groups by identity. Remove the third pass condition or fix the message. Add a hybrid-spec unit test.
+- Test that must exist after the fix: a hybrid spec with a leading mamba group must pass only when every group geometry is correct.
+
+### P-3 [HIGH] Non-atomic model writes wedge every later start
+- Location: prepare/quant_embed.py:61-76, prepare/quant_mtp.py:74-86, prepare/quant_heads_stream.py:163-266, prepare/quant_lm_head.py:64-105, prepare/translate_chat_template.py:93-106. The reader is docker/prepare.sh:37. The caller is docker/entrypoint.sh:18-20.
+- Path: model download and requantization.
+- What the code does: quant_embed.py truncates the shard, the index, and config.json in place. It saves a copy of the shard alone. quant_mtp.py follows the same pattern. quant_heads_stream.py writes each file alone but gives the set no commit point. quant_lm_head.py replaces shard, then index, then config. translate_chat_template.py truncates the chat template in place on every start.
+- Why this is a problem: a truncated index makes state() raise, set -e stops prepare.sh, and the entrypoint aborts. Every later start fails the same way. A mixed set also kills the repair run with KeyError, so prepare cannot heal itself. A truncated template keeps its marker, so the next run skips it, and every chat request then fails at serve time.
+- Trigger: SIGKILL, an OOM kill, or power loss in the write window. The window lasts seconds per multi-GB file. The repository proves the class itself in prepare/crash_inject_proof.sh.
+- Blast radius: the host stops serving until a person restores backups by hand. The model is a 19.5 GB download.
+- Evidence: `save_file(tensors, d + shard, ...)` and then `json.dump(idx, open(d + "model.safetensors.index.json", "w"))` in quant_embed.py.
+- Close action: Write every output beside its target and rename it. Save a copy of the index and config, not only the shard. Make state() treat an unreadable index as a download state. Make the re-run skip tensors that are already packed.
+- Test that must exist after the fix: a kill -9 between any two writes must leave the next prepare run able to finish and serve.
+
+### P-4 [HIGH] paired_run.sh measures the server on the default port
+- Location: bench/paired_run.sh:28 (PORT=18021, never exported), bench/paired_run.sh:127 (start), bench/paired_run.sh:170 (measure), bench/measure_c1.sh:33 (PORT default 18020).
+- Path: benchmark measurement.
+- What the code does: the script sets PORT=18021 as a plain variable. The start step passes PORT to the launcher by prefix. The measure step runs measure_c1.sh without PORT. measure_c1.sh then defaults to 18020.
+- Why this is a problem: when any server answers on :18020, every repeat measures that server. The manifest records the numbers as arm evidence. The started arms contribute nothing. The load also hits a server the experiment does not own.
+- Trigger: run paired_run.sh per its own usage while a server answers on :18020.
+- Blast radius: experiment conclusions use data that never touched the treatment. A production server takes the benchmark traffic.
+- Evidence: `PORT=18021` at line 28 has no export anywhere in the file. The measure call at line 170 inherits nothing.
+- Close action: Export PORT before the measure step. Record the start time of the started server and reject a health answer older than that start.
+- Test that must exist after the fix: a decoy server on :18020 must turn the run INVALID.
+
+### P-5 [MEDIUM] The fast variant aliases and trusts the base directory
+- Location: prepare/fetch_fast_variant.py:20-27 (hardlinks), prepare/fetch_fast_variant.py:34-42 (Hub files), prepare/fetch_fast_variant.py:16 (fixed shard layout).
+- Path: model download and requantization.
+- What the code does: shards 1-6 are hardlinks into the base directory. Shard 7 and the index arrive from a Hub repo. The script never checks that the pinned checkpoint produced the base directory.
+- Why this is a problem: an in-place writer on the base directory mutates the fast variant through the shared inode. P-3 names two such writers. A rebuilt or substituted base pairs its shard 7 with tensors from another checkpoint. Both cases serve without error. The second serves wrong weights silently.
+- Trigger: a re-run of quant_embed.py or quant_mtp.py on the base directory, or a base directory that is not the pinned checkpoint.
+- Blast radius: the default single-user path serves mixed weights. Output degrades with no error.
+- Evidence: `os.link(os.path.join(S, f), os.path.join(D, f))` at line 23.
+- Close action: Copy the shards instead of linking, or hash the base config and refuse a mismatch. Write the index with a rename from a sibling temporary file.
+- Test that must exist after the fix: an in-place rewrite of a base shard must not change the bytes the fast variant serves.
+
+### P-6 [MEDIUM] The draft vocabulary commits before its id file
+- Location: prepare/build_draft_vocab.py:140-145.
+- Path: model download and requantization.
+- What the code does: the index replace (the commit point) runs before the mtp_draft_vocab_ids.pt write. The comment above the index says never to reorder it above the ids replace. The code does exactly that.
+- Why this is a problem: a stop in between commits the new head with missing or stale ids. Missing ids heal through state(). Stale ids of the same length do not. The server then loads a head whose rows do not match the id list. Drafting degrades, or the load dies on a shape mismatch. Output stays exact either way, so nothing alarms.
+- Trigger: a kill between the two writes on a manual rebuild.
+- Blast radius: silent acceptance loss on the single-user path until a person rebuilds the directory.
+- Evidence: `os.replace(_tmp_idx, ...)` at line 142, then `torch.save(ids_t, _tmp_ids_pt)` at line 144.
+- Close action: Write the ids file before the index commit. Make verify.sh check that the id count matches the head rows.
+- Test that must exist after the fix: state() and verify.sh must flag a directory whose id count differs from the head rows.
+
+### P-7 [MEDIUM] The documented install applies patches with fuzz
+- Location: docs/install.md:111, docs/python-314.md:70. Contrast Dockerfile:39 and patches/check_vllm_series.sh:64, which use --fuzz 0. See also verify.sh:27, where a version mismatch is a WARN.
+- Path: restart and repair loops (install side).
+- What the code does: the bare-metal instructions run plain `patch -p1`. GNU patch then accepts approximate anchors with up to two lines of slack. The enforced paths refuse that slack.
+- Why this is a problem: a hunk that lands by fuzz patches the wrong place. The verify presence checks still pass, because they search for the added lines and not their location. docs/vllm-0.29.md records nine hunks that once landed by fuzz.
+- Trigger: a bare-metal install on a tree that differs from the pin. A vLLM version mismatch is only a WARN in verify.sh, so the start proceeds.
+- Blast radius: silently wrong vLLM code on the bare-metal path. The class spans dead code to wrong math, per hunk.
+- Evidence: `patch -p1 -d venv/lib/python3.12/site-packages/vllm < "patches/$name"` in docs/install.md:111.
+- Close action: Add --fuzz 0 --no-backup-if-mismatch to both documented loops. Share one apply script between the docs and the Dockerfile. Make the version mismatch a FAIL.
+- Test that must exist after the fix: CI must reject a series that needs fuzz on the pinned tree, on both install paths.
+
+### P-8 [MEDIUM] The published image no longer tracks main
+- Location: .github/workflows/docker-image.yml:18-29, docker-compose.yml:45-61.
+- Path: restart and repair loops (image side).
+- What the code does: the workflow file lists the push and schedule triggers as comments, dated 2026-09-15. Only manual dispatch builds the image. docker-compose.yml still claims a prebuilt image on every main push. It pulls the moving tag latest with pull_policy: missing.
+- Why this is a problem: users who follow the README run an image older than main. Fixes on main, including auth-deny-default, never reach them. A host with any cached latest never pulls again.
+- Trigger: docker compose up on a host that pulled before the triggers stopped.
+- Blast radius: every container user. The documentation promises freshness the pipeline does not deliver.
+- Evidence: `workflow_dispatch:` is the only active trigger. "Prebuilt on every main push" is at docker-compose.yml:45.
+- Close action: Re-enable the push trigger, or correct the compose and README claims. Pin a digest in the compose file, or document the required compose pull.
+- Test that must exist after the fix: a push to main must produce a new sha tag without manual dispatch.
+
+### P-9 [MEDIUM] One attribute, two meanings, in the DFlash2 patches
+- Location: patches/dflash2-z-adaptive-emitted.patch:23,38 (new value), patches/dflash2-ngram-chains.patch:242 (old value kept), patches/dflash2-lookup-drafting.patch:261 (old value, later rewritten).
+- Path: speculative decode.
+- What the code does: z-adaptive-emitted changes last_num_emitted from num_sampled - num_rejected to num_sampled. Its own comment says the subtraction double-counts rejections. The chain path in ngram-chains keeps the subtraction. Both sites write the same file, dflash2/speculator.py.
+- Why this is a problem: the chain path reports fewer emitted tokens for the same step. lookup.py sizes the next verify block from that number. Adaptive sizing drifts on chain steps. The two paths now disagree about one attribute.
+- Trigger: any chain step under SPEC=dflash2 with lookup on.
+- Blast radius: degraded adaptive block sizing. Output stays exact. The cost is speed, not correctness.
+- Evidence: `self.last_num_emitted = (num_sampled - num_rejected) ...` in ngram-chains, against `= num_sampled` at the two rewritten sites.
+- Close action: Compute last_num_emitted in one helper that all three sites call.
+- Test that must exist after the fix: the same step inputs must produce the same value on all three paths.
+
+### P-10 [MEDIUM] The drafter dequantization drops zero points
+- Location: patches/dflash2-lookup-drafting.patch:13-43 (_dense_kv_rows), verify.sh:290-291 (the drafter check reads only architectures and quant_method).
+- Path: speculative decode.
+- What the code does: _dense_kv_rows dequantizes a packed qkv_proj as weights times scales. No zero point enters. The repository ships marlin-int8-asym-zp.patch because asymmetric exports exist. verify.sh checks head-group symmetry for the served model but not for the drafter.
+- Why this is a problem: an asymmetric drafter checkpoint loads and drafts from wrong KV projections. Acceptance collapses. Rejection sampling keeps output exact, so no check fires.
+- Trigger: serve a DFlash2 drafter whose qkv group sets symmetric: false.
+- Blast radius: silent speed loss and wasted GPU for anyone who swaps the drafter on the single-user profile.
+- Evidence: `dense = (quantized.to(torch.float32).reshape(...) * scale[..., None])` with no zero-point term.
+- Close action: Apply weight_zero_point when the tensor exists. Make verify.sh fail on an asymmetric drafter qkv group.
+- Test that must exist after the fix: a synthetic asymmetric drafter must fail verify, and the dequantized rows must match the reference path.
+
+### P-11 [MEDIUM] MTP_DRAFT_VOCAB changes shapes outside the compile key
+- Location: patches/qwen3_5-mtp-draft-vocab.patch:34. Contrast patches/compile-key-runtime-knobs.patch and patches/speed-knobs-envs.patch.
+- Path: GPU memory budget.
+- What the code does: the patch reads MTP_DRAFT_VOCAB with os.environ at model build time. The value changes the module set and the logits width. The knob is not registered in envs.py, so compile_factors() never sees it.
+- Why this is a problem: toggling the knob against a warm compile cache reuses graphs built for the other geometry. The repository documents the resulting assert_size_stride crash class for VLLM_MARLIN_TUNE. It fixed that knob by registration.
+- Trigger: set MTP_DRAFT_VOCAB=0 for one start, then unset it, with a shared cache.
+- Blast radius: the start crashes with a message that names neither the knob nor the cache. The cost is debug hours.
+- Evidence: `_os.environ.get("MTP_DRAFT_VOCAB", "1") != "0"` at patch line 34. No envs.py registration exists for the name.
+- Close action: Register the knob in envs.py so the compile key includes it.
+- Test that must exist after the fix: toggling the knob must change the computed compile factors.
+
+### P-12 [MEDIUM] The negative-scale fix skips admitted quadrants
+- Location: patches/marlin-int8-negative-scales.patch:33-38, patches/marlin-int8-asym-zp.patch.
+- Path: HTTP request to response.
+- What the code does: the sign fold runs only for symmetric, grouped, no-act-order configs. The kernel reads int16 scales as uint16, so negative scales produce garbage. The asym-zp patch admits zero-point weights onto the same int8 path. An asymmetric export with negative group scales is admitted and not fixed. Per-channel and act-order exports also skip the fold with no log line.
+- Why this is a problem: those layers compute wrong output for every request. Nothing fails. The numbers are wrong.
+- Trigger: a third-party checkpoint with negative group scales in a skipped quadrant, plus INT8_ACT=int8.
+- Blast radius: silent wrong answers on the affected layers for the whole serving life.
+- Evidence: the gate `c.group_size != -1 and not c.has_g_idx and not c.zero_points`, under a comment that says negative scales produce garbage.
+- Close action: Extend the fold to the zero-point case, or refuse the combination loudly at load. Log a line for every skipped config.
+- Test that must exist after the fix: a fixture with negative asymmetric scales must serve reference-equal logits or fail at load.
+
+### P-13 [MEDIUM] The selector-walk guard ships only in the KVarN overlay
+- Location: kvarn/kvarn-v2-runner-0.29.0.patch:199,216. The default walk lives in the DFlash2 speculator, visible at patches/dflash2-lookup-drafting.patch:641.
+- Path: speculative decode.
+- What the code does: the overlay clamps the walk index and maps NaN scores to a large negative number. Its comment says a degenerate distribution can produce NaN scores. The default path runs the same walk without the guard.
+- Why this is a problem: a degenerate score row yields an index past top_k. The walk then reads past the row, and past the tensor on the last row. That is a device fault and an engine stop.
+- Trigger: NaN or all-negative-infinity scores in the selector input. The overlay authors judged the case real enough to guard.
+- Blast radius: an engine stop on the default DFlash2 profile. The cost is availability, not correctness.
+- Evidence: `index = tl.where(index >= top_k, 0, index)` exists only in the overlay patch.
+- Close action: Port the clamp and the NaN mapping into the default path, or upstream.
+- Test that must exist after the fix: a NaN score row must select index 0 and must not fault.
+
+### P-14 [MEDIUM] The Python clients ignore the documented key precedence
+- Location: bench/api_smoke.py:20, bench/needle_test.py:37, bench/needle_reuse.py:43. The contract is at resolve_api_key.sh:16-24.
+- Path: secrets.
+- What the code does: the shell resolver lets an explicit OPENAI_API_KEY win. The Python clients read VLLM_API_KEY or api_key.txt and never read OPENAI_API_KEY.
+- Why this is a problem: a caller who sets OPENAI_API_KEY for a differently keyed server gets 401 from the Python tools. The shell tools work. The documented chain says the opposite.
+- Trigger: OPENAI_API_KEY set, the file key different, run api_smoke.py.
+- Blast radius: operator time and false alarms during incident response. Bounded to the bench tools.
+- Evidence: `os.environ.get("VLLM_API_KEY") or _key(...)` at bench/api_smoke.py:20.
+- Close action: Read OPENAI_API_KEY first in all three clients, or share one resolver module.
+- Test that must exist after the fix: with OPENAI_API_KEY set and a different file key, the clients must send the environment value.
+
+### P-15 [MEDIUM] measure_c1.sh records PASS for an all-failed run
+- Location: bench/measure_c1.sh:51-72. The gates it lacks sit at bench/run_benchmarks.sh:75-76, bench/real_rep.sh:38-39, bench/prefill_ab.sh:96-97.
+- Path: benchmark measurement.
+- What the code does: the script checks the bench exit code and metric finiteness. It never checks the Successful requests and Failed requests lines. Its siblings document that an all-failed run exits 0 with zeroed metrics.
+- Why this is a problem: a server that fails every request still yields finite zeros and a PASS in result.json. paired_run.sh counts that pair as valid. The finding extends the P-4 blast radius.
+- Trigger: any run where the server errors on every request.
+- Blast radius: wrong evidence enters experiments and ship decisions.
+- Evidence: `grep -qE "^Successful requests"` exists in the three siblings and in no line of measure_c1.sh.
+- Close action: Add the same two greps to measure_c1.sh. Share one gate function across the four scripts (S-3).
+- Test that must exist after the fix: a server that returns 500 for every request must produce INVALID.
+
+### P-16 [LOW] torch.quantile crosses the aten size limit on large flushes
+- Location: kvarn/files/vllm/v1/attention/ops/kvarn_store.py:40-41, call sites at lines 188 and 222.
+- Path: KV geometry validation (store side).
+- What the code does: with KVARN_RTN_QUANTILE set, _rtn_range calls torch.quantile on the flush batch. aten refuses quantile inputs above 2^24 elements. Tiles are [N, 256, 128], so a batch above about 500 tiles crosses the limit.
+- Why this is a problem: the failure is a loud RuntimeError mid-request, not corruption. The knob is off by default.
+- Trigger: KVARN_RTN_QUANTILE set and a flush batch above about 500 tiles.
+- Blast radius: failed requests under one opt-in configuration.
+- Evidence: `lo = torch.quantile(t, q, dim=dim, keepdim=True)` at line 40.
+- Close action: Chunk the quantile call below the limit, or use min and max above it.
+- Test that must exist after the fix: a 600-tile batch with the knob set must complete.
+
+### P-17 [LOW] The fast top-k keeps ties the reference drops
+- Location: patches/sampler-small-topk-fast-softmax.patch:180-181.
+- Path: HTTP request to response.
+- What the code does: `keep = vals >= kth` keeps every entry tied at the k-th value. The sort-based reference keeps exactly k by position. The patch header claims the same result as the reference.
+- Why this is a problem: under exact-tied logits the kept set differs from the reference. The sampled distribution diverges silently from the unpatched build.
+- Trigger: exact float ties at the k-th logit. Rare with real models, common in synthetic tests.
+- Blast radius: a small silent change to sampling when top_k is set.
+- Evidence: `kth = vals.gather(1, ...)` then `keep = vals >= kth` at lines 180-181.
+- Close action: Break ties by position with the topk indices, or correct the header claim.
+- Test that must exist after the fix: a logits fixture with exact ties must produce the reference kept set.
+
+### P-18 [LOW] verify.sh exposes the key in the process table
+- Location: verify.sh:318 and the curl calls after it. The same pattern is at bench/measure_c1.sh:46 and bench/prefill_ab.sh:88.
+- Path: secrets.
+- What the code does: the key rides as a curl argument. ps shows argv on a multi-user host during the request.
+- Why this is a problem: a local user who reads the process table at the right moment gets the key. The key then opens the full API (P-1).
+- Trigger: run verify.sh or a bench script against a keyed server on a shared host.
+- Blast radius: the API key, on hosts with untrusted local users.
+- Evidence: `curl -s http://127.0.0.1:$PORT/v1/chat/completions -H "Authorization: Bearer $KEY"` at verify.sh:318.
+- Close action: Pass the header through curl --config or a netrc file with tight permissions.
+- Test that must exist after the fix: a CI grep must fail when a curl call carries the key in argv.
+
+## 4. High-value seams
+
+### S-1 [S1] The model directory has no schema
+- Sides of the boundary: prepare/*.py and drafter/export_mtp.py write. docker/prepare.sh state(), verify.sh, patches/qwen3_5-mtp-draft-vocab.patch, and single-user/select_model.sh read.
+- Implicit contract: the shared names below mean the same thing to writers and readers.
+  - Index entry names, such as lm_head.weight_packed.
+  - File names, such as mtp_draft_vocab_ids.pt.
+  - Backup suffixes (.bak-mtp versus .bak-orig).
+  - Group regexes and scale dtypes.
+  - The -fast and DFlash2-W4A16 directory names.
+- Drift failure: a writer and a reader disagree. The failure surfaces as a wedged start or a silently degraded server. state() checks existence, never agreement.
+- Defects this seam feeds: P-3, P-5, P-6, P-10.
+- Close action: Write one Python module that defines the schema and validates a directory. Call it from every writer, from state(), and from verify.sh.
+- Proof after close: a CI fixture builds a synthetic directory. The test fails when a writer and the validator disagree.
+
+### S-2 [S1] One key contract, three implementations
+- Sides of the boundary: resolve_api_key.sh, the launchers, the Python bench clients, and the vLLM environment binding.
+- Implicit contract: VLLM_API_KEY in the environment becomes the server key, and an explicit OPENAI_API_KEY wins on the client side. The launchers never pass --api-key themselves. The Python clients ignore OPENAI_API_KEY. verify.sh checks the middleware patch, not the environment binding.
+- Drift failure: a vLLM change to the environment binding leaves the server keyless while clients keep sending keys. The keyless-401 probes in verify.sh grade WARN when the patch is absent.
+- Defects this seam feeds: P-1, P-14, P-18.
+- Close action: Pass --api-key explicitly from the launchers. Share one client resolver. Make the keyless-401 probe a FAIL when a key is configured.
+- Proof after close: a start test with the environment key set must get 401 on a keyless request.
+
+### S-3 [S1] Bench gates and scrapes are copied per script
+- Sides of the boundary: bench/run_benchmarks.sh, prefill_ab.sh, real_rep.sh, measure_c1.sh, canary.sh, warmup.sh, paired_run.sh.
+- Implicit contract: the fail-closed greps, the spec-series regex with the _created filter, the served name qwen3.8-27b, and the PORT and HOST plumbing. Two of four copies have the _created filter. Three of four have the request gates. The served name lives in at least nine files.
+- Drift failure: one copy records PASS on broken evidence or prints garbage series. The copies already disagree.
+- Defects this seam feeds: P-4, P-15.
+- Close action: Write one sourced library for target, key, gate, and scrape. Add a CI policy test that fails when a bench entrypoint skips the library.
+- Proof after close: the policy test fails when a copy re-implements a gate.
+
+### S-4 [S2] Two install paths, two strictness levels
+- Sides of the boundary: the container path (Dockerfile, verify.sh --install, docker/requirements.txt pins) versus the bare-metal path (docs/install.md, docs/python-314.md).
+- Implicit contract: both paths produce the same vLLM tree and the same dependency set. The bare-metal path applies patches without --fuzz 0 and does not pin transformers, tokenizers, or compressed-tensors. verify.sh only warns on a vLLM version mismatch.
+- Drift failure: a bare-metal install diverges from the tested tree and still reads as verified.
+- Defects this seam feeds: P-7.
+- Close action: Use one apply script on both paths. Pin the full dependency set for both. Make the version mismatch a FAIL.
+- Proof after close: CI builds the tree both ways and compares a hash of the result.
+
+### S-5 [S2] Shape-changing knobs register case by case
+- Sides of the boundary: patches that read environment variables, vllm/envs.py registrations, and compile_factors().
+- Implicit contract: every knob that changes shapes or module sets must join the compile key. Three patches do this by hand. MTP_DRAFT_VOCAB does not. The launcher-pinned VLLM_SPEC_DECODE_ATTN_QMAX sizes patch buffers, and no check exists on either side.
+- Drift failure: a warm compile cache replays wrong geometry. The crash names neither the knob nor the cache.
+- Defects this seam feeds: P-11.
+- Close action: Add a CI test that greps patches for os.environ reads and fails on any read that is not registered.
+- Proof after close: the test fails when a patch adds an unregistered shape knob.
+
+### S-6 [S2] Patch-on-patch text dependencies
+- Sides of the boundary: patches/series order, the Supersedes header strings, and the fork branch behind scripts/export-patch.sh.
+- Implicit contract: later patches carry earlier patch lines as context. A semantic rewrite must find every copy. z-adaptive-emitted missed the ngram-chains copy. Supersedes exists only as a header line that verify.sh parses.
+- Drift failure: two sites that must agree silently disagree, with no apply-time signal.
+- Defects this seam feeds: P-9.
+- Close action: Apply the full series in CI and compare the tree against the fork branch. docs/vllm-0.29.md says the two are byte-identical today.
+- Proof after close: the compare job fails on any divergence.
+
+### S-7 [S3] torch.load relies on the runtime default
+- Sides of the boundary: patches/qwen3_5-mtp-draft-vocab.patch:35, drafter/capture_dflash2.py:168, drafter/requant_mtp_gptq.py:44, drafter/quant_dflash2.py:48, drafter/train_mtp.py:230.
+- Implicit contract: torch 2.13 defaults weights_only to True, so these loads cannot run pickle payloads. That safety is a torch version behavior, not a choice in this repository.
+- Drift failure: a torch downgrade or a default change turns a Hub-downloaded tensor file into a code-execution surface.
+- Defects this seam feeds: none today, on the pinned stack.
+- Close action: Write weights_only=True at every site.
+- Proof after close: a grep test in CI fails on a bare torch.load.
+
+### S-8 [S3] Three launcher copies of one decision tree
+- Sides of the boundary: single-user/start_qwen.sh, batch/start_qwen.sh, single-user/alternative.sh.
+- Implicit contract: the allocator decision tree, the shm cleanup, the key resolution, and the host default. The copies already differ. batch hardcodes 0.0.0.0. alternative.sh skips resolve_config.sh and refuses nothing.
+- Drift failure: a fix lands in one copy. The others keep the old behavior. P-1 is one instance.
+- Defects this seam feeds: P-1.
+- Close action: Write one sourced launcher library for the shared decisions.
+- Proof after close: a shell test asserts the three launchers agree on host and key defaults.
+
+## 5. Work order
+
+1. Refuse a 0.0.0.0 start without a key in all three launchers, with an explicit ALLOW_OPEN=1 escape (P-1, S-8).
+2. Fix the coordinator assert pairing in kvarn-v2-runner-0.29.0.patch and add the hybrid-geometry test (P-2).
+3. Export PORT to the measure step in paired_run.sh and reject a health answer older than the start (P-4).
+4. Make the prepare writers rename from a sibling temporary file, save copies of index and config, and make state() survive an unreadable index (P-3, S-1).
+5. Replace the fast-variant hardlinks with copies and check the base identity before any link (P-5).
+6. Write the draft ids before the index commit and validate id count against head rows (P-6).
+7. Add the request gates to measure_c1.sh and move the four bench scripts onto one gate and scrape library (P-15, S-3).
+8. Add --fuzz 0 to the documented install loops, pin the full dependency set, and make the vLLM version mismatch a FAIL (P-7, S-4).
+9. Re-enable the image push trigger, or correct the freshness claims in compose and README (P-8).
+10. Register MTP_DRAFT_VOCAB in envs.py so the compile key includes it (P-11, S-5).
+11. Port the selector-walk guard from the KVarN overlay to the default DFlash2 path (P-13).
+12. Apply zero points in _dense_kv_rows and extend verify.sh to the drafter group (P-10).
+13. Extend the negative-scale fold to the admitted quadrants, or refuse them loudly at load (P-12).
+14. Compute last_num_emitted in one helper for all three DFlash2 sites (P-9, S-6).
+15. Make the Python clients honor OPENAI_API_KEY first (P-14, S-2).
+16. Pass the key to curl without argv in verify.sh and the bench scripts (P-18).
+17. Write weights_only=True at the torch.load sites (S-7).
+18. Chunk the quantile call in kvarn_store.py below the aten limit (P-16).
+19. Break sampler ties by position, or correct the patch header claim (P-17).
+
+## 6. What this review did not prove
+
+- The audit executed nothing. The host had no GPU. The audit read the launchers, verify.sh, the prepare pipeline, and every benchmark, but ran none of them.
+- The vLLM 0.29.0 tree is not in this repository. Patch findings use the diffs and their context lines as evidence. The audit ran no CI workflow and no patch apply check.
+- The audit did not fetch the cpuchip/vllm fork branches named in PATCHES.md.
+- The audit did not pull or inspect the container image. Image findings use the Dockerfile and the workflow files as evidence.
+- Not proven: a request-teardown path that skips pop_blocks_for_free. Without that call, the deferred blocks in patches/mamba-align-checkpoint-order.patch:113-209 stay allocated. The audit saw no such path in the diff.
+- Not proven: a top_k value of 0 reaches the sampler kernel in patches/sampler-small-topk-fast-softmax.patch:180. Upstream normalization is not visible in the diff.
+- Not proven: the exact flush shapes at serving time for P-16. The finding uses the documented 2^24 aten limit and the tile shape in the code as evidence.
+- Bench files read in full: canary.sh, run_benchmarks.sh, warmup.sh, paired_run.sh, measure_c1.sh, real_rep.sh, prefill_ab.sh, api_smoke.py, verbatim.py, needle_test.py, needle_reuse.py, test_model_verification.py. The audit searched the other bench files for the audit patterns but did not read them line by line.
+- Docs skimmed or unread: gotchas.md, optimizations.md, benchmarks.md, quality.md, long-context.md, multi-gpu.md, clients.md, third-party-checkpoints.md, main-track.md, ubuntu-3090.md, wsl2-4090.md, reproductions/. These are prose, not code.
+- The audit found no secrets in the tree. The scan was pattern-based. It does not prove absence.
+- The product is single-tenant. No tenant-isolation path exists to audit.
+
+## 7. Appendix — file index
+
+- Dockerfile
+- docker-compose.yml
+- docker-compose.override.yml
+- docker/entrypoint.sh
+- docker/prepare.sh
+- docker/requirements.txt
+- .env.example
+- .github/workflows/docker-image.yml
+- .github/workflows/patch-integrity.yml
+- .github/workflows/bench-policy.yml
+- resolve_api_key.sh
+- resolve_config.sh
+- run_quant.sh
+- verify.sh
+- single-user/start_qwen.sh
+- single-user/select_model.sh
+- single-user/qwen-server.sh
+- single-user/alternative.sh
+- batch/start_qwen.sh
+- batch/qwen-serving.service
+- single-user/qwen-serving.service
+- patches/series
+- patches/check_vllm_series.sh
+- patches/_check_applied.py
+- patches/auth-deny-default.patch
+- patches/qwen3_5-mtp-draft-vocab.patch
+- patches/dflash2-lookup-drafting.patch
+- patches/dflash2-ngram-chains.patch
+- patches/dflash2-z-adaptive-emitted.patch
+- patches/marlin-int8-negative-scales.patch
+- patches/marlin-int8-asym-zp.patch
+- patches/sampler-small-topk-fast-softmax.patch
+- patches/engine-stall-sentinel.patch
+- patches/offload-mtp-serve.patch
+- patches/mamba-align-checkpoint-order.patch
+- patches/compile-key-runtime-knobs.patch
+- scripts/export-patch.sh
+- kvarn/install.sh
+- kvarn/kvarn-v2-runner-0.29.0.patch
+- kvarn/files/vllm/v1/attention/ops/kvarn_store.py
+- prepare/quant_embed.py
+- prepare/quant_lm_head.py
+- prepare/quant_mtp.py
+- prepare/quant_heads_stream.py
+- prepare/build_draft_vocab.py
+- prepare/translate_chat_template.py
+- prepare/harden_chat_template.py
+- prepare/fetch_fast_variant.py
+- prepare/fetch_dflash2.py
+- prepare/fetch_thirdparty.py
+- prepare/crash_inject_proof.sh
+- bench/paired_run.sh
+- bench/measure_c1.sh
+- bench/run_benchmarks.sh
+- bench/prefill_ab.sh
+- bench/real_rep.sh
+- bench/canary.sh
+- bench/api_smoke.py
+- bench/needle_test.py
+- bench/needle_reuse.py
+- docs/install.md
+- docs/python-314.md
+- docs/vllm-0.29.md
+- PATCHES.md
+- README.md
