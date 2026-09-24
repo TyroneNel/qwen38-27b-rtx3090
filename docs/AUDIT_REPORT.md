@@ -1,9 +1,18 @@
+---
+title: "Codebase Audit Report"
+timestamp: "2026-09-24T09:39:57Z"
+agent: "cline"
+model: "not exposed in the agent environment"
+skill: "senior codebase auditor"
+description: "Full-repository audit of the HyperQwen vLLM patch series and serving stack: system map, critical paths, 18 ranked defects (4 HIGH), and 8 high-value seams, written to ASD-STE100 Issue 9 constraints."
+---
+
 # Codebase Audit Report
 
 ## 0. Document control
 
 - Repository: HyperQwen. Local copy at /workspace. Remote: https://github.com/syv-ai/HyperQwen, branch main.
-- Date: 2026-09-23.
+- Date of review: 2026-09-23. Report timestamp: 2026-09-24T09:39:57Z.
 - Scope: the full repository. The audit read or searched every directory.
 - Revision: commit 9882fde, "bench: correct the canary's documented thresholds and runtime".
 - Limits of the review:
