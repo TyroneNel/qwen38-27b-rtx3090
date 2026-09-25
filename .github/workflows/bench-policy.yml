@@ -39,6 +39,7 @@ jobs:
         run: |
           python3 bench/verbatim.py
           python3 bench/test_fa_scratch_capacity.py
+          python3 bench/test_paired_run_port.py
       - name: offline failure-path mocks
         run: |
           python3 - <<'EOF'

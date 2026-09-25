@@ -48,6 +48,10 @@ while [ $# -gt 0 ]; do case "$1" in
   --force-gpu) FORCE_GPU=1; shift;;
   *) echo "paired_run: unknown flag $1" >&2; exit 1;;
 esac; done
+# The measure script runs as a child and reads PORT (measure_c1.sh defaults to
+# 18020). Unexported, every repeat measured whatever answered on :18020, not the
+# server this driver booted on --port (audit P-4).
+export PORT
 
 _refuse() { echo "paired_run: refusing: $1" >&2; exit 1; }
 [ -n "$CONTROL_ENV" ] || _refuse "--control-env is required"
