@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CPU fixture for the F07 KVarN materialize-scratch capacity guard.
 
-Loads KVarNConfig from the overlay source (stdlib-only, no torch/GPU) and
+Loads KVarNConfig from the overlay source (no torch, no GPU, no vLLM) and
 proves the sizing invariants the GPU guard in kvarn_decode_attention relies
 on, plus the boundary semantics of materialize_fits:
 
@@ -10,15 +10,34 @@ on, plus the boundary semantics of materialize_fits:
 import importlib.util
 import os
 import sys
+import types
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 _CFG = os.path.join(REPO, "kvarn", "files", "vllm", "model_executor",
                     "layers", "quantization", "kvarn", "config.py")
 
-_spec = importlib.util.spec_from_file_location("kvarn_overlay_config", _CFG)
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
+# Since the 0.29 pin flip, config.py reads its knobs through `vllm.envs`, where
+# kvarn-0.29.0.patch registers them. The fixture runs without vLLM (and a venv
+# without KVarN installed lacks the registration), so it loads the overlay
+# against a stand-in `vllm.envs` carrying the one knob the sizing helpers read,
+# with the patch's semantics: the raw string, None when unset.
+_envs = types.ModuleType("vllm.envs")
+_envs.KVARN_FA_SCRATCH_CAP = os.environ.get("KVARN_FA_SCRATCH_CAP")
+_vllm = types.ModuleType("vllm")
+_vllm.envs = _envs
+_saved = {k: sys.modules.get(k) for k in ("vllm", "vllm.envs")}
+sys.modules.update({"vllm": _vllm, "vllm.envs": _envs})
+try:
+    _spec = importlib.util.spec_from_file_location("kvarn_overlay_config", _CFG)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+finally:
+    for k, v in _saved.items():
+        if v is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = v
 KVarNConfig = _mod.KVarNConfig
 
 
