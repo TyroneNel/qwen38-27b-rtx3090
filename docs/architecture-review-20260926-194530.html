@@ -72,11 +72,13 @@
       verifier) and the spec-decode <i>verify step</i> (the model checking drafted tokens) are different things that
       share a word; this report always means the first.
     </p>
-    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> candidates 1 and 2 received
+    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> candidates 1, 2 and 3 received
       full line-level deep dives — every claim re-verified, corrections folded back into their cards (notably:
-      candidate 2 is <i>three</i> launchers, not two). Remediation plans:
+      candidate 2 is <i>three</i> launchers, not two; candidate 3's glue is ~400 lines, not ~1,500, but the
+      <span class="font-mono">_created</span> guard is missing from 2 of 3 bash scrapers). Remediation plans:
       <a class="underline" href="patch-series-apply-remediation.md">docs/patch-series-apply-remediation.md</a> ·
-      <a class="underline" href="launcher-chassis-remediation.md">docs/launcher-chassis-remediation.md</a>.</p>
+      <a class="underline" href="launcher-chassis-remediation.md">docs/launcher-chassis-remediation.md</a> ·
+      <a class="underline" href="harness-client-remediation.md">docs/harness-client-remediation.md</a>.</p>
   </header>
 
   <!-- ============ HOT SPOTS ============ -->
@@ -355,20 +357,36 @@ flowchart LR
       <span class="badge badge-strong">Strong</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">bench/ — ~20 Python scripts</span><span class="chip">resolve_api_key.sh:32-42</span><span class="chip">bench/api_smoke.py:15</span><span class="chip">bench/needle_test.py:29</span><span class="chip">bench/conc_ladder.py:68</span><span class="chip">bench/labd_bench.py</span><span class="chip">bench/run_benchmarks.sh</span>
+      <span class="chip">bench/ — 15 Python + 4 bash scripts</span><span class="chip">resolve_api_key.sh:32-42</span><span class="chip">bench/api_smoke.py:15</span><span class="chip">bench/needle_test.py:29</span><span class="chip">bench/conc_ladder.py:68</span><span class="chip">bench/labd_bench.py:28</span><span class="chip">bench/real_rep.sh:19</span><span class="chip">bench/run_benchmarks.sh:39</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="harness-client-remediation.md">Deep dive + remediation plan → docs/harness-client-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
-        <p>"How to talk to our server" is ~1,500 lines of copy-paste across the <b class="text-white">harness</b>,
-        and the copies have already drifted in ways that produce real misfires. The API-key chain is implemented
-        <b class="text-white">four different ways</b>: the canonical one
-        (<span class="font-mono">resolve_api_key.sh</span>: OPENAI_API_KEY → VLLM_API_KEY → api_key.txt → empty),
-        a Python flavor in ~10 scripts that skips OPENAI_API_KEY, a second Python flavor that reads
-        <span class="font-mono">~/qwen-serving/api_key.txt</span> (a path nothing else uses), and one-off variants.
-        Issue #113 fixed the bash scrapers to resolve the key properly; the Python scripts never got the memo —
-        so a keyed server still reads as "spec-decode absent" to half the harness. Streaming, TTFT timing, metrics
-        scraping and usage-field handling are likewise re-implemented per script with subtly different bugs.</p>
+        <p>"How to talk to our server" is re-implemented in <b class="text-white">19 harness scripts</b> (15 Python,
+        4 bash) — measured: 142 lines match the glue idioms, ~400 counting the surrounding blocks (the review's
+        "~1,500" was an overestimate; broad, not deep — which is why it drifted). The API-key chain exists in
+        <b class="text-white">four flavors</b>: the canonical one (<span class="font-mono">resolve_api_key.sh</span>:
+        OPENAI → VLLM → api_key.txt → EMPTY) used only by the 4 bash scripts; flavor A
+        (<span class="font-mono">VLLM_API_KEY</span> or api_key.txt, <b class="text-white">no Python script reads
+        OPENAI_API_KEY</b> — verified) in 10 scripts with 10 private <span class="font-mono">def _key(</span>;
+        flavor B (unguarded <span class="font-mono">~/qwen-serving/api_key.txt</span>) in 4; env-only in 1.
+        Issue #113 fixed the bash side; the Python side never got the memo. The URL is five conventions
+        (<span class="font-mono">PORT</span> vs <span class="font-mono">VLLM_API</span> env vars, two scripts with no
+        override at all); the model name is a string literal in 12 call sites and <b class="text-white">no script
+        asks /v1/models</b>; <span class="font-mono">def post(</span> exists 4× with ~11 inlines, SSE parsers 7×,
+        <span class="font-mono">def metrics(</span> 7 Python + 3 bash.</p>
+        <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b> the
+        <span class="font-mono">_created</span> guard exists in 1 of 3 bash spec-scrapers —
+        <span class="font-mono">real_rep.sh:19</span> filters <span class="font-mono">grep -v created</span>,
+        <span class="font-mono">run_benchmarks.sh:39</span> and <span class="font-mono">prefill_ab.sh:57</span> do not,
+        and their tok/step arithmetic is positional, so a prometheus <span class="font-mono">_created</span> line
+        (emitted on this stack, per <span class="font-mono">labd_accept.py:135</span>) shifts a Unix timestamp into
+        the token counts. Also un-propagated: the array-not-string lesson (<span class="font-mono">warmup.sh:43-46</span>
+        has the comment; three sibling scripts still expand <span class="font-mono">$B</span> unquoted), and
+        <span class="font-mono">prefill_ab.sh:39-40</span> re-implements the launcher's INT8 guards in the drifted
+        shape (candidate 2's 1.3.1, fourth file).</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -394,10 +412,11 @@ flowchart LR
         <div class="space-y-2 font-mono text-xs">
           <div class="flex items-center gap-2"><div class="tile w-56 flex-none">resolve_api_key.sh</div><div class="text-slate-500">canonical — used by 4 bash scripts only</div></div>
           <div class="flex items-center gap-2"><div class="tile red w-56 flex-none">python flavor A ×10</div><div class="text-slate-500">VLLM_API_KEY → api_key.txt (skips OPENAI_)</div></div>
-          <div class="flex items-center gap-2"><div class="tile red w-56 flex-none">python flavor B</div><div class="text-slate-500">reads ~/qwen-serving/api_key.txt (!)</div></div>
+          <div class="flex items-center gap-2"><div class="tile red w-56 flex-none">python flavor B ×4</div><div class="text-slate-500">unguarded ~/qwen-serving/api_key.txt</div></div>
           <div class="flex items-center gap-2"><div class="tile red w-56 flex-none">one-offs</div><div class="text-slate-500">per-script variants</div></div>
           <div class="pt-2 text-slate-400">Each also re-rolls: streaming · TTFT · metrics scrape · usage fields</div>
-          <div class="tile red w-fit">#113 fixed the bash copies; the keyed-server misfire lives on in Python</div>
+          <div class="tile red w-fit">_created guard in 1 of 3 bash scrapers — 2 compute tok/step from timestamps</div>
+          <div class="tile red w-fit">model name hardcoded ×12; nobody asks /v1/models</div>
         </div>
       </div>
       <div class="panel panel-after">
@@ -709,14 +728,16 @@ flowchart LR
       <p class="text-slate-400">Sequence after that: 2 and 3 are independent and can run in either order; 5 is the
       cheapest card in the deck; 6 and 7 land best on top of 1.</p>
       <p class="text-slate-300">Remediation plans already written: <a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">candidate 1 → patch-series-apply-remediation.md</a>
-      (three PRs: one door, retire the retired, KVarN under the fast gate) and
+      (three PRs: one door, retire the retired, KVarN under the fast gate),
       <a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">candidate 2 → launcher-chassis-remediation.md</a>
-      (three PRs: chassis + dry-run seam, alternative.sh joins, CI argv assertions).</p>
+      (three PRs: chassis + dry-run seam, alternative.sh joins, CI argv assertions), and
+      <a class="text-emerald-400 underline" href="harness-client-remediation.md">candidate 3 → harness-client-remediation.md</a>
+      (three PRs: module + key/URL migration, stream/metrics + bash guards, model name).</p>
     </div>
   </section>
 
   <footer class="text-sm text-slate-500 pb-8">
-    <p>Every file:line citation was spot-checked against the tree; candidates 1 and 2 were then deep-dived and their
+    <p>Every file:line citation was spot-checked against the tree; candidates 1, 2 and 3 were then deep-dived and their
     cards corrected where the deeper pass disproved a claim. Vocabulary from README / PATCHES.md / docs/gotchas.md
     (no CONTEXT.md or ADR directory exists).</p>
     <p class="mt-2 text-slate-300 font-bold">Which of these would you like to explore?</p>
