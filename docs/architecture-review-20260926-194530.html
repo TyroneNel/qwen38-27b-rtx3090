@@ -72,6 +72,11 @@
       verifier) and the spec-decode <i>verify step</i> (the model checking drafted tokens) are different things that
       share a word; this report always means the first.
     </p>
+    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> candidates 1 and 2 received
+      full line-level deep dives — every claim re-verified, corrections folded back into their cards (notably:
+      candidate 2 is <i>three</i> launchers, not two). Remediation plans:
+      <a class="underline" href="patch-series-apply-remediation.md">docs/patch-series-apply-remediation.md</a> ·
+      <a class="underline" href="launcher-chassis-remediation.md">docs/launcher-chassis-remediation.md</a>.</p>
   </header>
 
   <!-- ============ HOT SPOTS ============ -->
@@ -131,6 +136,8 @@ flowchart LR
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">patches/series</span><span class="chip">Dockerfile:30-38</span><span class="chip">verify.sh:52-86</span><span class="chip">patches/check_vllm_series.sh</span><span class="chip">docs/install.md:100-113</span><span class="chip">docs/python-314.md:62-71</span><span class="chip">kvarn/install.sh</span><span class="chip">patches/dflash2-backport.patch</span><span class="chip">README.md:119</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">Deep dive + remediation plan → docs/patch-series-apply-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
@@ -144,6 +151,16 @@ flowchart LR
         is kept in the tree and special-cased in <b class="text-white">five</b> consumers, the old 0.27.1 KVarN patches
         ride along as inert weight, and the README's front door still says "38 files" — there are 45. The fast CI gate
         never sees the two KVarN patches at all; only the 20-minute image build does.</p>
+        <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
+        <span class="font-mono">kvarn/install.sh</span>'s completeness check — a heredoc counting
+        <span class="font-mono">port(kvarn-v2)</span> markers — has silently decayed: the v2-runner patch carries
+        <b class="text-slate-200">12 hunks across 7 files but only 1 marker</b>, so install-time verification
+        proves 1 hunk and prints "port complete" (measured: 12 <span class="font-mono">@@</span> hunks,
+        7 <span class="font-mono">+++</span> files, 1 marker; the base port has 13 hunks, 0 markers).
+        <span class="font-mono">docs/python-314.md</span> is stale as a whole — its 0.27.1 pin is deliberate
+        (the abi3 wheel), but "every patch applies unmodified" and "all fifteen land" were written for the
+        15-patch 0.27.1-era series. And <span class="font-mono">PATCHES.md:82</span> sends readers to a
+        <span class="font-mono">docs/MR-DRAFT.md</span> that does not exist.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -180,6 +197,8 @@ flowchart LR
             <div class="tile red">dflash2-backport skip ×5</div>
             <div class="tile red">README: “38 files” → actually 45</div>
             <div class="tile red">kvarn invisible to fast CI</div>
+            <div class="tile red">marker check: 1 of 12 hunks verified</div>
+            <div class="tile red">PATCHES.md → docs/MR-DRAFT.md (missing)</div>
           </div>
         </div>
       </div>
@@ -210,28 +229,47 @@ flowchart LR
       <span class="badge badge-strong">Strong</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">single-user/start_qwen.sh (822 lines)</span><span class="chip">batch/start_qwen.sh (271 lines)</span><span class="chip">resolve_config.sh</span><span class="chip">resolve_api_key.sh</span><span class="chip">single-user/select_model.sh</span>
+      <span class="chip">single-user/start_qwen.sh (822 lines)</span><span class="chip">batch/start_qwen.sh (271 lines)</span><span class="chip">single-user/alternative.sh (133 lines)</span><span class="chip">resolve_config.sh</span><span class="chip">resolve_api_key.sh</span><span class="chip">single-user/select_model.sh</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">Deep dive + remediation plan → docs/launcher-chassis-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
-        <p>The two <b class="text-white">launchers</b> are one file pasted twice, then drifted.
-        <b class="text-white">180 lines are byte-identical</b> — 73% of batch's substantive code appears verbatim in
-        single: the env prelude, the CUDA_HOME/nvcc-13 fix, the stale <span class="font-mono">/dev/shm</span> offload
-        sweep, the TOOLS/METRICS/VISION blocks, the WSL2 + tensor-parallel allocator logic, key resolution, and 13 of
-        ~18 exec-line flags. The drift is not hypothetical: the INT8 export guards already differ between the copies,
-        batch carries a spec-decode metrics block that mode cannot produce, and single's VISION comment cites
-        <span class="font-mono">SPEC=dflash2</span> OOM measurements batch never runs. Every hard-won gotcha
-        (#33 ghosts, #163 TP all-reduce, the nvcc fix in #185) has to be fixed in two files — and gotchas are this
-        repo's lifeblood. <span class="font-mono">resolve_config.sh</span> was itself built as the F13 fix for
-        exactly this class of bug.</p>
+        <p>The <b class="text-white">launchers</b> are one chassis pasted <b class="text-white">three</b> times, then drifted:
+        <span class="font-mono">single-user/start_qwen.sh</span> (822 lines), <span class="font-mono">batch/start_qwen.sh</span>
+        (271), and the review undercounted one — <span class="font-mono">single-user/alternative.sh</span> (133), the
+        experimental int4-KV profile and the most drifted copy. Measured on 2026-09-26:
+        <b class="text-white">180 lines byte-identical</b> between single and batch (69% of batch's unique substantive
+        lines verbatim in single; 49% of alternative's), 12 of 13 literal exec flags shared, and 47/13/6
+        env-conditional decision points respectively. The drift is not hypothetical: the INT8 export guards
+        already disagree (<span class="font-mono">batch:247-248</span> vs <span class="font-mono">single:139-140</span>),
+        batch carries a spec-decode metrics block that mode cannot produce (<span class="font-mono">batch:154-161</span>),
+        and batch's VISION comment cites <span class="font-mono">SPEC=dflash2</span> OOM measurements batch never runs.
+        <span class="font-mono">alternative.sh</span> never received the #185 CUDA_HOME fix or the #176 TP allocator arm
+        (both touched only the two start_qwen.sh — verified via the upstream commit file lists), resolves the API key
+        with a bare <span class="font-mono">cat api_key.txt</span> under <span class="font-mono">set -e</span>, and uses
+        relative model paths. Every hard-won gotcha lands twice (three times where alternative.sh copied the block) —
+        and gotchas are this repo's lifeblood.</p>
+        <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
+        <span class="font-mono">resolve_config.sh</span> — itself the F13 fix — has drifted from what it validates: its
+        hand-maintained shadow list (<span class="font-mono">:68</span>) names 11 flags while the three launchers emit
+        ~30 (<span class="font-mono">--compilation-config</span>, <span class="font-mono">--speculative-config</span>,
+        <span class="font-mono">--async-scheduling</span>… shadow silently), and a real print bug: single resolves config
+        at <span class="font-mono">:99</span> but selects the model at <span class="font-mono">:101</span>, so the
+        <span class="font-mono">[effective-config] MODEL=</span> line prints the base checkpoint when
+        <span class="font-mono">-fast</span> will be served (native path; Docker masks it). Also stale:
+        <span class="font-mono">single:219</span> cites <span class="font-mono">kvarn-v2-runner-0.28.0.patch</span>,
+        renamed by the #148 pin flip.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
-        <p>A sourced <span class="font-mono">launcher-chassis.sh</span> that both modes source: the env/platform
-        prelude, the allocator/TP decision tree, the TOOLS/METRICS/VISION flag builders, and key resolution. Each
-        launcher keeps only what is genuinely mode-shaped — the CTX×SPEC profile branches in single, the KV profile
-        branch in batch, and the final <span class="font-mono">exec vllm serve</span> line. Add a
+        <p>A sourced <span class="font-mono">launcher_common.sh</span> at the repo root (the <span class="font-mono">resolve_*.sh</span>
+        convention) that both <span class="font-mono">start_qwen.sh</span> and <span class="font-mono">alternative.sh</span> source:
+        the env/platform prelude, the allocator/TP decision tree, the TOOLS/METRICS/VISION flag builders, the INT8
+        guards, and key resolution — each gotcha essay moving as its function's comment. Each launcher keeps only
+        what is genuinely mode-shaped: the CTX×SPEC profile branches and DFlash2/MTP machinery in single, the KV
+        profile branch in batch, the int4 profile in alternative, and the exec line (assembled as an argv array). Add a
         <span class="font-mono">PRINT_ARGV=1</span> dry-run exit (print the assembled argv + resolved env, skip the
         platform-mutating exports, never exec) as the test seam.</p>
         <p class="font-bold text-white mt-4 mb-1">Benefits</p>
@@ -244,7 +282,7 @@ flowchart LR
     </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="panel panel-before">
-        <p class="panel-tag text-rose-400 mb-3">BEFORE — one chassis, two diverging copies</p>
+        <p class="panel-tag text-rose-400 mb-3">BEFORE — one chassis, three diverging copies</p>
         <div class="space-y-3 font-mono text-xs">
           <div>
             <div class="flex justify-between text-slate-400 mb-1"><span>single-user/start_qwen.sh</span><span>822 lines</span></div>
@@ -260,12 +298,21 @@ flowchart LR
               <div style="width:34%;background:#26334f" title="batch-mode: KV profile"></div>
             </div>
           </div>
+          <div>
+            <div class="flex justify-between text-slate-400 mb-1"><span>single-user/alternative.sh</span><span>133 lines</span></div>
+            <div class="h-6 rounded bg-slate-800 overflow-hidden flex">
+              <div style="width:49%;background:#3b5bdb" title="shared chassis"></div>
+              <div style="width:51%;background:#26334f" title="int4 profile"></div>
+            </div>
+          </div>
           <div class="flex items-center gap-2 pt-1">
             <div class="w-4 h-4 rounded" style="background:#3b5bdb"></div>
-            <span class="text-slate-400">180 byte-identical lines (66% of batch) — each fix must land twice</span>
+            <span class="text-slate-400">180 byte-identical lines (69% of batch's substantive) — each fix must land twice, three times where alternative.sh copied the block</span>
           </div>
           <div class="flex flex-wrap gap-2 pt-1">
             <div class="tile red">INT8 guards differ</div>
+            <div class="tile red">alternative.sh: no #185 / no #176 fix, own key flavor</div>
+            <div class="tile red">resolve_config shadow list: 11 of ~30 flags</div>
             <div class="tile red">spec-decode metrics in batch (impossible there)</div>
             <div class="tile red">dflash2 comment in batch's VISION block</div>
           </div>
@@ -278,7 +325,7 @@ flowchart LR
             <div class="flex justify-between text-slate-400 mb-1"><span>launcher-chassis.sh — sourced</span></div>
             <div class="h-6 rounded overflow-hidden" style="background:#3b5bdb"></div>
           </div>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-3 gap-2">
             <div>
               <div class="text-slate-400 mb-1">single: profiles + exec</div>
               <div class="h-6 rounded" style="background:#26334f"></div>
@@ -287,10 +334,14 @@ flowchart LR
               <div class="text-slate-400 mb-1">batch: KV + exec</div>
               <div class="h-6 rounded" style="background:#26334f"></div>
             </div>
+            <div>
+              <div class="text-slate-400 mb-1">alternative: int4 + exec</div>
+              <div class="h-6 rounded" style="background:#26334f"></div>
+            </div>
           </div>
           <div class="flex items-center gap-2 pt-1">
             <div class="w-4 h-4 rounded" style="background:#3b5bdb"></div>
-            <span class="text-slate-400">gotcha fix lands once, both modes inherit</span>
+            <span class="text-slate-400">gotcha fix lands once, all three launchers inherit</span>
           </div>
           <div class="tile green">PRINT_ARGV=1 → argv asserted in CI, no GPU</div>
         </div>
@@ -657,12 +708,17 @@ flowchart LR
       it is subtraction, not new machinery.</p>
       <p class="text-slate-400">Sequence after that: 2 and 3 are independent and can run in either order; 5 is the
       cheapest card in the deck; 6 and 7 land best on top of 1.</p>
+      <p class="text-slate-300">Remediation plans already written: <a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">candidate 1 → patch-series-apply-remediation.md</a>
+      (three PRs: one door, retire the retired, KVarN under the fast gate) and
+      <a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">candidate 2 → launcher-chassis-remediation.md</a>
+      (three PRs: chassis + dry-run seam, alternative.sh joins, CI argv assertions).</p>
     </div>
   </section>
 
   <footer class="text-sm text-slate-500 pb-8">
-    <p>Report written to the OS temp directory — nothing lands in the repo. Every file:line citation was spot-checked
-    against the tree. Vocabulary from README / PATCHES.md / docs/gotchas.md (no CONTEXT.md or ADR directory exists).</p>
+    <p>Every file:line citation was spot-checked against the tree; candidates 1 and 2 were then deep-dived and their
+    cards corrected where the deeper pass disproved a claim. Vocabulary from README / PATCHES.md / docs/gotchas.md
+    (no CONTEXT.md or ADR directory exists).</p>
     <p class="mt-2 text-slate-300 font-bold">Which of these would you like to explore?</p>
   </footer>
 
