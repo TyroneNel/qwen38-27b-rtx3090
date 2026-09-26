@@ -72,13 +72,16 @@
       verifier) and the spec-decode <i>verify step</i> (the model checking drafted tokens) are different things that
       share a word; this report always means the first.
     </p>
-    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> candidates 1, 2 and 3 received
-      full line-level deep dives — every claim re-verified, corrections folded back into their cards (notably:
-      candidate 2 is <i>three</i> launchers, not two; candidate 3's glue is ~400 lines, not ~1,500, but the
-      <span class="font-mono">_created</span> guard is missing from 2 of 3 bash scrapers). Remediation plans:
-      <a class="underline" href="patch-series-apply-remediation.md">docs/patch-series-apply-remediation.md</a> ·
-      <a class="underline" href="launcher-chassis-remediation.md">docs/launcher-chassis-remediation.md</a> ·
-      <a class="underline" href="harness-client-remediation.md">docs/harness-client-remediation.md</a>.</p>
+    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> candidates 1, 2, 3, 5 and 6
+      received full line-level deep dives — every claim re-verified, corrections folded back into their cards
+      (notably: candidate 2 is <i>three</i> launchers, not two; candidate 3's glue is ~400 lines, not ~1,500;
+      candidate 5's two exit-2 usages turn out to <i>agree</i>; candidate 6's table is complete today but nothing
+      keeps it so). Remediation plans:
+      <a class="underline" href="patch-series-apply-remediation.md">patch-series-apply</a> ·
+      <a class="underline" href="launcher-chassis-remediation.md">launcher-chassis</a> ·
+      <a class="underline" href="harness-client-remediation.md">harness-client</a> ·
+      <a class="underline" href="harness-verdicts-ci-remediation.md">harness-verdicts-ci</a> ·
+      <a class="underline" href="patch-index-generation-remediation.md">patch-index-generation</a>.</p>
   </header>
 
   <!-- ============ HOT SPOTS ============ -->
@@ -516,8 +519,10 @@ flowchart LR
       <span class="badge badge-explore">Worth exploring</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">bench/test_spec_decode_attn.py</span><span class="chip">bench/api_smoke.py</span><span class="chip">bench/mq3d_capacity_property.py</span><span class="chip">bench/verbatim.py</span><span class="chip">bench/test_model_verification.py</span><span class="chip">bench/prefix_alternation.py</span><span class="chip">.github/workflows/patch-integrity.yml</span>
+      <span class="chip">bench/test_spec_decode_attn.py</span><span class="chip">bench/api_smoke.py</span><span class="chip">bench/mq3d_capacity_property.py</span><span class="chip">bench/verbatim.py</span><span class="chip">bench/test_model_verification.py:18-19</span><span class="chip">bench/prefix_alternation.py:304</span><span class="chip">.github/workflows/patch-integrity.yml:21</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="harness-verdicts-ci-remediation.md">Deep dive + remediation plan → docs/harness-verdicts-ci-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
@@ -529,7 +534,9 @@ flowchart LR
         <span class="font-mono">FAIL</span> on a correctness miss and <b class="text-white">exits 0 anyway</b>;
         <span class="font-mono">api_smoke.py</span> prints <span class="font-mono">SUMMARY</span> and exits 0 at
         0/12; <span class="font-mono">prefix_alternation.py</span> returns 0 on the arm that reproduces the defect;
-        exit 2 means "refusing to pass" in one script and "invalid tier" in another. Meanwhile two genuinely
+        exit 2 carries the same "the run is invalid" meaning in both scripts that use it
+        (<span class="font-mono">mq3d_capacity_property.py:109-131</span>, <span class="font-mono">replay_offload_serve.py:121</span>) —
+        a four-value convention (0/1/2/3) that already exists in embryo in one file, private and undocumented. Meanwhile two genuinely
         CI-able tests already exist and gate nothing: <span class="font-mono">mq3d_capacity_property.py</span>
         (pure stdlib, seconds, with a negative control) and <span class="font-mono">verbatim.py</span>'s self-test.</p>
       </div>
@@ -549,6 +556,16 @@ flowchart LR
           <li><b>Leverage:</b> reproducers become composable — a regression suite can be assembled from existing scripts instead of written anew per issue.</li>
           <li><b>Tests:</b> two real tests start gating for free; the heredoc string-split dependency in the one CI test is the natural next hardening (candidate 1 helps here too).</li>
         </ul>
+        <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
+        the string-split is at <span class="font-mono">test_model_verification.py:18-19</span> (literal
+        <span class="font-mono">$PY - "$MODEL" <<'EOF'</span> marker). The convention being proposed already
+        exists in embryo: <span class="font-mono">mq3d_capacity_property.py</span> returns 0/1/2/3 with a
+        <span class="font-mono">--mutate</span> negative control (:49, :112-118). Rot inventory:
+        <span class="font-mono">test_lookup_kernels.py:3</span> names a renamed-away file;
+        the verdicts JSONL is checked in twice 1 byte apart (11,438 vs 11,439 B);
+        <span class="font-mono">mq3d_layer2_oracle.py:50</span> writes into the checkout by default;
+        <span class="font-mono">bench/results-prefill-ab/</span> is missing from <span class="font-mono">.gitignore</span>
+        (<span class="font-mono">prefill_ab.sh:19</span>).</p>
       </div>
     </div>
     <div class="grid md:grid-cols-2 gap-4">
@@ -558,7 +575,8 @@ flowchart LR
           <div class="flex justify-between tile red"><span>test_spec_decode_attn</span><span>prints FAIL → exit 0</span></div>
           <div class="flex justify-between tile red"><span>api_smoke</span><span>0/12 → exit 0</span></div>
           <div class="flex justify-between tile red"><span>prefix_alternation</span><span>reproduces bug → exit 0</span></div>
-          <div class="flex justify-between tile red"><span>exit 2</span><span>"refuse to pass" | "bad tier" ?</span></div>
+          <div class="flex justify-between tile red"><span>exit 2</span><span>= "invalid run" in both — but only 2 scripts use it</span></div>
+          <div class="flex justify-between tile red"><span>needle_test</span><span>prints MISSED → exit 0</span></div>
           <div class="flex justify-between tile"><span>CI gate</span><span>1 of ~37 files</span></div>
         </div>
       </div>
@@ -582,17 +600,26 @@ flowchart LR
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">PATCHES.md</span><span class="chip">scripts/export-patch.sh</span><span class="chip">patch preambles (Supersedes: convention)</span><span class="chip">verify.sh:333-411</span><span class="chip">README.md:119</span><span class="chip">patches/series header</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="patch-index-generation-remediation.md">Deep dive + remediation plan → docs/patch-index-generation-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
         <p><span class="font-mono">PATCHES.md</span> — the human index of the <b class="text-white">patch series</b>
-        (kind, upstream reference, what retires it) — is a hand-maintained full re-list of all 45 rows, and it is the
-        5th-most-touched file upstream. Hand-maintained re-lists drift: the README's "38 files" count is stale (45),
-        the <span class="font-mono">series</span> header comment points at a README install loop that no longer
-        exists, and per-patch metadata that belongs with the patch is scattered across the table, a prose paragraph,
-        and <span class="font-mono">verify.sh</span>'s marker triples. Nothing checks any of it. The repo already has
-        the machine-read pattern working in production: the <span class="font-mono">Supersedes:</span> preamble
-        header is consumed by <span class="font-mono">verify.sh:64-72</span>.</p>
+        (kind, upstream reference, what retires it) — is a hand-maintained full re-list. Verified 2026-09-26: the
+        table is <i>accidentally complete</i> today (47 data rows = 45 series + 2 kvarn, checked with
+        <span class="font-mono">comm</span>) — but it is the 5th-most-touched file upstream and
+        <b class="text-white">nothing in CI references it</b>, and its surroundings have already rotted: the README's
+        "38 files" count is stale (45), the <span class="font-mono">series</span> header comment points at a README
+        install loop that no longer exists, <span class="font-mono">PATCHES.md:82</span> points at a
+        <span class="font-mono">docs/MR-DRAFT.md</span> that does not exist, and :81-82's own mechanism claim
+        ("raw <span class="font-mono">diff -ruN</span> headers") is stale — both files were re-exported (zero
+        <span class="font-mono">diff -ruN</span> lines; <span class="font-mono">dflash2-z-adaptive-emitted:1-5</span>
+        has an empty preamble, <span class="font-mono">offload-wsl2-devptr:1</span> a one-liner). The repo already
+        has the machine-read pattern working in production: the <span class="font-mono">Supersedes:</span>
+        preamble header (1 producer, <span class="font-mono">spec-decode-scratch-within-budget.patch:49</span>)
+        is consumed by <span class="font-mono">verify.sh:67</span>; per-patch verify markers live as bash triples
+        (<span class="font-mono">verify.sh:333-336</span>, calls at :399/:405/:411).</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -615,7 +642,8 @@ flowchart LR
       <div class="panel panel-before">
         <p class="panel-tag text-rose-400 mb-3">BEFORE — metadata in three homes, none checked</p>
         <div class="font-mono text-xs space-y-1.5">
-          <div class="flex justify-between tile red"><span>PATCHES.md table</span><span>45 rows by hand</span></div>
+          <div class="flex justify-between tile red"><span>PATCHES.md table</span><span>47 rows by hand — complete today, unchecked</span></div>
+          <div class="flex justify-between tile red"><span>PATCHES.md:81-82</span><span class="drift">own mechanism claim stale (0 diff -ruN left)</span></div>
           <div class="flex justify-between tile red"><span>README “38 files”</span><span class="drift">stale: 45</span></div>
           <div class="flex justify-between tile red"><span>series header</span><span class="drift">points at a deleted loop</span></div>
           <div class="flex justify-between tile"><span>verify.sh markers</span><span>3rd copy of per-patch facts</span></div>
@@ -727,17 +755,18 @@ flowchart LR
       it is subtraction, not new machinery.</p>
       <p class="text-slate-400">Sequence after that: 2 and 3 are independent and can run in either order; 5 is the
       cheapest card in the deck; 6 and 7 land best on top of 1.</p>
-      <p class="text-slate-300">Remediation plans already written: <a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">candidate 1 → patch-series-apply-remediation.md</a>
-      (three PRs: one door, retire the retired, KVarN under the fast gate),
-      <a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">candidate 2 → launcher-chassis-remediation.md</a>
-      (three PRs: chassis + dry-run seam, alternative.sh joins, CI argv assertions), and
-      <a class="text-emerald-400 underline" href="harness-client-remediation.md">candidate 3 → harness-client-remediation.md</a>
-      (three PRs: module + key/URL migration, stream/metrics + bash guards, model name).</p>
+      <p class="text-slate-300">Remediation plans already written:
+      <a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">1 → patch-series-apply</a>,
+      <a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">2 → launcher-chassis</a>,
+      <a class="text-emerald-400 underline" href="harness-client-remediation.md">3 → harness-client</a>,
+      <a class="text-emerald-400 underline" href="harness-verdicts-ci-remediation.md">5 → harness-verdicts-ci</a>, and
+      <a class="text-emerald-400 underline" href="patch-index-generation-remediation.md">6 → patch-index-generation</a>.
+      Each is a 2–3 PR sequence with a no-GPU test plan and grep-able done-when checks.</p>
     </div>
   </section>
 
   <footer class="text-sm text-slate-500 pb-8">
-    <p>Every file:line citation was spot-checked against the tree; candidates 1, 2 and 3 were then deep-dived and their
+    <p>Every file:line citation was spot-checked against the tree; candidates 1, 2, 3, 5 and 6 were then deep-dived and their
     cards corrected where the deeper pass disproved a claim. Vocabulary from README / PATCHES.md / docs/gotchas.md
     (no CONTEXT.md or ADR directory exists).</p>
     <p class="mt-2 text-slate-300 font-bold">Which of these would you like to explore?</p>
