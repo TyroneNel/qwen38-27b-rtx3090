@@ -72,16 +72,19 @@
       verifier) and the spec-decode <i>verify step</i> (the model checking drafted tokens) are different things that
       share a word; this report always means the first.
     </p>
-    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> candidates 1, 2, 3, 5 and 6
+    <p class="mt-3 text-sm text-emerald-300/90 max-w-3xl"><b>Status, updated 2026-09-26:</b> all seven candidates
       received full line-level deep dives — every claim re-verified, corrections folded back into their cards
       (notably: candidate 2 is <i>three</i> launchers, not two; candidate 3's glue is ~400 lines, not ~1,500;
       candidate 5's two exit-2 usages turn out to <i>agree</i>; candidate 6's table is complete today but nothing
-      keeps it so). Remediation plans:
-      <a class="underline" href="patch-series-apply-remediation.md">patch-series-apply</a> ·
-      <a class="underline" href="launcher-chassis-remediation.md">launcher-chassis</a> ·
-      <a class="underline" href="harness-client-remediation.md">harness-client</a> ·
-      <a class="underline" href="harness-verdicts-ci-remediation.md">harness-verdicts-ci</a> ·
-      <a class="underline" href="patch-index-generation-remediation.md">patch-index-generation</a>.</p>
+      keeps it so; candidate 4's "shared" rtn_quantize is not actually identical to the copies).
+      Remediation plans, one per candidate:
+      <a class="underline" href="patch-series-apply-remediation.md">1 patch-series-apply</a> ·
+      <a class="underline" href="launcher-chassis-remediation.md">2 launcher-chassis</a> ·
+      <a class="underline" href="harness-client-remediation.md">3 harness-client</a> ·
+      <a class="underline" href="pipeline-core-remediation.md">4 pipeline-core</a> ·
+      <a class="underline" href="harness-verdicts-ci-remediation.md">5 harness-verdicts-ci</a> ·
+      <a class="underline" href="patch-index-generation-remediation.md">6 patch-index-generation</a> ·
+      <a class="underline" href="prepare-status-remediation.md">7 prepare-status</a>.</p>
   </header>
 
   <!-- ============ HOT SPOTS ============ -->
@@ -444,8 +447,10 @@ flowchart LR
       <span class="badge badge-explore">Worth exploring</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">prepare/quant_lm_head.py</span><span class="chip">prepare/quant_embed.py</span><span class="chip">prepare/quant_mtp.py</span><span class="chip">prepare/quant_heads_stream.py</span><span class="chip">drafter/gptq_utils.py</span><span class="chip">drafter/export_mtp.py</span><span class="chip">drafter/requant_mtp_gptq.py</span><span class="chip">docker/prepare.sh:26-50</span>
+      <span class="chip">prepare/quant_lm_head.py</span><span class="chip">prepare/quant_embed.py</span><span class="chip">prepare/quant_mtp.py</span><span class="chip">prepare/quant_heads_stream.py:152</span><span class="chip">drafter/gptq_utils.py:77-84</span><span class="chip">drafter/export_mtp.py</span><span class="chip">drafter/requant_mtp_gptq.py:20-22</span><span class="chip">docker/prepare.sh:26-50</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="pipeline-core-remediation.md">Deep dive + remediation plan → docs/pipeline-core-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
@@ -461,6 +466,21 @@ flowchart LR
         shim duplicated 5×. The pipeline's tensor-name conventions are likewise known to
         <span class="font-mono">docker/prepare.sh</span>'s embedded-Python <span class="font-mono">state()</span>,
         <span class="font-mono">verify.sh</span>, and the scripts themselves — three authors for one protocol.</p>
+        <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
+        the shared <span class="font-mono">rtn_quantize</span> is <i>not actually identical</i> to the prepare/
+        copies (clamp <span class="font-mono">1e-8</span> vs <span class="font-mono">1e-10</span>, no keepdim) —
+        an invisible variant with nowhere to be written down. The fp16-vs-bf16 scale fact is encoded three ways
+        (comments at <span class="font-mono">quant_lm_head.py:55-56</span> and <span class="font-mono">quant_embed.py:55-56</span>,
+        data at <span class="font-mono">quant_heads_stream.py:152</span>). The MTP list's six sites use three forms
+        (incl. <span class="font-mono">LIN</span> at <span class="font-mono">requant_mtp_gptq.py:20-22</span> and an
+        inline tuple doing a secret side job at <span class="font-mono">quant_lm_head.py:74-83</span>). The draft-head
+        contract has two writers with a real semantic difference —
+        <span class="font-mono">build_draft_vocab.py:91-126</span> slices packed rows,
+        <span class="font-mono">export_mtp.py:108-129</span> requantizes a trained head — consumed by
+        <span class="font-mono">patches/qwen3_5-mtp-draft-vocab.patch:33-41</span>. The inode-truncation bug already
+        bit once (story at <span class="font-mono">gptq_lm_head.py:84-88</span>) and travels by comment
+        (<span class="font-mono">export_mtp.py:52-53</span>); the backup-suffix protocol
+        (<span class="font-mono">.bak / .bak-quant / .bak-mtp / .bak-draft</span>) crosses six files undocumented.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -667,8 +687,10 @@ flowchart LR
       <span class="badge badge-explore">Worth exploring</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">docker/prepare.sh:26-50, 101</span><span class="chip">the six prepare/ scripts</span><span class="chip">verify.sh:197-225</span><span class="chip">bench/test_model_verification.py:15</span>
+      <span class="chip">docker/prepare.sh:26-50, 101-102</span><span class="chip">the six prepare/ scripts</span><span class="chip">verify.sh:104-225</span><span class="chip">bench/test_model_verification.py:18-19</span>
     </p>
+    <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="prepare-status-remediation.md">Deep dive + remediation plan → docs/prepare-status-remediation.md</a>
+      <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
@@ -681,6 +703,18 @@ flowchart LR
         shell source on a literal marker. So the done-ness protocol of a ~20 GB artifact pipeline is maintained in a
         language the writers don't run, and tested through a parser of a parser. Rename a tensor and you edit the
         script, the heredoc, and verify.sh — miss one and prepare silently re-runs or skips a step.</p>
+        <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
+        the string-split is verbatim at <span class="font-mono">test_model_verification.py:18-19</span>
+        (splits on <span class="font-mono">$PY - "$MODEL" <<'EOF'</span>), and the same file's second test
+        (:59-91) already proves the healthy pattern — it replays <i>files</i> (entrypoint.sh, select_model.sh)
+        instead of parsing shell. verify.sh's model block is a genuinely skeptical third implementation
+        (<span class="font-mono">group_of</span> at :159-169 re-derives vLLM's
+        <span class="font-mono">find_matched_target</span> semantics; symmetry/zero-point rules at :145-179) —
+        and it is <b class="text-slate-200">torch-free</b> (imports only json/os/sys/re at :148), so it
+        extracts cleanly into <span class="font-mono">scripts/verify_model.py</span>: verify.sh calls it,
+        the test runs the file, the heredoc and the string-split both die. Also load-bearing:
+        <span class="font-mono">tokenizer.json</span> in the state check (:31-33) — without it the dir looks
+        servable until startup.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -755,18 +789,20 @@ flowchart LR
       it is subtraction, not new machinery.</p>
       <p class="text-slate-400">Sequence after that: 2 and 3 are independent and can run in either order; 5 is the
       cheapest card in the deck; 6 and 7 land best on top of 1.</p>
-      <p class="text-slate-300">Remediation plans already written:
+      <p class="text-slate-300">Remediation plans already written, all seven:
       <a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">1 → patch-series-apply</a>,
       <a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">2 → launcher-chassis</a>,
       <a class="text-emerald-400 underline" href="harness-client-remediation.md">3 → harness-client</a>,
-      <a class="text-emerald-400 underline" href="harness-verdicts-ci-remediation.md">5 → harness-verdicts-ci</a>, and
-      <a class="text-emerald-400 underline" href="patch-index-generation-remediation.md">6 → patch-index-generation</a>.
+      <a class="text-emerald-400 underline" href="pipeline-core-remediation.md">4 → pipeline-core</a>,
+      <a class="text-emerald-400 underline" href="harness-verdicts-ci-remediation.md">5 → harness-verdicts-ci</a>,
+      <a class="text-emerald-400 underline" href="patch-index-generation-remediation.md">6 → patch-index-generation</a>, and
+      <a class="text-emerald-400 underline" href="prepare-status-remediation.md">7 → prepare-status</a>.
       Each is a 2–3 PR sequence with a no-GPU test plan and grep-able done-when checks.</p>
     </div>
   </section>
 
   <footer class="text-sm text-slate-500 pb-8">
-    <p>Every file:line citation was spot-checked against the tree; candidates 1, 2, 3, 5 and 6 were then deep-dived and their
+    <p>Every file:line citation was spot-checked against the tree; all seven candidates were then deep-dived and their
     cards corrected where the deeper pass disproved a claim. Vocabulary from README / PATCHES.md / docs/gotchas.md
     (no CONTEXT.md or ADR directory exists).</p>
     <p class="mt-2 text-slate-300 font-bold">Which of these would you like to explore?</p>
