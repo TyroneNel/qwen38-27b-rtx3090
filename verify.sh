@@ -101,6 +101,10 @@ if [ -f "$SP/v1/attention/backends/kvarn_attn.py" ]; then
   if $PY patches/_check_applied.py kvarn/kvarn-v2-runner-0.30.0.patch "$SP" >/dev/null 2>&1; then
     ok "kvarn-v2-runner-0.30.0.patch applied (SPEC=dflash2 + CTX=huge available)"
   else warn "kvarn-v2-runner-0.30.0.patch not applied (re-run bash kvarn/install.sh for DFlash2 at 240k)"; fi
+  if $PY patches/_check_applied.py kvarn/kvarn-recycled-pages-0.30.0.patch "$SP" >/dev/null 2>&1 \
+      && grep -q "def note_scheduled_blocks" "$SP/v1/attention/backends/kvarn_attn.py"; then
+    ok "kvarn-recycled-pages-0.30.0.patch applied (no late KVarN flush into mamba state, #208)"
+  else warn "kvarn-recycled-pages-0.30.0.patch not applied: CTX=huge + PREFIX_CACHE=1 can print \"!!!!\" (#208; bash kvarn/install.sh)"; fi
 else warn "KVarN not installed (optional; bash kvarn/install.sh for 262k context)"; fi
 
 if [ $INSTALL = 0 ]; then

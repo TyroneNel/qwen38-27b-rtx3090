@@ -19,6 +19,9 @@ apply_kvarn kvarn-0.30.0.patch
 # V2-runner port: lets SPEC=dflash2 run with CTX=huge (KVarN KV + prefix caching, 240k).
 # Depends on hunks from both the patches/ set and kvarn-0.30.0.patch, hence applied last.
 apply_kvarn kvarn-v2-runner-0.30.0.patch
+# The runner tells KVarN which pages moved to another KV-cache group each step, so a late flush
+# never lands on another request's mamba state (#208, the "!!!!" output). Needs the modules above.
+apply_kvarn kvarn-recycled-pages-0.30.0.patch
 find "$SP" -type d -name __pycache__ -path "*kvarn*" -prune -exec rm -rf {} + 2>/dev/null || true
 "$PY" - "$SP" "$HERE" <<'PY'
 import sys
@@ -40,12 +43,14 @@ print("tile bytes", c.tile_bytes, "-> per token per head", c.tile_bytes_aligned 
 # counting them per file says exactly which ones did not land.
 sp, here = Path(sys.argv[1]), Path(sys.argv[2])
 want, current = {}, None
-for line in (here / "kvarn-v2-runner-0.30.0.patch").read_text().splitlines():
-    if line.startswith("+++ b/"):
-        current = line[len("+++ b/"):].strip()
-        want.setdefault(current, 0)
-    elif current and line.startswith("+") and "port(kvarn-v2)" in line:
-        want[current] += 1
+PORTS = ("kvarn-v2-runner-0.30.0.patch", "kvarn-recycled-pages-0.30.0.patch")
+for name in PORTS:
+    for line in (here / name).read_text().splitlines():
+        if line.startswith("+++ b/"):
+            current = line[len("+++ b/"):].strip()
+            want.setdefault(current, 0)
+        elif current and line.startswith("+") and "port(kvarn-v2)" in line:
+            want[current] += 1
 short = []
 for rel, expected in sorted(want.items()):
     target = sp / rel
@@ -53,7 +58,7 @@ for rel, expected in sorted(want.items()):
     if found < expected:
         short.append(f"  {rel}: {found}/{expected} markers")
 if short:
-    print("\nERROR: kvarn-v2-runner-0.30.0.patch did not apply completely:", file=sys.stderr)
+    print("\nERROR: " + " / ".join(PORTS) + " did not apply completely:", file=sys.stderr)
     print("\n".join(short), file=sys.stderr)
     print(
         "\nThis vLLM tree differs from the one the patch was cut against.\n"
