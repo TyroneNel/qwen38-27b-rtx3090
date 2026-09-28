@@ -4,6 +4,24 @@
 document. Analyzed tree: `main` @ `1cf86656c26b7725743c41a0ad7b9de99f5d7844` (identical to
 `upstream/main`, syv-ai/HyperQwen; the fork tip `f6a5436` differs only by a docs/auth merge).
 
+**Re-verified 2026-09-28 against upstream/main @ `2522ef9`** (22 commits later; still no new
+measurements — the deltas below are source-level). What landed since the analysis:
+- **PR #189 merged (d88544b): vLLM is now pinned to 0.30.0** — opportunity 2 / T2 is no
+  longer "land the port" but "switch on and validate its spec-decode wins" (updated below).
+  The 0.30 image is the shipped image, so Q3–Q4's soak experiments need no special build.
+- **#208 fixed via #222** (`kvarn-recycled-pages-0.30.0.patch`): the "!!!!" collapse — a
+  *different* KVarN corruption (late page flush across KV-cache groups onto another
+  request's mamba state), with a new GPU reproducer `bench/concurrent_collapse.py`.
+  T1's target corruption (shared-verify ↔ async scheduling) is untouched: the docstring
+  survives verbatim (`triton_kvarn_decode.py:941-945`) and `KVARN_SHARED_VERIFY` is still
+  default-off (`kvarn-0.30.0.patch:49,78`) — but the hunt now has a proven template.
+- **Appendix A's "most useful A/B left" is measured**: 2× 3090 TP=2, int8/TRITON vs
+  fp8/FlashInfer MTP — 156.0 vs 90.9 tok/s (1.72×, #217; `docs/multi-gpu.md:226`).
+- `spec-attn-smem-fit` (#188) and `bench-sse-keepalive` (#226) joined the series;
+  `offload-mtp-serve` and `mamba-align-retire-null-gaps` retired out. The launchers now
+  pin the prefix-cache retention interval explicitly (#189; 0.30's unset default is 0,
+  vllm#55760) — T2's retention caveat is already handled in-tree.
+
 **Number labels.** Every figure is one of:
 - **[REPO-MEASURED]** — quoted from this repo's docs/issues, with the path.
 - **[EXTERNAL-MEASURED]** — another project's published result, with link.
@@ -40,8 +58,8 @@ numbers noted where they are what the repo publishes.
 
 | # | Opportunity | Expected gain [ESTIMATE] | Quality risk | Effort |
 |---|---|---|---|---|
-| 1 | **Enable KVarN's shared-dequant verify kernel** (`KVARN_SHARED_VERIFY`, currently default-off over an unresolved corruption) + batch-1 kernel-efficiency pass on the KVarN decode path. The fallback re-dequantizes the whole KV cache **once per query token** (4× at MTP k=3, 8× at DFlash2 k=7) every step. | **240k: +80–200%** (step ~127 → ~35–45 ms); 112–150k KVarN: +40–90% | none (kernel math unchanged; validated in isolation already) | **M** |
-| 2 | **Land the vLLM 0.30.0 port (PR #189, open, verified on the reference 3090) and switch on its spec-decode wins**: adaptive verification (vllm#52228), DFlash AOT-schedule drop (vllm#54374), gc-freeze graph capture (vllm#54646), `FULL_DECODE_ONLY` graphs (vllm#55095), Mamba-state-at-EAGLE-resume (vllm#53945). | **+5–15%** at both depths | none (spec decode is exact) | **S–M** |
+| 1 | **Enable KVarN's shared-dequant verify kernel** (`KVARN_SHARED_VERIFY`, still default-off over an unresolved corruption — a *second*, unrelated KVarN corruption, #208's "!!!!" page-flush, was isolated and fixed in #222 since this analysis) + batch-1 kernel-efficiency pass on the KVarN decode path. The fallback re-dequantizes the whole KV cache **once per query token** (4× at MTP k=3, 8× at DFlash2 k=7) every step. | **240k: +80–200%** (step ~127 → ~35–45 ms); 112–150k KVarN: +40–90% | none (kernel math unchanged; validated in isolation already) | **M** |
+| 2 | **Switch on and validate the 0.30.0 spec-decode wins — the port has LANDED** (PR #189 merged 2026-09-28, `vllm==0.30.0` pinned): adaptive verification (vllm#52228), DFlash AOT-schedule drop (vllm#54374), gc-freeze graph capture (vllm#54646), `FULL_DECODE_ONLY` graphs (vllm#55095), Mamba-state-at-EAGLE-resume (vllm#53945). | **+5–15%** at both depths | none (spec decode is exact) | **S** (validation, not a port) |
 | 3 | **Recover FULL CUDA graphs on the fp8/FlashInfer 150k path and re-enable MTP k=4** (PIECEWISE costs −6.6% step [REPO-MEASURED: gotcha 40]; k=4 is worth ~+7% [REPO-MEASURED: docs/optimizations.md lines 397–403]). Both are gated on the #34 FlashInfer crash, which the 0.29/0.30 pin + FlashInfer 0.6.18.post1 may already fix — a soak test decides. | **150k: +8–14%** | none | **S–M** |
 | 4 | **DFlash2 + fp8 at 150k via the FA2-fp8 plugin geometry relaxation** (issue #153: TP=1 needs `(256,4)`/`(128,8)` admitted to the adapter's tested set). Gives DFlash2's acceptance + the lookup lane at 150k with FULL graphs, instead of the TRITON/int8 tier that decays with depth (gotcha 40) or KVarN's per-token verify. | **150k copy/quote: +30–100%**; mixed prose at depth: ~0 (MTP keeps that workload) | none | **M** |
 | 5 | **int4-per-token-head KV + MQ-3D split-KV verify as the hedge 240k path** (`single-user/alternative.sh` + `VLLM_INT4_MQ_3D=1`): measured 38–46 tok/s at 88k on the 3090 [REPO-MEASURED: docs/spec-decode-scratch-token-units.md lines 366–378] vs KVarN's 38.6 at 90k, pool 314,915 tokens, GSM8K 96.0 / 100k needle retrieved [REPO-MEASURED: docs/long-context.md lines 456–465]. | **240k: 1.5–2.5× current E** if #1 stalls | **medium** (PPL at depth and 240k needle not yet published; int4 pth is coarser than KVarN k4v2) | **M** |
@@ -208,7 +226,11 @@ single-user at 112k] — the tax is per-query-token, and single-user verifies 4�
 agree); MEDIUM that enabling the shared kernel is easy (corruption mechanism unresolved —
 but the launcher already runs `--no-async-scheduling` at CTX=huge for the lookup lane, and
 the suspicion named is async-scheduling/drafter-metadata, so enabling may be a validation
-exercise, not a rewrite).
+exercise, not a rewrite). **2026-09-28 note:** the gate and the docstring are unchanged on
+0.30 (`kvarn-0.30.0.patch:49,78`; `triton_kvarn_decode.py:941-945`), and #222 proved the
+bisect-and-fix loop on a *different* KVarN corruption (#208's cross-group page flush —
+fixed by telling the runner which pages moved groups each step, reproducer
+`bench/concurrent_collapse.py`). Neither fix touches this path.
 
 **F2 — fp8 verify on sm86 is structurally downgraded: PIECEWISE graphs and k=3 (not 4).**
 Two independent constraints on D: (a) FlashInfer's spec-decode path is single-token-only →
@@ -345,8 +367,10 @@ T9 sweep alone (splits/tile) is a cheap partial.
 
 ### T2 — vLLM 0.30.0 (PR #189) + adaptive verification
 
-**Mechanism.** The port PR is open and verified on the reference 3090 with identical KV
-pools on every shipped mode [REPO-MEASURED: PR #189 description]. 0.30.0 carries: acceptance
+**Mechanism.** The port PR **landed** on 2026-09-28 (d88544b: `vllm==0.30.0` pinned, the
+series re-exported, four apply-invisible regressions fixed; verified on the reference 3090
+with identical KV pools on every shipped mode [REPO-MEASURED: PR #189 description, now
+merged]). What remains of this row is the validation-and-enablement half. 0.30.0 carries: acceptance
 estimation for adaptive verification (vllm#52228, merged 2026-09-14) — the engine shortens
 the draft when acceptance is low, which matters most exactly where verify cost is highest
 (long context); DFlash drafters dropping FlashAttention's AOT schedule (vllm#54374);
@@ -354,11 +378,12 @@ gc-freeze during graph capture (vllm#54646); `FULL_DECODE_ONLY` graphs (vllm#550
 state cached at the EAGLE resume position (vllm#53945, a correctness enabler for EAGLE-class
 drafters on hybrid models).
 
-**Implementation sketch.** Land PR #189 under the repo's two-box bar (docs/vllm-0.29.md
-lines 143–166 describes the procedure). Then: enable adaptive verification for the D and E
+**Implementation sketch.** ~~Land PR #189 under the repo's two-box bar~~ — done
+(2026-09-28). Remaining: enable adaptive verification for the D and E
 profiles (confirm #52228 covers MTP and DFlash2 on the V2 runner; it is documented as "every
-draft-model speculator"), keep the launcher's explicit prefix-cache retention (PR #189
-already handles the 0.30 default change), and re-run the mode acceptance tables.
+draft-model speculator"), keep the launcher's explicit prefix-cache retention (already
+shipped in #189 — `single-user/start_qwen.sh:524-570` pins 13056/14592 against the 0.30
+default change, vllm#55760), and re-run the mode acceptance tables.
 
 **Benchmark + quality validation (Setups B, D, E).** `bash bench/run_benchmarks.sh single`
 twice per mode (keep second run), C1–C8 + tok/step, 0.29 vs 0.30 on the same box in one
@@ -546,7 +571,8 @@ feature, and T1 (lossless) remains the only 240k route.
   head at 150k (80.6 vs 61–64 tok/s) — if that reproduces, the draft-vocab truncation is a
   pessimization at long context and the launcher should stop shipping it there; if it does
   not, the fix is just the corpus rebuild (T6).
-- **Q4 (T3 enabler).** On the 0.30 image with FlashInfer 0.6.18.post1: does
+- **Q4 (T3 enabler).** On the 0.30 image (now the *shipped* image — #189 merged, so no
+  special build is needed) with the FlashInfer set `vllm==0.30.0` resolves: does
   `DRAFT_TOKENS=4` at `CTX=long` still Xid/IMA under request churn at 28–34k (#34), and
   does FULL (or FULL_DECODE_ONLY) graph mode on the fp8 verify pass the concurrent-garbage
   check from #121? Both are boot-and-soak, no code.
@@ -576,8 +602,10 @@ Not part of the plan (Hard constraint 3), recorded because the repo has measured
   [REPO-MEASURED: docs/multi-gpu.md lines 122–128]. TP=3 is invalid for this model (4 KV
   heads, 64 layers) [REPO-MEASURED: docs/multi-gpu.md lines 15–26].
 - **MTP at TP>1:** int8 KV on TRITON_ATTN beats fp8/FlashInfer 1.43–1.89× on sm120
-  [REPO-MEASURED: docs/multi-gpu.md lines 156–164]; unmeasured on Ampere TP>1 — the doc
-  names it "the most useful A/B left".
+  [REPO-MEASURED: docs/multi-gpu.md lines 156–164]; **measured on Ampere since this
+  analysis**: 2× 3090 TP=2 (patched-driver P2P, no NVLink) 156.0 vs 90.9 tok/s, 1.72×
+  [REPO-MEASURED: docs/multi-gpu.md line 226, issue #217] — the same shape as sm120,
+  and TP1 int8/TRITON passes the #121 concurrent-garbage check on the reference 3090.
 - The second card buys a second memory system, which is exactly what batch-1 decode is
   bound by (§2.4) — hence the outsize gains; but it is not the 24 GB plan.
 
@@ -593,7 +621,9 @@ huggingface.co/dbirks/Qwen3.8-27B-W4A16-AutoRound/raw/main/config.json.
 
 GitHub (syv-ai/HyperQwen): issues #11, #25, #34, #38, #40, #52, #57, #60, #62, #73, #86,
 #103, #105, #107, #121, #153, #159, #160, #164, #174, #190, #192, #194, #196; PR #42, #46,
-#148, #188, #189. Upstream vLLM PRs: #50021 (open), #52228, #53945, #54374, #54646,
+#148, #188, #189 (merged 2026-09-28). Post-analysis: issues #195, #208, #213, #216–#218,
+#221 and PRs #198–#203, #207, #212, #214, #215, #220, #222–#226 (see the re-verified note
+at the top). Upstream vLLM PRs: #50021 (open), #52228, #53945, #54374, #54646,
 #55041, #55095, #55450, #55760, #58024–#58028 (open), #54282, #52789; vLLM v0.30.0 release
 notes (2026-09-22).
 
