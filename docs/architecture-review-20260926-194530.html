@@ -55,11 +55,11 @@
 <div class="max-w-6xl mx-auto px-6 py-12">
   <!-- ============ HEADER ============ -->
   <header class="mb-14">
-    <p class="kicker mb-3">Architecture review · generated 2026-09-26</p>
+    <p class="kicker mb-3">Architecture review · generated 2026-09-26 · re-verified 2026-09-28 against upstream/main @ 2522ef9 (vLLM 0.30.0)</p>
     <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight">HyperQwen</h1>
     <p class="mt-3 text-lg text-slate-300 max-w-3xl">
       Qwen3.8-27B, served fast on the GPUs people actually own: a <b class="text-white">patch series</b> on a pinned
-      vLLM&nbsp;0.29.0, plus a <b class="text-white">model-preparation pipeline</b>, two <b class="text-white">serving
+      vLLM&nbsp;0.30.0 (0.29.0 at the review; flipped by #189 two days later), plus a <b class="text-white">model-preparation pipeline</b>, two <b class="text-white">serving
       modes</b> behind their <b class="text-white">launchers</b>, and a <b class="text-white">harness</b> of benchmarks,
       sweeps and reproducers.
     </p>
@@ -85,23 +85,31 @@
       <a class="underline" href="harness-verdicts-ci-remediation.md">5 harness-verdicts-ci</a> ·
       <a class="underline" href="patch-index-generation-remediation.md">6 patch-index-generation</a> ·
       <a class="underline" href="prepare-status-remediation.md">7 prepare-status</a>.</p>
+    <p class="mt-3 text-sm text-amber-300/90 max-w-3xl"><b>Status, updated 2026-09-28:</b> all seven plans
+      re-verified against <span class="font-mono">upstream/main @ 2522ef9</span> — 22 upstream commits landed since
+      the review, including the 0.29 → 0.30 pin flip (#189) the top recommendation calls the coming change.
+      Every card re-cited; what upstream fixed, partially fixed, and newly duplicated is marked per card.
+      Headline: the drift thesis was proven in the wild — the flip touched all five series parsers, the README
+      still says "38 files", python-314.md is now two pins behind, and #195 built the shared-module pattern
+      (<span class="font-mono">prepare/atomic_publish.py</span>) candidate 4 proposes, for the write protocol.</p>
   </header>
 
   <!-- ============ HOT SPOTS ============ -->
   <section class="card p-6 md:p-8 mb-12">
     <h2 class="sec mb-1">Where the change pressure is</h2>
-    <p class="text-sm text-slate-400 mb-5">File touches per area across the last 40 upstream commits
-      (<span class="font-mono">patches/</span> alone out-changes the next three areas combined).</p>
+    <p class="text-sm text-slate-400 mb-5">File touches per area across the last 40 upstream commits, re-measured
+      2026-09-28 (<span class="font-mono">patches/</span> alone out-changes the next three areas combined — 103 vs 79).</p>
     <div>
-      <div class="bar-row"><div class="bar-label">patches/</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#f59e0b,#f43f5e)"></div></div><div class="font-mono text-xs text-slate-300 w-8">61</div></div>
-      <div class="bar-row"><div class="bar-label">docs/</div><div class="bar-track"><div class="bar-fill" style="width:41%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">25</div></div>
-      <div class="bar-row"><div class="bar-label">bench/</div><div class="bar-track"><div class="bar-fill" style="width:23%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">14</div></div>
-      <div class="bar-row"><div class="bar-label">single-user/</div><div class="bar-track"><div class="bar-fill" style="width:21%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">13</div></div>
-      <div class="bar-row"><div class="bar-label">PATCHES.md</div><div class="bar-track"><div class="bar-fill" style="width:15%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">9</div></div>
-      <div class="bar-row"><div class="bar-label">batch/</div><div class="bar-track"><div class="bar-fill" style="width:10%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">6</div></div>
-      <div class="bar-row"><div class="bar-label">docker/</div><div class="bar-track"><div class="bar-fill" style="width:8%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">5</div></div>
-      <div class="bar-row"><div class="bar-label">verify.sh</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">4</div></div>
-      <div class="bar-row"><div class="bar-label">kvarn/</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">4</div></div>
+      <div class="bar-row"><div class="bar-label">patches/</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#f59e0b,#f43f5e)"></div></div><div class="font-mono text-xs text-slate-300 w-8">103</div></div>
+      <div class="bar-row"><div class="bar-label">docs/</div><div class="bar-track"><div class="bar-fill" style="width:37%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">38</div></div>
+      <div class="bar-row"><div class="bar-label">bench/</div><div class="bar-track"><div class="bar-fill" style="width:23%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">24</div></div>
+      <div class="bar-row"><div class="bar-label">kvarn/</div><div class="bar-track"><div class="bar-fill" style="width:17%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">17</div></div>
+      <div class="bar-row"><div class="bar-label">single-user/</div><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">14</div></div>
+      <div class="bar-row"><div class="bar-label">prepare/</div><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">14</div></div>
+      <div class="bar-row"><div class="bar-label">PATCHES.md</div><div class="bar-track"><div class="bar-fill" style="width:9%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">9</div></div>
+      <div class="bar-row"><div class="bar-label">batch/</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">7</div></div>
+      <div class="bar-row"><div class="bar-label">verify.sh</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">7</div></div>
+      <div class="bar-row"><div class="bar-label">docker/</div><div class="bar-track"><div class="bar-fill" style="width:5%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">5</div></div>
     </div>
     <p class="mt-4 text-sm text-slate-400">The seven candidates below are weighted toward these surfaces:
       the machinery <i>around</i> the patch series, the launchers, and the harness — because that is where future
@@ -113,20 +121,20 @@
     <pre class="mermaid">
 flowchart LR
   subgraph FORK["cpuchip/vllm fork — source of truth"]
-    C["one commit per patch<br/>qwen38/0.29 · -hq · -hq2"]
+    C["one commit per patch<br/>qwen38/0.30 · tag 0.30-cut5"]
   end
   C -->|"scripts/export-patch.sh"| S["patches/series<br/>45 patches, ordered"]
   S --> A1["Dockerfile apply loop<br/>sed + patch --fuzz 0"]
   S -.->|"re-parsed"| A2["verify.sh"]
   S -.->|"re-parsed"| A3["check_vllm_series.sh · CI"]
   S -.->|"re-told, drifted"| A4["docs/install.md · python-314.md"]
-  K["kvarn/<br/>2 patches + 8-file overlay"] --> A1
-  A1 --> IMG["image: patched vLLM 0.29.0"]
+  K["kvarn/<br/>3 patches + 8-file overlay"] --> A1
+  A1 --> IMG["image: patched vLLM 0.30.0"]
   P["prepare/ + drafter/<br/>requant · draft vocab · drafters"] --> M["models/<br/>base · -fast · DFlash2"]
   IMG --> L{"launchers<br/>single-user / batch"}
   M --> L
   L --> V["vllm serve :18020"]
-  B["bench/ harness<br/>~37 scripts"] --> V
+  B["bench/ harness<br/>~39 scripts"] --> V
   style S stroke:#f59e0b,stroke-width:2px
   style L stroke:#f59e0b,stroke-width:2px
   style B stroke:#f59e0b,stroke-width:2px
@@ -142,7 +150,7 @@ flowchart LR
       <span class="badge badge-strong">Strong</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">patches/series</span><span class="chip">Dockerfile:30-38</span><span class="chip">verify.sh:52-86</span><span class="chip">patches/check_vllm_series.sh</span><span class="chip">docs/install.md:100-113</span><span class="chip">docs/python-314.md:62-71</span><span class="chip">kvarn/install.sh</span><span class="chip">patches/dflash2-backport.patch</span><span class="chip">README.md:119</span>
+      <span class="chip">patches/series</span><span class="chip">Dockerfile:28-39</span><span class="chip">verify.sh:56-107</span><span class="chip">patches/check_vllm_series.sh</span><span class="chip">docs/install.md:104-121</span><span class="chip">docs/python-314.md:62-71</span><span class="chip">kvarn/install.sh</span><span class="chip">patches/dflash2-backport.patch</span><span class="chip">README.md:122</span>
     </p>
     <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="patch-series-apply-remediation.md">Deep dive + remediation plan → docs/patch-series-apply-remediation.md</a>
       <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
@@ -158,22 +166,22 @@ flowchart LR
         vLLM 0.27.1 with no skip logic. Meanwhile the retired <span class="font-mono">dflash2-backport.patch</span>
         is kept in the tree and special-cased in <b class="text-white">five</b> consumers, the old 0.27.1 KVarN patches
         ride along as inert weight, and the README's front door still says "38 files" — there are 45. The fast CI gate
-        never sees the two KVarN patches at all; only the 20-minute image build does.</p>
+        never sees the three KVarN patches at all (a third, <span class="font-mono">kvarn-recycled-pages</span>, joined for #208 in #222); only the 20-minute image build does.</p>
         <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
         <span class="font-mono">kvarn/install.sh</span>'s completeness check — a heredoc counting
-        <span class="font-mono">port(kvarn-v2)</span> markers — has silently decayed: the v2-runner patch carries
-        <b class="text-slate-200">12 hunks across 7 files but only 1 marker</b>, so install-time verification
-        proves 1 hunk and prints "port complete" (measured: 12 <span class="font-mono">@@</span> hunks,
-        7 <span class="font-mono">+++</span> files, 1 marker; the base port has 13 hunks, 0 markers).
+        <span class="font-mono">port(kvarn-v2)</span> markers — has silently decayed: across the three 0.30.0
+        patches it verifies <b class="text-slate-200">3 markers out of 27 hunks</b> — the v2-runner still
+        carries 12 hunks across 7 files but only 1 marker (recycled-pages has 2 of 2; the base port 0 of 13).
         <span class="font-mono">docs/python-314.md</span> is stale as a whole — its 0.27.1 pin is deliberate
         (the abi3 wheel), but "every patch applies unmodified" and "all fifteen land" were written for the
-        15-patch 0.27.1-era series. And <span class="font-mono">PATCHES.md:82</span> sends readers to a
+        15-patch 0.27.1-era series, now <b class="text-slate-200">two</b> pin flips behind (0.29, 0.30).
+        And <span class="font-mono">PATCHES.md:83</span> sends readers to a
         <span class="font-mono">docs/MR-DRAFT.md</span> that does not exist.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
         <p>One executable entry point — <span class="font-mono">patches/apply.sh</span> (parse series → apply
-        <span class="font-mono">--fuzz 0</span> → apply the KVarN pair) — that the Dockerfile, verify.sh, the CI
+        <span class="font-mono">--fuzz 0</span> → apply the three KVarN patches) — that the Dockerfile, verify.sh, the CI
         checker and the docs all call, instead of each re-deriving it. Delete the retired artifacts
         (<span class="font-mono">dflash2-backport</span>, the 0.27.1 KVarN pair) so <b class="text-white">zero</b>
         per-patch exceptions remain; their one-line obituaries already belong to PATCHES.md's "Retired" section,
@@ -182,7 +190,7 @@ flowchart LR
         <p class="font-bold text-white mt-4 mb-1">Benefits</p>
         <ul class="list-disc pl-5 space-y-1 benefit">
           <li><b>Locality:</b> apply policy lives in one file beside the series; a hunk failure names one script, not five suspects.</li>
-          <li><b>Leverage:</b> the next pin flip (0.29 → 0.30) or new patch touches the series and its index — not five parsers and two docs. This is the change the repo makes most often.</li>
+          <li><b>Leverage:</b> a pin flip or new patch touches the series and its index — not five parsers and two docs. The 0.29 → 0.30 flip (#189) landed two days after this review and touched all five parsers; the drift they carry is still there. This is the change the repo makes most often.</li>
           <li><b>Tests:</b> one script is directly exercisable in CI against a pristine wheel; deleting special cases deletes untested branches rather than adding tests for them.</li>
         </ul>
       </div>
@@ -197,7 +205,7 @@ flowchart LR
             <div class="tile">Dockerfile <span class="text-slate-500">sed-copy 1</span></div>
             <div class="tile">verify.sh <span class="text-slate-500">sed-copy 2</span></div>
             <div class="tile">check_vllm_series.sh <span class="text-slate-500">sed-copy 3</span></div>
-            <div class="tile">kvarn/install.sh <span class="text-slate-500">2 hardcoded patches</span></div>
+            <div class="tile">kvarn/install.sh <span class="text-slate-500">3 hardcoded patches</span></div>
             <div class="tile red">docs/install.md<span class="drift">no --fuzz 0</span></div>
             <div class="tile red">docs/python-314.md<span class="drift">pins 0.27.1</span></div>
           </div>
@@ -205,7 +213,7 @@ flowchart LR
             <div class="tile red">dflash2-backport skip ×5</div>
             <div class="tile red">README: “38 files” → actually 45</div>
             <div class="tile red">kvarn invisible to fast CI</div>
-            <div class="tile red">marker check: 1 of 12 hunks verified</div>
+            <div class="tile red">marker check: 3 of 27 hunks verified</div>
             <div class="tile red">PATCHES.md → docs/MR-DRAFT.md (missing)</div>
           </div>
         </div>
@@ -237,7 +245,7 @@ flowchart LR
       <span class="badge badge-strong">Strong</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">single-user/start_qwen.sh (822 lines)</span><span class="chip">batch/start_qwen.sh (271 lines)</span><span class="chip">single-user/alternative.sh (133 lines)</span><span class="chip">resolve_config.sh</span><span class="chip">resolve_api_key.sh</span><span class="chip">single-user/select_model.sh</span>
+      <span class="chip">single-user/start_qwen.sh (838 lines)</span><span class="chip">batch/start_qwen.sh (279 lines)</span><span class="chip">single-user/alternative.sh (142 lines)</span><span class="chip">resolve_config.sh</span><span class="chip">resolve_api_key.sh</span><span class="chip">single-user/select_model.sh</span>
     </p>
     <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="launcher-chassis-remediation.md">Deep dive + remediation plan → docs/launcher-chassis-remediation.md</a>
       <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
@@ -245,26 +253,32 @@ flowchart LR
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
         <p>The <b class="text-white">launchers</b> are one chassis pasted <b class="text-white">three</b> times, then drifted:
-        <span class="font-mono">single-user/start_qwen.sh</span> (822 lines), <span class="font-mono">batch/start_qwen.sh</span>
-        (271), and the review undercounted one — <span class="font-mono">single-user/alternative.sh</span> (133), the
+        <span class="font-mono">single-user/start_qwen.sh</span> (838 lines), <span class="font-mono">batch/start_qwen.sh</span>
+        (279), and the review undercounted one — <span class="font-mono">single-user/alternative.sh</span> (142), the
         experimental int4-KV profile and the most drifted copy. Measured on 2026-09-26:
-        <b class="text-white">180 lines byte-identical</b> between single and batch (69% of batch's unique substantive
-        lines verbatim in single; 49% of alternative's), 12 of 13 literal exec flags shared, and 47/13/6
-        env-conditional decision points respectively. The drift is not hypothetical: the INT8 export guards
-        already disagree (<span class="font-mono">batch:247-248</span> vs <span class="font-mono">single:139-140</span>),
-        batch carries a spec-decode metrics block that mode cannot produce (<span class="font-mono">batch:154-161</span>),
+        <b class="text-white">182 lines byte-identical</b> between single and batch (76 shared unique substantive lines —
+        69% of batch's; 40 of alternative's 87, 46%), 12 of 13 literal exec flags shared (14-flag union), and
+        47/13/8 env-conditional decision points respectively. The drift is not hypothetical: the INT8 export guards
+        already disagree (<span class="font-mono">batch:255-256</span> vs <span class="font-mono">single:141-142</span>),
+        batch carries a spec-decode metrics block that mode cannot produce (<span class="font-mono">batch:156-170</span>),
         and batch's VISION comment cites <span class="font-mono">SPEC=dflash2</span> OOM measurements batch never runs.
         <span class="font-mono">alternative.sh</span> never received the #185 CUDA_HOME fix or the #176 TP allocator arm
         (both touched only the two start_qwen.sh — verified via the upstream commit file lists), resolves the API key
         with a bare <span class="font-mono">cat api_key.txt</span> under <span class="font-mono">set -e</span>, and uses
         relative model paths. Every hard-won gotcha lands twice (three times where alternative.sh copied the block) —
-        and gotchas are this repo's lifeblood.</p>
+        and gotchas are this repo's lifeblood. <b class="text-slate-200">Since the review:</b> #189 landed the
+        0.30 prefix-cache retention block as <i>two capability-skewed copies in one commit</i>
+        (<span class="font-mono">single:524-570</span>, measured 13056/14592 + the #174 warning + an override
+        ladder; <span class="font-mono">alternative.sh:91-99</span>, None-only) — the newest chassis block was
+        born duplicated. #214 fixed the KV_MEM append in single only
+        (<span class="font-mono">:507-511</span>); batch and alternative have no KV_MEM handling at all.</p>
         <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
         <span class="font-mono">resolve_config.sh</span> — itself the F13 fix — has drifted from what it validates: its
         hand-maintained shadow list (<span class="font-mono">:68</span>) names 11 flags while the three launchers emit
-        ~30 (<span class="font-mono">--compilation-config</span>, <span class="font-mono">--speculative-config</span>,
-        <span class="font-mono">--async-scheduling</span>… shadow silently), and a real print bug: single resolves config
-        at <span class="font-mono">:99</span> but selects the model at <span class="font-mono">:101</span>, so the
+        17 (<span class="font-mono">--compilation-config</span>, <span class="font-mono">--speculative-config</span>,
+        <span class="font-mono">--async-scheduling</span>… shadow silently; neither #189 nor #214 updated it), and a
+        real print bug: single resolves config
+        at <span class="font-mono">:101</span> but selects the model at <span class="font-mono">:103</span>, so the
         <span class="font-mono">[effective-config] MODEL=</span> line prints the base checkpoint when
         <span class="font-mono">-fast</span> will be served (native path; Docker masks it). Also stale:
         <span class="font-mono">single:219</span> cites <span class="font-mono">kvarn-v2-runner-0.28.0.patch</span>,
@@ -293,21 +307,21 @@ flowchart LR
         <p class="panel-tag text-rose-400 mb-3">BEFORE — one chassis, three diverging copies</p>
         <div class="space-y-3 font-mono text-xs">
           <div>
-            <div class="flex justify-between text-slate-400 mb-1"><span>single-user/start_qwen.sh</span><span>822 lines</span></div>
+            <div class="flex justify-between text-slate-400 mb-1"><span>single-user/start_qwen.sh</span><span>838 lines</span></div>
             <div class="h-6 rounded bg-slate-800 overflow-hidden flex">
               <div style="width:22%;background:#3b5bdb" title="shared chassis"></div>
               <div style="width:78%;background:#26334f" title="single-mode: CTX×SPEC profiles, dflash2, KV_MEM"></div>
             </div>
           </div>
           <div>
-            <div class="flex justify-between text-slate-400 mb-1"><span>batch/start_qwen.sh</span><span>271 lines</span></div>
+            <div class="flex justify-between text-slate-400 mb-1"><span>batch/start_qwen.sh</span><span>279 lines</span></div>
             <div class="h-6 rounded bg-slate-800 overflow-hidden flex">
               <div style="width:66%;background:#3b5bdb" title="shared chassis"></div>
               <div style="width:34%;background:#26334f" title="batch-mode: KV profile"></div>
             </div>
           </div>
           <div>
-            <div class="flex justify-between text-slate-400 mb-1"><span>single-user/alternative.sh</span><span>133 lines</span></div>
+            <div class="flex justify-between text-slate-400 mb-1"><span>single-user/alternative.sh</span><span>142 lines</span></div>
             <div class="h-6 rounded bg-slate-800 overflow-hidden flex">
               <div style="width:49%;background:#3b5bdb" title="shared chassis"></div>
               <div style="width:51%;background:#26334f" title="int4 profile"></div>
@@ -315,12 +329,12 @@ flowchart LR
           </div>
           <div class="flex items-center gap-2 pt-1">
             <div class="w-4 h-4 rounded" style="background:#3b5bdb"></div>
-            <span class="text-slate-400">180 byte-identical lines (69% of batch's substantive) — each fix must land twice, three times where alternative.sh copied the block</span>
+            <span class="text-slate-400">182 byte-identical lines (69% of batch's substantive) — each fix must land twice, three times where alternative.sh copied the block</span>
           </div>
           <div class="flex flex-wrap gap-2 pt-1">
             <div class="tile red">INT8 guards differ</div>
             <div class="tile red">alternative.sh: no #185 / no #176 fix, own key flavor</div>
-            <div class="tile red">resolve_config shadow list: 11 of ~30 flags</div>
+            <div class="tile red">resolve_config shadow list: 11 of 17 flags</div>
             <div class="tile red">spec-decode metrics in batch (impossible there)</div>
             <div class="tile red">dflash2 comment in batch's VISION block</div>
           </div>
@@ -363,26 +377,32 @@ flowchart LR
       <span class="badge badge-strong">Strong</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">bench/ — 15 Python + 4 bash scripts</span><span class="chip">resolve_api_key.sh:32-42</span><span class="chip">bench/api_smoke.py:15</span><span class="chip">bench/needle_test.py:29</span><span class="chip">bench/conc_ladder.py:68</span><span class="chip">bench/labd_bench.py:28</span><span class="chip">bench/real_rep.sh:19</span><span class="chip">bench/run_benchmarks.sh:39</span>
+      <span class="chip">bench/ — 16 Python + 4 bash scripts</span><span class="chip">resolve_api_key.sh:32-42</span><span class="chip">bench/api_smoke.py:15</span><span class="chip">bench/needle_test.py:29</span><span class="chip">bench/conc_ladder.py:68</span><span class="chip">bench/labd_bench.py:28</span><span class="chip">bench/real_rep.sh:19</span><span class="chip">bench/run_benchmarks.sh:39</span>
     </p>
     <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="harness-client-remediation.md">Deep dive + remediation plan → docs/harness-client-remediation.md</a>
       <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
-        <p>"How to talk to our server" is re-implemented in <b class="text-white">19 harness scripts</b> (15 Python,
-        4 bash) — measured: 142 lines match the glue idioms, ~400 counting the surrounding blocks (the review's
+        <p>"How to talk to our server" is re-implemented in <b class="text-white">20 harness scripts</b> (16 Python,
+        4 bash) — measured: 164 lines match the glue idioms, ~420 counting the surrounding blocks (the review's
         "~1,500" was an overestimate; broad, not deep — which is why it drifted). The API-key chain exists in
         <b class="text-white">four flavors</b>: the canonical one (<span class="font-mono">resolve_api_key.sh</span>:
         OPENAI → VLLM → api_key.txt → EMPTY) used only by the 4 bash scripts; flavor A
         (<span class="font-mono">VLLM_API_KEY</span> or api_key.txt, <b class="text-white">no Python script reads
-        OPENAI_API_KEY</b> — verified) in 10 scripts with 10 private <span class="font-mono">def _key(</span>;
+        OPENAI_API_KEY</b> — verified) in 11 scripts with 11 private <span class="font-mono">def _key(</span>;
         flavor B (unguarded <span class="font-mono">~/qwen-serving/api_key.txt</span>) in 4; env-only in 1.
         Issue #113 fixed the bash side; the Python side never got the memo. The URL is five conventions
         (<span class="font-mono">PORT</span> vs <span class="font-mono">VLLM_API</span> env vars, two scripts with no
-        override at all); the model name is a string literal in 12 call sites and <b class="text-white">no script
-        asks /v1/models</b>; <span class="font-mono">def post(</span> exists 4× with ~11 inlines, SSE parsers 7×,
-        <span class="font-mono">def metrics(</span> 7 Python + 3 bash.</p>
+        override at all); the model name is a string literal in 15 call sites and <b class="text-white">no script
+        asks /v1/models</b>; <span class="font-mono">def post(</span> exists 5× with 11 inlines, SSE parsers 7×,
+        <span class="font-mono">def metrics(</span> 7 Python + 3 bash. Since the review:
+        <span class="font-mono">concurrent_collapse.py</span> (#208) arrived as the 20th script — 11th
+        <span class="font-mono">_key()</span>, 5th <span class="font-mono">def post(</span>, a second model-env
+        spelling (<span class="font-mono">MODEL</span>, not <span class="font-mono">VLLM_MODEL</span>); and #226
+        fixed the SSE keep-alive bug in <i>vLLM's</i> bench tool that zeroed
+        <span class="font-mono">run_benchmarks.sh --long</span> past 30 s prefills (#216's lost 48k+ rows) —
+        the repo's own seven SSE parsers were never touched.</p>
         <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b> the
         <span class="font-mono">_created</span> guard exists in 1 of 3 bash spec-scrapers —
         <span class="font-mono">real_rep.sh:19</span> filters <span class="font-mono">grep -v created</span>,
@@ -447,7 +467,7 @@ flowchart LR
       <span class="badge badge-explore">Worth exploring</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">prepare/quant_lm_head.py</span><span class="chip">prepare/quant_embed.py</span><span class="chip">prepare/quant_mtp.py</span><span class="chip">prepare/quant_heads_stream.py:152</span><span class="chip">drafter/gptq_utils.py:77-84</span><span class="chip">drafter/export_mtp.py</span><span class="chip">drafter/requant_mtp_gptq.py:20-22</span><span class="chip">docker/prepare.sh:26-50</span>
+      <span class="chip">prepare/quant_lm_head.py</span><span class="chip">prepare/quant_embed.py</span><span class="chip">prepare/quant_mtp.py</span><span class="chip">prepare/quant_heads_stream.py:178</span><span class="chip">prepare/atomic_publish.py (#195)</span><span class="chip">drafter/gptq_utils.py:82</span><span class="chip">drafter/export_mtp.py</span><span class="chip">drafter/requant_mtp_gptq.py:20-22</span><span class="chip">docker/prepare.sh:26-71</span>
     </p>
     <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="pipeline-core-remediation.md">Deep dive + remediation plan → docs/pipeline-core-remediation.md</a>
       <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
@@ -457,9 +477,12 @@ flowchart LR
         <p>The <b class="text-white">model-preparation pipeline</b>'s two non-trivial operations — RTN quant math and
         the compressed-tensors write tail (<span class="font-mono">weight_packed / weight_scale / weight_shape</span>
         + weight_map edit + config-group clone + ignore-list edit + backup) — are re-implemented
-        <b class="text-white">8 times</b> across <span class="font-mono">prepare/</span> and
-        <span class="font-mono">drafter/</span>. The differences that actually matter (fp16 vs bf16 scales) are
-        invisible without diffing all eight. The <span class="font-mono">MTP_LINEARS</span> tensor list is defined in
+        <b class="text-white">9 times</b> across <span class="font-mono">prepare/</span> and
+        <span class="font-mono">drafter/</span> — over an I/O primitive that is now shared: the #195 saga landed
+        <span class="font-mono">prepare/atomic_publish.py</span> (backup_once / publish / save_tensors /
+        write_json, the index last) and rewired all eight prepare/ writers to it, while
+        <span class="font-mono">drafter/</span> still writes in place. The differences that actually matter
+        (fp16 vs bf16 scales) are invisible without diffing all nine. The <span class="font-mono">MTP_LINEARS</span> tensor list is defined in
         <b class="text-white">6 files across 2 directories</b>. A shared <span class="font-mono">rtn_quantize</span>
         exists in <span class="font-mono">drafter/gptq_utils.py</span> but <span class="font-mono">prepare/</span>
         can't see it — and the drafter scripts reach it through a <span class="font-mono">sys.path.insert</span>
@@ -470,21 +493,26 @@ flowchart LR
         the shared <span class="font-mono">rtn_quantize</span> is <i>not actually identical</i> to the prepare/
         copies (clamp <span class="font-mono">1e-8</span> vs <span class="font-mono">1e-10</span>, no keepdim) —
         an invisible variant with nowhere to be written down. The fp16-vs-bf16 scale fact is encoded three ways
-        (comments at <span class="font-mono">quant_lm_head.py:55-56</span> and <span class="font-mono">quant_embed.py:55-56</span>,
-        data at <span class="font-mono">quant_heads_stream.py:152</span>). The MTP list's six sites use three forms
+        (comments at <span class="font-mono">quant_lm_head.py:70-71</span> and <span class="font-mono">quant_embed.py:70-71</span>,
+        data at <span class="font-mono">quant_heads_stream.py:178</span>). The MTP list's six sites use four spellings
         (incl. <span class="font-mono">LIN</span> at <span class="font-mono">requant_mtp_gptq.py:20-22</span> and an
-        inline tuple doing a secret side job at <span class="font-mono">quant_lm_head.py:74-83</span>). The draft-head
+        inline tuple doing a secret side job at <span class="font-mono">quant_lm_head.py:84-93</span>). The draft-head
         contract has two writers with a real semantic difference —
-        <span class="font-mono">build_draft_vocab.py:91-126</span> slices packed rows,
-        <span class="font-mono">export_mtp.py:108-129</span> requantizes a trained head — consumed by
-        <span class="font-mono">patches/qwen3_5-mtp-draft-vocab.patch:33-41</span>. The inode-truncation bug already
-        bit once (story at <span class="font-mono">gptq_lm_head.py:84-88</span>) and travels by comment
-        (<span class="font-mono">export_mtp.py:52-53</span>); the backup-suffix protocol
-        (<span class="font-mono">.bak / .bak-quant / .bak-mtp / .bak-draft</span>) crosses six files undocumented.</p>
+        <span class="font-mono">build_draft_vocab.py:114-150</span> slices packed rows,
+        <span class="font-mono">export_mtp.py:108-130</span> requantizes a trained head — consumed by
+        <span class="font-mono">patches/qwen3_5-mtp-draft-vocab.patch:33-42</span>, and since #201 only the
+        <i>slice</i> writer is atomic. The inode-truncation bug already
+        bit once (story at <span class="font-mono">gptq_lm_head.py:83-86</span> — whose comment now describes a
+        writer #201 made atomic, i.e. drift) and travels by comment
+        (<span class="font-mono">export_mtp.py:53</span>); the backup suffixes
+        (<span class="font-mono">.bak / .bak-quant / .bak_embed / .bak-mtp / .bak-draft / .bak-orig</span>)
+        now sit on one shared <span class="font-mono">backup_once</span> — still six names, still undocumented.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
-        <p>A small shared module importable from both directories (no framework — a bag of functions):
+        <p>A small shared module importable from both directories (no framework — a bag of functions), a
+        sibling of <span class="font-mono">prepare/atomic_publish.py</span> (#195 proved the pattern and the
+        import shape in this repo):
         the quant math, the write tail with its variants expressed as data (scale dtype, group ordinal), the
         <span class="font-mono">MTP_LINEARS</span> constants, and one "assemble a variant dir" helper
         (hardlink/copy + fresh-write, encoding the inode-truncation guardrail that today travels by comment).
@@ -501,7 +529,7 @@ flowchart LR
     </div>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="panel panel-before">
-        <p class="panel-tag text-rose-400 mb-3">BEFORE — the write tail, 8 times</p>
+        <p class="panel-tag text-rose-400 mb-3">BEFORE — the write-tail contract, 9 sites (I/O shared by #195)</p>
         <div class="font-mono text-xs space-y-1.5">
           <div class="grid grid-cols-2 gap-1.5 text-center">
             <div class="tile red">quant_lm_head</div><div class="tile red">quant_embed</div>
@@ -509,7 +537,7 @@ flowchart LR
             <div class="tile red">gptq_lm_head</div><div class="tile red">requant_mtp_gptq</div>
             <div class="tile red">export_mtp ×2</div><div class="tile red">quant_dflash2</div>
           </div>
-          <div class="text-slate-500 pt-1">each: RTN math + packed/scale/shape + weight_map + config clone + ignore-list + backup</div>
+          <div class="text-slate-500 pt-1">each: RTN math + packed/scale/shape + weight_map + config clone + ignore-list — backup/rename now via atomic_publish</div>
           <div class="flex flex-wrap gap-1.5 pt-1">
             <div class="tile red">MTP_LINEARS ×6</div>
             <div class="tile red">sys.path shim ×5</div>
@@ -546,10 +574,11 @@ flowchart LR
     <div class="grid md:grid-cols-2 gap-6 text-sm text-slate-300 mb-6">
       <div>
         <p class="font-bold text-white mb-1">Problem</p>
-        <p>Of the ~37 files in the <b class="text-white">harness</b>, exactly one gates CI
-        (<span class="font-mono">test_model_verification.py</span> — and it reaches into
-        <span class="font-mono">verify.sh</span> by string-splitting on a literal heredoc marker, so a reformat
-        breaks CI with an IndexError). The rest cannot be composed into a gate even by hand, because pass/fail
+        <p>Of the 39 files in the <b class="text-white">harness</b>, exactly two gate CI
+        (<span class="font-mono">test_model_verification.py</span> and, since #195/#203,
+        <span class="font-mono">test_prepare_state.py</span> — <b class="text-slate-200">both</b> reach into a
+        shell heredoc by string-splitting on a literal marker, so a reformat breaks CI with an IndexError;
+        the unwired <span class="font-mono">test_prepare_crash.py:365-367</span> is a third call site). The rest cannot be composed into a gate even by hand, because pass/fail
         semantics are per-script and often absent: <span class="font-mono">test_spec_decode_attn.py</span> prints
         <span class="font-mono">FAIL</span> on a correctness miss and <b class="text-white">exits 0 anyway</b>;
         <span class="font-mono">api_smoke.py</span> prints <span class="font-mono">SUMMARY</span> and exits 0 at
@@ -569,12 +598,12 @@ flowchart LR
         negative control) and <span class="font-mono">verbatim.py</span> into patch-integrity.yml (seconds),
         <span class="font-mono">mq3d_scratch_pool_test.py</span> into the image build ("no GPU" per its own
         docstring). A short manifest table (script · kind · needs GPU/server/data · exit semantics) stops every
-        reader re-deriving the taxonomy from 37 docstrings.</p>
+        reader re-deriving the taxonomy from 39 docstrings.</p>
         <p class="font-bold text-white mt-4 mb-1">Benefits</p>
         <ul class="list-disc pl-5 space-y-1 benefit">
           <li><b>Locality:</b> a script's contract lives in its exit code and one table row, not in gotchas.md folklore (~20 scattered references today).</li>
           <li><b>Leverage:</b> reproducers become composable — a regression suite can be assembled from existing scripts instead of written anew per issue.</li>
-          <li><b>Tests:</b> two real tests start gating for free; the heredoc string-split dependency in the one CI test is the natural next hardening (candidate 1 helps here too).</li>
+          <li><b>Tests:</b> more real tests start gating for free (upstream added three of the right shape, unwired); the heredoc string-split dependency — now in both gated tests — is the natural next hardening (candidate 1 helps here too).</li>
         </ul>
         <p class="mt-3 text-slate-400"><b class="text-slate-200">Deep-dive addendum (verified):</b>
         the string-split is at <span class="font-mono">test_model_verification.py:18-19</span> (literal
@@ -597,7 +626,8 @@ flowchart LR
           <div class="flex justify-between tile red"><span>prefix_alternation</span><span>reproduces bug → exit 0</span></div>
           <div class="flex justify-between tile red"><span>exit 2</span><span>= "invalid run" in both — but only 2 scripts use it</span></div>
           <div class="flex justify-between tile red"><span>needle_test</span><span>prints MISSED → exit 0</span></div>
-          <div class="flex justify-between tile"><span>CI gate</span><span>1 of ~37 files</span></div>
+          <div class="flex justify-between tile"><span>CI gate</span><span>2 of 39 files</span></div>
+          <div class="flex justify-between tile red"><span>test_bench_sse_keepalive + concurrent_collapse</span><span class="drift">new, same disease: verdict → exit 0</span></div>
         </div>
       </div>
       <div class="panel panel-after">
@@ -618,7 +648,7 @@ flowchart LR
       <span class="badge badge-explore">Worth exploring</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">PATCHES.md</span><span class="chip">scripts/export-patch.sh</span><span class="chip">patch preambles (Supersedes: convention)</span><span class="chip">verify.sh:333-411</span><span class="chip">README.md:119</span><span class="chip">patches/series header</span>
+      <span class="chip">PATCHES.md</span><span class="chip">scripts/export-patch.sh</span><span class="chip">patch preambles (Supersedes: convention)</span><span class="chip">verify.sh:342-420</span><span class="chip">README.md:122</span><span class="chip">patches/series header</span>
     </p>
     <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="patch-index-generation-remediation.md">Deep dive + remediation plan → docs/patch-index-generation-remediation.md</a>
       <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
@@ -627,19 +657,21 @@ flowchart LR
         <p class="font-bold text-white mb-1">Problem</p>
         <p><span class="font-mono">PATCHES.md</span> — the human index of the <b class="text-white">patch series</b>
         (kind, upstream reference, what retires it) — is a hand-maintained full re-list. Verified 2026-09-26: the
-        table is <i>accidentally complete</i> today (47 data rows = 45 series + 2 kvarn, checked with
-        <span class="font-mono">comm</span>) — but it is the 5th-most-touched file upstream and
+        table is <i>accidentally complete</i> today (48 data rows = 45 series + 3 kvarn, checked with
+        <span class="font-mono">comm</span>) — but it is the single most-touched file upstream (8 touches in the
+        last 40 commits) and
         <b class="text-white">nothing in CI references it</b>, and its surroundings have already rotted: the README's
-        "38 files" count is stale (45), the <span class="font-mono">series</span> header comment points at a README
-        install loop that no longer exists, <span class="font-mono">PATCHES.md:82</span> points at a
-        <span class="font-mono">docs/MR-DRAFT.md</span> that does not exist, and :81-82's own mechanism claim
+        "38 files" count is stale (45, at <span class="font-mono">README.md:122</span>), the
+        <span class="font-mono">series</span> header comment points at a README
+        install loop that no longer exists, <span class="font-mono">PATCHES.md:83</span> points at a
+        <span class="font-mono">docs/MR-DRAFT.md</span> that does not exist, and :82-83's own mechanism claim
         ("raw <span class="font-mono">diff -ruN</span> headers") is stale — both files were re-exported (zero
-        <span class="font-mono">diff -ruN</span> lines; <span class="font-mono">dflash2-z-adaptive-emitted:1-5</span>
+        <span class="font-mono">diff -ruN</span> lines; <span class="font-mono">dflash2-z-adaptive-emitted:1-4</span>
         has an empty preamble, <span class="font-mono">offload-wsl2-devptr:1</span> a one-liner). The repo already
         has the machine-read pattern working in production: the <span class="font-mono">Supersedes:</span>
         preamble header (1 producer, <span class="font-mono">spec-decode-scratch-within-budget.patch:49</span>)
-        is consumed by <span class="font-mono">verify.sh:67</span>; per-patch verify markers live as bash triples
-        (<span class="font-mono">verify.sh:333-336</span>, calls at :399/:405/:411).</p>
+        is consumed by <span class="font-mono">verify.sh:72</span>; per-patch verify markers live as bash triples
+        (<span class="font-mono">verify.sh:342</span>, calls at :408/:414/:420).</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -662,8 +694,8 @@ flowchart LR
       <div class="panel panel-before">
         <p class="panel-tag text-rose-400 mb-3">BEFORE — metadata in three homes, none checked</p>
         <div class="font-mono text-xs space-y-1.5">
-          <div class="flex justify-between tile red"><span>PATCHES.md table</span><span>47 rows by hand — complete today, unchecked</span></div>
-          <div class="flex justify-between tile red"><span>PATCHES.md:81-82</span><span class="drift">own mechanism claim stale (0 diff -ruN left)</span></div>
+          <div class="flex justify-between tile red"><span>PATCHES.md table</span><span>48 rows by hand — complete today, unchecked</span></div>
+          <div class="flex justify-between tile red"><span>PATCHES.md:82-83</span><span class="drift">own mechanism claim stale (0 diff -ruN left)</span></div>
           <div class="flex justify-between tile red"><span>README “38 files”</span><span class="drift">stale: 45</span></div>
           <div class="flex justify-between tile red"><span>series header</span><span class="drift">points at a deleted loop</span></div>
           <div class="flex justify-between tile"><span>verify.sh markers</span><span>3rd copy of per-patch facts</span></div>
@@ -687,7 +719,7 @@ flowchart LR
       <span class="badge badge-explore">Worth exploring</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
-      <span class="chip">docker/prepare.sh:26-50, 101-102</span><span class="chip">the six prepare/ scripts</span><span class="chip">verify.sh:104-225</span><span class="chip">bench/test_model_verification.py:18-19</span>
+      <span class="chip">docker/prepare.sh:26-71, 123-124</span><span class="chip">the six prepare/ scripts</span><span class="chip">verify.sh:111-261</span><span class="chip">bench/test_model_verification.py:18-19</span><span class="chip">bench/test_prepare_state.py:37</span>
     </p>
     <p class="text-sm mb-4 -mt-2"><a class="text-emerald-400 underline" href="prepare-status-remediation.md">Deep dive + remediation plan → docs/prepare-status-remediation.md</a>
       <span class="text-slate-500">(2026-09-26: every claim re-verified line by line; corrections folded back into this card)</span></p>
@@ -698,8 +730,9 @@ flowchart LR
         <b class="text-white">three times</b>: the scripts themselves (which know the real tensor names),
         <span class="font-mono">docker/prepare.sh</span>'s <span class="font-mono">state()</span> — a Python heredoc
         living inside shell, pattern-matching <span class="font-mono">weight_packed</span> names out of the index —
-        and <span class="font-mono">verify.sh</span>'s model checks. The one CI test that exercises this
-        (<span class="font-mono">test_model_verification.py</span>) does so by string-splitting the heredoc out of
+        and <span class="font-mono">verify.sh</span>'s model checks. Both CI tests that exercise this
+        (<span class="font-mono">test_model_verification.py</span>, and since #195/#203
+        <span class="font-mono">test_prepare_state.py</span>) do so by string-splitting the heredoc out of
         shell source on a literal marker. So the done-ness protocol of a ~20 GB artifact pipeline is maintained in a
         language the writers don't run, and tested through a parser of a parser. Rename a tensor and you edit the
         script, the heredoc, and verify.sh — miss one and prepare silently re-runs or skips a step.</p>
@@ -708,13 +741,17 @@ flowchart LR
         (splits on <span class="font-mono">$PY - "$MODEL" <<'EOF'</span>), and the same file's second test
         (:59-91) already proves the healthy pattern — it replays <i>files</i> (entrypoint.sh, select_model.sh)
         instead of parsing shell. verify.sh's model block is a genuinely skeptical third implementation
-        (<span class="font-mono">group_of</span> at :159-169 re-derives vLLM's
-        <span class="font-mono">find_matched_target</span> semantics; symmetry/zero-point rules at :145-179) —
-        and it is <b class="text-slate-200">torch-free</b> (imports only json/os/sys/re at :148), so it
+        (<span class="font-mono">group_of</span> at :168-179 re-derives vLLM's
+        <span class="font-mono">find_matched_target</span> semantics; symmetry/zero-point rules at :126-179) —
+        and it is <b class="text-slate-200">torch-free</b> (imports only json/os/sys at :114, re at :157), so it
         extracts cleanly into <span class="font-mono">scripts/verify_model.py</span>: verify.sh calls it,
         the test runs the file, the heredoc and the string-split both die. Also load-bearing:
         <span class="font-mono">tokenizer.json</span> in the state check (:31-33) — without it the dir looks
-        servable until startup.</p>
+        servable until startup. Since the review: <span class="font-mono">state()</span> also grew
+        <span class="font-mono">intact()</span> (:41-53, #203) — torn shard → download — a <i>fourth</i>
+        done-ness implementation, while #195's <span class="font-mono">atomic_publish.py</span> made the
+        writers' index the declared commit point. The publish contract is written down; the predicates
+        still live in shell.</p>
       </div>
       <div>
         <p class="font-bold text-white mb-1">Solution</p>
@@ -774,14 +811,17 @@ flowchart LR
     <h2 class="text-2xl font-extrabold text-white mb-3">Start with candidate 1 — one door into the patch series.</h2>
     <div class="text-sm text-slate-300 space-y-3 max-w-4xl">
       <p>Three reasons. <b class="text-white">It is where the change pressure is:</b>
-      <span class="font-mono">patches/</span> took 61 file-touches in the last 40 upstream commits — more than the next
+      <span class="font-mono">patches/</span> took 103 file-touches in the last 40 upstream commits (re-measured
+      2026-09-28; 61 at the review) — more than the next
       three areas combined — and the README says the quiet part out loud: "what this repo really is … is a patch
       series against a pinned vLLM." Deepening the module you change most pays the most.</p>
       <p><b class="text-white">The drift is not hypothetical:</b> both prose copies of the apply loop have already
       diverged from the real one (one drops the fuzz-0 guarantee the series was rebuilt to enforce; the other still
       pins 0.27.1), and the front-door README undercounts the series by seven patches. Every month this waits, the
-      five parsers get another chance to disagree — and the next pin flip (0.29 → 0.30, already foreshadowed by the
-      three fork branch lines) is exactly the change this candidate makes easy.</p>
+      five parsers get another chance to disagree — and the pin flip this called the coming change
+      <b class="text-white">has since happened</b> (0.29 → 0.30, #189, 2026-09-28): it touched all five parsers,
+      and the drift they carry (the README count, python-314's pin, the stale consumer claims) survived it
+      untouched. The next flip is exactly the change this candidate makes easy.</p>
       <p><b class="text-white">It unlocks the others:</b> with one apply door, the CI gate (candidate 5) can exercise
       the whole series — KVarN included — on a pristine wheel in two minutes instead of twenty, and the generated
       index (candidate 6) hangs off the same door. And the deletion half of the candidate (retired patches, inert
@@ -804,7 +844,8 @@ flowchart LR
   <footer class="text-sm text-slate-500 pb-8">
     <p>Every file:line citation was spot-checked against the tree; all seven candidates were then deep-dived and their
     cards corrected where the deeper pass disproved a claim. Vocabulary from README / PATCHES.md / docs/gotchas.md
-    (no CONTEXT.md or ADR directory exists).</p>
+    (no CONTEXT.md or ADR directory exists). Re-verified end-to-end 2026-09-28 against upstream/main @ 2522ef9
+    (22 upstream commits later, vLLM 0.30.0); every card and all seven deep dives re-cited to that tree.</p>
     <p class="mt-2 text-slate-300 font-bold">Which of these would you like to explore?</p>
   </footer>
 
