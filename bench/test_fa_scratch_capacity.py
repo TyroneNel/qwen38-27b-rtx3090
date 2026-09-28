@@ -18,7 +18,7 @@ _CFG = os.path.join(REPO, "kvarn", "files", "vllm", "model_executor",
                     "layers", "quantization", "kvarn", "config.py")
 
 # Since the 0.29 pin flip, config.py reads its knobs through `vllm.envs`, where
-# kvarn-0.29.0.patch registers them. The fixture runs without vLLM (and a venv
+# kvarn-0.30.0.patch registers them. The fixture runs without vLLM (and a venv
 # without KVarN installed lacks the registration), so it loads the overlay
 # against a stand-in `vllm.envs` carrying the one knob the sizing helpers read,
 # with the patch's semantics: the raw string, None when unset.
