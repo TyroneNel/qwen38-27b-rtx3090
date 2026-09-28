@@ -5,6 +5,31 @@ report is [architecture-review-20260926-194530.html](architecture-review-2026092
 this is the deep dive on that card, every claim re-verified against the tree
 on 2026-09-26.
 
+**Re-verified 2026-09-28 against upstream/main @ 2522ef9 (vLLM 0.30.0).**
+
+- #189 (the 0.30 port) re-exported every patch and rewrote the fork prose:
+  one branch, `qwen38/0.30`, export point tagged `qwen38/0.30-cut5`
+  (`PATCHES.md:12`) — no per-row hashes anymore, and the tag exists so a
+  branch rewrite cannot orphan the hashes the files name. The
+  history-rewrite risk in §5 is upstream-defused, not just mitigated.
+- The hand-cut exception is gone: `marlin-int8-asym-zp.patch` was imported
+  into the fork and re-exported in #189; the standard export marker is now
+  at `:24`. 44 of 45 files carry it; the 45th is the retired
+  `dflash2-backport.patch` (its own RETIRED header — also parseable).
+- The table kept pace by hand: 83 lines, 50 pipe-rows = 2 header + 48 data
+  (all 45 series names + 3 kvarn rows, comm-verified; new rows for #188,
+  #226, #222). The load grew with it: PATCHES.md is now the single
+  most-touched file in the last 40 commits (8 touches;
+  `git log -40 --name-only`).
+- Still unguarded (zero CI references) and stale in the same places:
+  README's "38 files" (`:122`), the consumer claims at `series:3-4` and
+  `check_vllm_series.sh:8-9`, the `diff -ruN` mechanism claim and the
+  dangling `docs/MR-DRAFT.md` (`PATCHES.md:82-83`).
+- New drift, postdating the review: #189's commit message says the
+  pins were "moved by scripts/pin-bump.py" — no such file is in `scripts/`
+  (only `export-patch.sh`); tooling referenced but never committed.
+- Line numbers, counts and file names throughout updated to this tree.
+
 **Scope.** `PATCHES.md` and its relationship to `patches/series`, the patch
 preambles, `scripts/export-patch.sh`, and `verify.sh`'s per-patch markers.
 **Not in scope:** the apply path (`patches/apply.sh` — candidate 1's plan;
@@ -15,32 +40,35 @@ this plan assumes series order stays the single source of truth for
 
 ### 1.1 The index is hand-maintained — and today, accidentally complete
 
-`PATCHES.md` is 82 lines: the kinds taxonomy (`:6-10`), the fork/export
-rules (`:12-18`), a 6-column table (`:20-21`: patch · kind · what ·
-upstream · cut against · retires when), and retired/notes prose (`:70-82`).
-Verified 2026-09-26: 49 lines start with `|` = 2 header + **47 data rows** —
-all 45 series names present (checked with `comm` against `patches/series`),
-plus the 2 kvarn rows, no duplicates. So the table is complete *today* — the
+`PATCHES.md` is 83 lines: the kinds taxonomy (`:6-10`), the fork/export
+rules (`:12-16`), a 6-column table (`:18-19`: patch · kind · what ·
+upstream · cut against · retires when), and retired/notes prose (`:69-83`).
+Re-verified 2026-09-28: 50 lines start with `|` = 2 header + **48 data rows**
+— all 45 series names present (checked with `comm` against `patches/series`),
+plus the 3 kvarn rows (`:65-67`), no duplicates. So the table is complete *today* — the
 problem is that nothing keeps it that way, and its surroundings have
 already rotted:
 
-- It is the **5th-most-touched file** upstream (9 touches in the last 40
-  commits) — the maintenance load is real and recurring.
-- `README.md:119` says the series is "**38 files**" — there are 45
+- It is the **most-touched file** upstream (8 touches in the last 40
+  commits; `git log -40 --name-only`) — the maintenance load is real and
+  recurring.
+- `README.md:122` says the series is "**38 files**" — there are 45
   (verified). No mechanism connects the two.
 - `patches/series:3-4` names "the README install loop" as a consumer — the
   loop moved to `docs/install.md` in #129; the header wasn't updated.
 - `patches/check_vllm_series.sh:8-9` repeats the same stale "which the
   Dockerfile and the README use".
-- `PATCHES.md:82` sends readers to `docs/MR-DRAFT.md` — a file that does
-  not exist anywhere in the tree (verified: only reference in the repo).
-- `PATCHES.md:81-82`'s own mechanism claim is stale: it says
+- `PATCHES.md:83` sends readers to `docs/MR-DRAFT.md` — a file that does
+  not exist anywhere in the tree (verified: the only reference outside the
+  review's own artifacts).
+- `PATCHES.md:82-83`'s own mechanism claim is stale: it says
   `dflash2-z-adaptive-emitted` and `offload-wsl2-devptr` "still carry raw
-  `diff -ruN` headers with timestamps instead of a preamble". Both files
-  have since been re-exported: zero `diff -ruN` lines in either (verified);
-  `dflash2-z-adaptive-emitted.patch:1-5` is blank lines + the standard
+  `diff -ruN` headers with timestamps instead of a preamble". Zero
+  `diff -ruN` lines exist anywhere in the tree (verified); the 0.30
+  re-export refreshed both files' markers again without touching the gap:
+  `dflash2-z-adaptive-emitted.patch:1-4` is blank lines + the standard
   export marker (no prose preamble — the *gap* the note describes is real),
-  and `offload-wsl2-devptr.patch:1` now has a one-line preamble.
+  and `offload-wsl2-devptr.patch:1` has a one-line preamble.
 - **Nothing in CI references `PATCHES.md`** (verified: zero matches in
   `.github/workflows/`).
 
@@ -49,23 +77,27 @@ already rotted:
 - **The export marker**: every patch file carries
   `--- exported from cpuchip/vllm <short-hash> (<topic>); regenerate with
   scripts/export-patch.sh, do not edit ---` (produced by
-  `export-patch.sh:19`). Provenance is already machine-readable in 44 of 45
-  files (the hand-cut `marlin-int8-asym-zp.patch:24` carries its own
-  "cut by hand" marker — also parseable).
+  `export-patch.sh:19`). Provenance is machine-readable in 44 of 45 files;
+  the 45th is the retired `dflash2-backport.patch`, whose RETIRED prose
+  header plays the same role. (The review's second exception is gone:
+  `marlin-int8-asym-zp.patch` was hand-cut with its own marker at `:24`;
+  #189 imported it into the fork and re-exported it — standard marker now
+  at `:24`.)
 - **The preamble**: `export-patch.sh:15` copies the fork commit *body*
   into the file above the marker (stripping `^Source:` lines and stray
   diff-syntax lines). Whatever structure the commit body has, the preamble
   has — no export change needed to start passing headers through.
 - **`Supersedes:`**: one producer (`spec-decode-scratch-within-budget.patch:49`
   declares `Supersedes: spec-decode-scratch-token-units.patch`), one consumer
-  (`verify.sh:67`, in the `superseded_by` rung of the check ladder). A
+  (`verify.sh:72`, in the `superseded_by` rung of the check ladder). A
   working `Key: value` convention, consumed in production — currently
   carrying exactly one fact.
 - **The `graded()` verify markers**: per-patch metadata as bash triples in
-  `verify.sh:333-336` (definition) and call sites at `:399`
+  `verify.sh:342` (definition; rationale comment `:332-341`) and call sites
+  at `:408`
   (`serve-404-served-names` → `entrypoints/serve/engine/serving.py` /
-  `Served models:`), `:405` (`auth-deny-default` → `…/authenticate.py` /
-  `UNGUARDED_PATHS`), `:411` (`tokenize-v1-route` → `…/tokenize/api_router.py`
+  `Served models:`), `:414` (`auth-deny-default` → `…/authenticate.py` /
+  `UNGUARDED_PATHS`), `:420` (`tokenize-v1-route` → `…/tokenize/api_router.py`
   / `prefix="/v1"`). A third home for per-patch facts, outside both the
   table and the preambles.
 
@@ -77,9 +109,9 @@ already rotted:
 | kind / upstream / retires-when | `PATCHES.md` table only | **nothing** |
 | description ("what") | `PATCHES.md` table + preamble prose (duplicated, drift-prone) | nothing |
 | provenance (commit, branch) | the export marker in every file | by inspection |
-| supersedes | preamble header (1 file) | `verify.sh:67` |
+| supersedes | preamble header (1 file) | `verify.sh:72` |
 | verify marker (file+string) | `verify.sh` triples (3 patches) | `verify.sh` itself |
-| file count | `README.md:119` | nothing (stale: 38 vs 45) |
+| file count | `README.md:122` | nothing (stale: 38 vs 45) |
 ## 2. The design
 
 ### 2.1 Headers in the preamble, table generated from them
@@ -114,10 +146,10 @@ One step in `patch-integrity.yml`: run `python scripts/patches_md.py`,
 then `git diff --exit-code PATCHES.md`. The table can no longer rot: a
 preamble edit without regeneration fails the same way a hand-edited patch
 already fails `check_vllm_series.sh`. Also fixed in passing (each its own
-line): the `README.md:119` count sentence drops the number; the
+line): the `README.md:122` count sentence drops the number; the
 `patches/series:3-4` and `check_vllm_series.sh:8-9` consumer lists are
-corrected; `PATCHES.md:82`'s dangling `docs/MR-DRAFT.md` reference is
-repointed (and `:81-82` rewritten — the mechanism it describes no longer
+corrected; `PATCHES.md:83`'s dangling `docs/MR-DRAFT.md` reference is
+repointed (and `:82-83` rewritten — the mechanism it describes no longer
 exists; `dflash2-z-adaptive-emitted` still needs its prose preamble,
 written as a fork commit body per rule 2, never hand-edited).
 
@@ -156,8 +188,8 @@ vs the pre-existing one contains only the deliberate fixes (2.2).
 
 ### 3.2 PR B — the reference fixes + the preamble gap
 
-`README.md:119` loses its count; `patches/series:3-4` and
-`check_vllm_series.sh:8-9` name the real consumers; `PATCHES.md:81-82`
+`README.md:122` loses its count; `patches/series:3-4` and
+`check_vllm_series.sh:8-9` name the real consumers; `PATCHES.md:82-83`
 is rewritten (and its `docs/MR-DRAFT.md` reference repointed);
 `dflash2-z-adaptive-emitted` gets its prose preamble via a fork commit
 body edit + re-export (never a hand edit — rule 2). The `Verify:` marker
@@ -180,7 +212,7 @@ Acceptance: the generator still reproduces PATCHES.md (CI);
 
 | risk | likelihood | mitigation |
 |---|---|---|
-| Backfilling fork commit bodies rewrites topic-branch history the series' prose points at (`PATCHES.md:12-13` names exact branch hashes) | medium | bodies-only edits change commit hashes — so do it on the *next* natural re-export (the pin-flip cadence the repo already has), or accept one documented rewrite of the hq/hq2 lines; either way the PR names the new hashes in the same edit that updates `:12-13` |
+| Backfilling fork commit bodies rewrites topic-branch history the patch files' export markers point at (each names a short-hash; `PATCHES.md:12` itself no longer names hashes — since #189 it names the branch plus the `qwen38/0.30-cut5` export tag, which exists precisely so a rewrite cannot orphan those hashes) | low | do the backfill on the *next* natural re-export and cut a new export tag in the same PR — the cadence #189 set: re-export, tag, update `:12` |
 | The generator becomes a second place the description is edited | low | the preamble is the only source; the generated block is marker-fenced with "do not edit" in the fence comment |
 | Free-form `Upstream:`/`Retires-when:` values drift in style | low | the taxonomy line for `Kind:` is validated; the other two are prose by design (as the table is today) |
 | The `Verify:` migration tempts bundling | medium | explicitly sequenced as a follow-up (2.3); this plan closes without touching verify.sh |
@@ -195,5 +227,5 @@ Acceptance: the generator still reproduces PATCHES.md (CI);
 3. `README.md` contains no patch count; `patches/series`'s header names
    the consumers that exist; `grep -rn 'MR-DRAFT' .` finds nothing.
 4. `PATCHES.md`'s hand-written remainder is prose that is genuinely prose
-   (retired history, port notes) — the 5th-most-touched file becomes one
+   (retired history, port notes) — the most-touched file becomes one
    of the least-touched.
