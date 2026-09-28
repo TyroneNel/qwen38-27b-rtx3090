@@ -6,8 +6,42 @@ this is the deep dive on that card. Every claim below was re-verified against
 the tree on 2026-09-26; where the review's numbers were wrong, they are
 corrected here and in the report.
 
-**Scope.** The 19 harness scripts that talk to the serving API — 15 Python
-(`bench/api_smoke.py`, `bugb_sweep.py`, `conc_ladder.py`, `demo_capture.py`,
+**Re-verified 2026-09-28 against upstream/main @ 2522ef9 (vLLM 0.30.0).**
+
+- `bench-sse-keepalive.patch` (#226, series:59) fixes the upstream `vllm
+  bench serve` request functions: stripping each network chunk deleted the
+  blank line between SSE messages, gluing a server's `: keep-alive` comment
+  to every message after it — so the launchers' `--sse-keep-alive-interval
+  30` failed every prefill over 30 s (`run_benchmarks.sh --long` read zeros;
+  #216 lost its 48k+ rows). It patches vLLM's
+  `benchmarks/lib/endpoint_request_func.py`, not this repo's scripts: the
+  seven in-repo SSE parsers below are byte-unchanged since 1cf8665 (`git
+  diff 1cf8665..HEAD -- bench/` touches no parser). The edge is now proven
+  upstream; the repo's own copies remain unfixed.
+
+- `bench-probe-errors.patch` (vllm #58024, in since the 0.30 port d88544b)
+  touches only `benchmarks/serve.py`: the `/tokenize` alignment probe now
+  sends the Bearer and classifies its failure (404 route-or-name vs 401 vs
+  unreachable vs timeout), and the two `/metrics` fetchers send the key. The
+  benchmark requests themselves still present `OPENAI_API_KEY` alone and
+  still report 0.00 in every field on a keyed server with only
+  `VLLM_API_KEY` set — the `docs/python-314.md:55-56` claim quoted in 1.1
+  stands (partial fix: probe + scrapes, not the request path).
+
+- `bench/concurrent_collapse.py` (new; the #208 "!!!!" GPU reproducer) is
+  the 20th harness script: 11th `_key()` copy, 5th `def post(`, a sixth
+  PORT-env URL, and a second model-env spelling (`MODEL`, not `VLLM_MODEL`).
+  It does not stream, so the SSE-parser census stays at 7.
+- `bench/demo_render.py` was deleted (#220 — the README gif is now a
+  plain-JS film under `bench/demo/`); it drops out of the offline-tools
+  list below.
+- `demo_capture.py` gained one docstring line (#220), shifting its later
+  cites +1. Every other census re-ran clean; stale lines are fixed in place.
+
+
+**Scope.** The 20 harness scripts that talk to the serving API — 16 Python
+(`bench/api_smoke.py`, `bugb_sweep.py`, `conc_ladder.py`,
+`concurrent_collapse.py`, `demo_capture.py`,
 `interleave_dose.py`, `labd_accept.py`, `labd_bench.py`, `labd_soak.py`,
 `needle_reuse.py`, `needle_test.py`, `prefix_alternation.py`,
 `quality_battery.py`, `replay_offload_serve.py`, `residue_sweep.py`,
@@ -16,8 +50,8 @@ corrected here and in the report.
 API-key resolution, server URL, model name, the request/stream helpers, and
 the `/metrics` scrape. **Not in scope:** verdict/exit-code conventions
 (candidate 5), the bench manifest (candidate 5), the offline tools
-(`act_calib.py`, `mq3d_*`, `spec_attn_ctx_scan.py`, `tune_gdn.py`,
-`demo_render.py`), and launcher-side logic (candidate 2's plan).
+(`act_calib.py`, `mq3d_*`, `spec_attn_ctx_scan.py`, `tune_gdn.py`), and
+launcher-side logic (candidate 2's plan).
 
 ## 1. Current state, precisely
 
@@ -33,8 +67,8 @@ is 0 everywhere):
 
 | flavor | shape | scripts (verified lines) |
 |---|---|---|
-| A: env-or-file | `VLLM_API_KEY` or `$REPO/api_key.txt` via a local `_key()` | `api_smoke.py:15`, `bugb_sweep.py:34`, `conc_ladder.py:68`, `interleave_dose.py:42`, `needle_reuse.py:43`, `needle_test.py:29`, `prefix_alternation.py:48`, `quality_battery.py:35`, `residue_sweep.py:39`, `seat_ttft.py:32` — **10 scripts**, each with its own `def _key(` (verified ×10) |
-| B: hardcoded home path | `open(expanduser("~/qwen-serving/api_key.txt"))` — unguarded, `FileNotFoundError` anywhere else | `demo_capture.py:27`, `labd_accept.py:91`, `labd_bench.py:28`, `labd_soak.py:46` — **4 scripts** |
+| A: env-or-file | `VLLM_API_KEY` or `$REPO/api_key.txt` via a local `_key()` | `api_smoke.py:15`, `bugb_sweep.py:34`, `conc_ladder.py:68`, `concurrent_collapse.py:24`, `interleave_dose.py:42`, `needle_reuse.py:43`, `needle_test.py:29`, `prefix_alternation.py:48`, `quality_battery.py:35`, `residue_sweep.py:39`, `seat_ttft.py:32` — **11 scripts**, each with its own `def _key(` (verified ×11) |
+| B: hardcoded home path | `open(expanduser("~/qwen-serving/api_key.txt"))` — unguarded, `FileNotFoundError` anywhere else | `demo_capture.py:28`, `labd_accept.py:91`, `labd_bench.py:28`, `labd_soak.py:46` — **4 scripts** |
 | C: env only | `os.environ.get("VLLM_API_KEY", "")` | `replay_offload_serve.py:33` |
 | canonical | `resolve_api_key.sh` + `resolve_client_key` | the 4 bash scripts |
 
@@ -43,34 +77,39 @@ client that silently presents nothing (or the wrong thing) to a keyed server.
 `docs/python-314.md:55-56` documents the symmetric version for `vllm bench
 serve` (which presents `OPENAI_API_KEY`): "with only the latter set it
 receives silent 401s and reports 0.00 in every field rather than failing."
-The repo's own Python scripts are the third surface, still un-fixed.
+That sentence still describes the benchmark request path at 0.30.0 —
+`bench-probe-errors` (vllm #58024) fixed only the `/tokenize` probe and the
+`/metrics` scrapes (header block). The repo's own Python scripts are the
+third surface, still un-fixed.
 
 ### 1.2 The server URL: five conventions
 
 | convention | scripts |
 |---|---|
 | `PORT` env, `f"http://127.0.0.1:{PORT}/v1/…"` | `api_smoke.py:16-18` |
-| `"http://127.0.0.1:" + PORT` | `bugb_sweep.py:35`, `residue_sweep.py:40`, `seat_ttft.py:33` |
+| `"http://127.0.0.1:" + PORT` | `bugb_sweep.py:35`, `residue_sweep.py:40`, `seat_ttft.py:33`, `concurrent_collapse.py:32` (the 6th `PORT`-env reader) |
 | `API = f"http://127.0.0.1:{PORT}"` | `conc_ladder.py:53-54` |
 | **`VLLM_API** env**, default `…:18020/v1` | `interleave_dose.py:43`, `needle_reuse.py:44`, `needle_test.py:30`, `prefix_alternation.py:49`, `quality_battery.py:36` |
 | **hardcoded** `http://127.0.0.1:18020` (no override) | `labd_bench.py:29`, `labd_soak.py:47`; `DEMO_BASE` env in `demo_capture.py:28`; `--base` arg in `labd_accept.py:105` |
 
-Two scripts even picked a *different environment variable* (`VLLM_API`) from
+Five scripts even picked a *different environment variable* (`VLLM_API`) from
 the rest (`PORT`), and two allow no override at all.
 
 ### 1.3 The model name: hardcoded almost everywhere
 
-`"qwen3.8-27b"` is a string literal in 12 call sites
+`"qwen3.8-27b"` is a string literal in 15 call sites
 (`api_smoke.py:31,75,84`, `bugb_sweep.py:66`, `conc_ladder.py:126`,
-`demo_capture.py:55`, `labd_bench.py:83,96`, `labd_soak.py:84`,
+`demo_capture.py:56`, `labd_bench.py:83,96`, `labd_soak.py:84`,
 `needle_test.py:59`, `quality_battery.py:70,99`,
-`replay_offload_serve.py:53`, `residue_sweep.py:55`). Three scripts accept a
+`replay_offload_serve.py:53`, `residue_sweep.py:55`, `seat_ttft.py:52`).
+Three scripts accept a
 `VLLM_MODEL` env with the same default (`interleave_dose.py:44`,
-`needle_reuse.py:45`, `prefix_alternation.py:50`), one takes `--model`
+`needle_reuse.py:45`, `prefix_alternation.py:50`), `concurrent_collapse.py:33`
+reads a second env spelling (`MODEL`, not `VLLM_MODEL`), one takes `--model`
 (`labd_accept.py:106`). **No script asks the server** — `/v1/models` appears
 nowhere in `bench/`. A served-name change (the
 `serve-model-path-match`/`serve-404-served-names` patches exist precisely
-because this bites) is a 12-file edit.
+because this bites) is a 16-file edit.
 
 The bash side has its own drift: `run_benchmarks.sh:28` and `real_rep.sh:14`
 default `MODEL` to the base checkpoint, `prefill_ab.sh:26` to `-fast`, and
@@ -78,31 +117,33 @@ only `warmup.sh:41` uses the shared `select_model.sh` (the candidate-2 plan
 covers the launcher-side selector).
 ### 1.4 The mechanisms, counted
 
-Measured against the 15 Python scripts (the review said "~1,500 lines of
+Measured against the 16 Python scripts (the review said "~1,500 lines of
 copy-paste" — that was an overestimate; the honest numbers):
 
-- **142 lines** match the narrow glue idiom grep (`def _key|def post|def
+- **164 lines** match the narrow glue idiom grep (`def _key|def post|def
   metrics|KEY =|BASE =|urllib…|Bearer|data: |[DONE]|include_usage|ttft`)
-  across the 15 files; counting the surrounding blocks (preambles, inline
-  request builders, stream loops, scrape functions, TTFT math) puts the
-  re-implemented total at **~400 lines**. The duplication is broad rather
-  than deep — which is exactly why it drifted: no single copy is big enough
+  across the 16 files (re-measured 2026-09-28: 155 on the original fifteen,
+  +9 in `concurrent_collapse.py`); counting the surrounding blocks
+  (preambles, inline request builders, stream loops, scrape functions, TTFT
+  math) puts the re-implemented total at **~420 lines**. The duplication is
+  broad rather than deep — which is exactly why it drifted: no single copy is big enough
   to look like a module.
-- `def _key(` — **10 copies** (the file-read-with-fallback helper).
-- `def post(` — **4** (`api_smoke.py:21-27`, `quality_battery.py:43-46`,
-  `needle_test.py`, `labd_accept.py`); the other ~11 scripts inline the same
+- `def _key(` — **11 copies** (the file-read-with-fallback helper).
+- `def post(` — **5** (`api_smoke.py:21-27`, `quality_battery.py:43-46`,
+  `needle_test.py`, `labd_accept.py`, `concurrent_collapse.py:41-48`); the
+  other 11 scripts inline the same
   `urllib.request.Request` + headers block at each call site (e.g.
   `labd_bench.py:88-91` and `:101-103`, twice in one file).
 - SSE stream parsers (`data:` / `[DONE]` / `include_usage` / first-token
   timing) — **7**: `api_smoke.py:74-78`, `conc_ladder.py:124-156`,
-  `demo_capture.py` (~:60-97), `labd_accept.py:167-`, `labd_bench.py:109-125`,
+  `demo_capture.py` (~:61-98), `labd_accept.py:167-`, `labd_bench.py:109-125`,
   `replay_offload_serve.py:53-74`, `seat_ttft.py`. The TTFT idiom
   `(t_first or t_end) - t0` recurs in at least 5
-  (`conc_ladder.py:154`, `demo_capture.py:89`, `labd_bench.py:130`,
-  `replay_offload_serve.py:71`, `labd_accept.py:167`).
+  (`conc_ladder.py:154`, `demo_capture.py:90`, `labd_bench.py:130`,
+  `replay_offload_serve.py:71`, `labd_accept.py:195`).
 - `def metrics(` — **7 Python** (`bugb_sweep.py`, `conc_ladder.py:114-121`,
   `labd_accept.py`, `labd_bench.py:42-50`, `labd_soak.py`,
-  `replay_offload_serve.py:42-45`, `residue_sweep.py`) **+ 3 bash**
+  `replay_offload_serve.py:41-46`, `residue_sweep.py`) **+ 3 bash**
   (`run_benchmarks.sh:38-39`, `real_rep.sh:18-19`, `prefill_ab.sh:56-57`).
 
 ### 1.5 The un-propagated fixes — the proof the glue is where bugs live
@@ -157,11 +198,11 @@ base_url()  -> str
 model()  -> str
     VLLM_MODEL if set, else the first id of GET {base}/v1/models (sends
     client_key(); this stack's auth-deny-default patch guards /v1/models).
-    The server is the source of truth; the 12 hardcoded literals die.
+    The server is the source of truth; the 15 hardcoded literals die.
 
 post(path, payload, timeout=1200) -> dict
-    JSON POST to base_url()+path with the key header. Replaces 4 defs and
-    ~11 inline copies.
+    JSON POST to base_url()+path with the key header. Replaces 5 defs and
+    11 inline copies.
 
 stream_chat(payload, timeout=1800) -> (ttft_s, decode_s, ntok, usage, text)
     The SSE parser once: data: lines, [DONE], usage capture, first-content
@@ -196,7 +237,7 @@ again), so each PR owns its mechanism end to end.
 ### 3.1 PR A — the module + key/URL/post migration
 
 Add `bench/harness.py` with `client_key`, `base_url`, `post`, and its test
-file (4.1). Migrate all 15 Python scripts: delete every `_key`/`KEY`/
+file (4.1). Migrate all 16 Python scripts: delete every `_key`/`KEY`/
 `BASE`/`API`/`URL` preamble and every `def post(` / inline request block.
 Flavor-B scripts (`labd_*`, `demo_capture`) gain working key resolution on
 any checkout — a behavior change, called out in the message (today they
@@ -221,7 +262,8 @@ no `_created` lines exist).
 
 ### 3.3 PR C — the model name + docs
 
-Add `model()`; replace the 12 literals and the `VLLM_MODEL` duplications;
+Add `model()`; replace the 15 literals and the `VLLM_MODEL`/`MODEL`
+duplications;
 the three bash scripts take their model from `select_model.sh` (candidate 2
 alignment). Update the affected docstrings (several document
 `VLLM_API_KEY … PORT=` on their usage lines, e.g. `api_smoke.py:5`).
@@ -269,12 +311,13 @@ full automation belongs to candidate 5's manifest, not this plan.
    interior.
 2. `grep -l 'OPENAI_API_KEY' bench/*.py` → `harness.py` and
    `test_harness.py` only — and the precedence table is test-pinned.
-3. `grep -l '\[DONE\]' bench/*.py` → `harness.py` / `test_harness.py`.
+3. `grep -l '\[DONE\]' bench/*.py` → `harness.py` / `test_harness.py`
+   (`test_bench_sse_keepalive.py`'s fixture transcript aside).
 4. `run_benchmarks.sh:39` and `prefill_ab.sh:57` carry the `_created`
-   filter; `real_rep.sh:19`'s comment explains why (it already does).
+   filter; `real_rep.sh:19` has it but no why comment — add one while there.
 5. `grep -c '"qwen3.8-27b"' bench/*.py` → 0 outside tests.
 6. `bench/test_harness.py` runs in `patch-integrity.yml` in seconds, green.
 
 At that point "how the harness talks to the server" has one answer per
-mechanism, the next #113 lands in one file, and the harness's ~400 lines of
+mechanism, the next #113 lands in one file, and the harness's ~420 lines of
 re-implemented glue is a module the tests actually cover.
