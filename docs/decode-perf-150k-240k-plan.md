@@ -4,23 +4,77 @@
 document. Analyzed tree: `main` @ `1cf86656c26b7725743c41a0ad7b9de99f5d7844` (identical to
 `upstream/main`, syv-ai/HyperQwen; the fork tip `f6a5436` differs only by a docs/auth merge).
 
+**Re-verified 2026-09-29 against upstream/main @ `d5e2a01`** (7 commits after `2522ef9`; still
+no new measurements — every change below is source-level or a citation fix). What changed:
+- **Upstream since `2522ef9`: unchanged for D and E.** None of the seven commits touches the
+  D/E decode path. #219 (8cf642e) exports `VLLM_WSL2_ENABLE_PIN_MEMORY=1` only under WSL2
+  with `SPEC=dflash2` (`single-user/start_qwen.sh:779-782`); the reference 3090 is native,
+  so no repo-measured row moves. #234 (e355f9f) makes `marlin-repack-staged-sm80` opt-in; its
+  old default was on for compute capability 8.0 only, never sm86. #232 (36936ec) makes
+  `alternative.sh`'s prefix retention default 0 without a KV tier (T5's path; affects prefix
+  reuse, not decode). #235 is batch-only; #230, #236 and #231 are docs/install.
+  `KVARN_SHARED_VERIFY` is still default-off (`kvarn-0.30.0.patch:49,78`, unmoved by
+  e355f9f's re-export), and the comment behind the gate is unchanged
+  (`triton_kvarn_decode.py:939-946`, gate on line 947).
+- **Errors this pass found that were already false at `2522ef9`, corrected in place below:**
+  - `CTX=huge` does **not** run `--no-async-scheduling` by default. The launcher sets
+    `ASYNC_SCHED=0` only when the lookup is on **and** `DFLASH_TOKENS>7`
+    (`start_qwen.sh:310-316`), else it passes `--async-scheduling` (`:659-660`). So the
+    default k=7 DFlash2 profile and every `SPEC=mtp CTX=huge` boot run async. T1's "the
+    shipped profile may already be safe" argument is withdrawn (F1, F6, T1, Q1).
+  - Adaptive verification (vllm#52228) is opt-in in 0.30.0 (`enable_adaptive_verification:
+    bool = False`, `vllm/config/speculative.py:539`). Reading the source (not booted), it
+    refuses this model: the backend check covers every KV-cache group, GDN included
+    (`vllm/v1/worker/gpu/model_runner.py:621-628`, `adaptive_verification.py:464-497`),
+    and SSM backends opt out (`vllm/v1/attention/backend.py:212-224`). T2's headline lever
+    needs a patch; a flag alone will not turn it on.
+  - FlashInfer on sm86 still reports `UNIFORM_SINGLE_TOKEN_DECODE` in 0.30.0
+    (`vllm/v1/attention/backends/flashinfer.py:977-1012`), so D's verify stays PIECEWISE
+    whatever the #34 soak shows. T3's graph half is not a soak question.
+  - vllm#55095 is a graph-mode fallback for *non-compiled* models, vllm#54646 speeds up
+    capture/boot, and vllm#54374 is a correctness fix. None of them raises decode rate for
+    this compiled model. Suffix decoding already ships in 0.30.0 (`method="suffix"`, needs
+    `arctic-inference`), so T8 needs no backport.
+  - The "15.9 GiB loaded" weight figure comes from a `SPEC=dflash2` boot, so it includes the
+    1.19 GB drafter and the ~1.27 GB int8 embedding table. Per-step target weights are
+    ~14.6 GB [ESTIMATE], and §2.2–2.4 are recomputed: both ceilings are ~121 tok/s, not
+    ~107.
+  - `int4_per_token_head` *has* a rotation, and its batch-mode PPL (8.257, +0.3%) and 240k
+    needle are already published (`docs/long-context.md:88,98-99`). T5's quality-risk text
+    is corrected.
+  - The 240k extrapolation is ~18 tok/s (linear, independent of tok/step), not ~19–25. The
+    F1 per-tile cost is ~0.46 µs, not 0.33.
+  - Gotcha 43: 4096 batched tokens boots (−2.4% pool); only 8192 refuses (R12).
+  - Issue states: #208 is still OPEN (its fix, #222, merged). #196 has maintainer replies
+    (2026-09-27/28: #213 fixed the `.txt` corpus bug, gotcha 61 was added), and the
+    full-vs-truncated head A/B is still owed. #107's thread never mentions vllm#50021, and
+    the repo has carried that backport since 9850338 (2026-08-17), before #107 was filed.
+  - Line-number drift fixed throughout (start_qwen.sh, optimizations.md, vllm-0.29.md,
+    long-context.md, gotchas 40/57, multi-gpu.md, kvarn/README.md). Each fix names the old
+    number.
+
 **Re-verified 2026-09-28 against upstream/main @ `2522ef9`** (22 commits later; still no new
 measurements — the deltas below are source-level). What landed since the analysis:
 - **PR #189 merged (d88544b): vLLM is now pinned to 0.30.0** — opportunity 2 / T2 is no
   longer "land the port" but "switch on and validate its spec-decode wins" (updated below).
   The 0.30 image is the shipped image, so Q3–Q4's soak experiments need no special build.
-- **#208 fixed via #222** (`kvarn-recycled-pages-0.30.0.patch`): the "!!!!" collapse — a
+- **#208 fixed via #222** (`kvarn-recycled-pages-0.30.0.patch`; 2026-09-29: #222 MERGED, but
+  #208 itself is still OPEN, awaiting reporter confirmation): the "!!!!" collapse — a
   *different* KVarN corruption (late page flush across KV-cache groups onto another
   request's mamba state), with a new GPU reproducer `bench/concurrent_collapse.py`.
-  T1's target corruption (shared-verify ↔ async scheduling) is untouched: the docstring
-  survives verbatim (`triton_kvarn_decode.py:941-945`) and `KVARN_SHARED_VERIFY` is still
+  T1's target corruption (shared-verify ↔ async scheduling) is untouched: the comment above
+  the gate survives verbatim (`triton_kvarn_decode.py:939-946`, was "941-945" and called the
+  docstring) and `KVARN_SHARED_VERIFY` is still
   default-off (`kvarn-0.30.0.patch:49,78`) — but the hunt now has a proven template.
 - **Appendix A's "most useful A/B left" is measured**: 2× 3090 TP=2, int8/TRITON vs
-  fp8/FlashInfer MTP — 156.0 vs 90.9 tok/s (1.72×, #217; `docs/multi-gpu.md:226`).
+  fp8/FlashInfer MTP — 156.0 vs 90.9 tok/s (1.72×, #217; `docs/multi-gpu.md:228`, was ":226").
 - `spec-attn-smem-fit` (#188) and `bench-sse-keepalive` (#226) joined the series;
   `offload-mtp-serve` and `mamba-align-retire-null-gaps` retired out. The launchers now
-  pin the prefix-cache retention interval explicitly (#189; 0.30's unset default is 0,
-  vllm#55760) — T2's retention caveat is already handled in-tree.
+  pin the prefix-cache retention interval explicitly (#189; 0.30's unset default is 0 —
+  `vllm/config/cache.py:148` in 0.30.0 — and vllm#55760's dense-for-Mamba+EAGLE resolution
+  is *not* in 0.30.0: the launcher says it was on the 0.29 release branch only,
+  `start_qwen.sh:542-544`; 2026-09-29 correction of "0.30's unset default is 0,
+  vllm#55760") — T2's retention caveat is already handled in-tree.
 
 **Number labels.** Every figure is one of:
 - **[REPO-MEASURED]** — quoted from this repo's docs/issues, with the path.
@@ -37,18 +91,28 @@ Substitute the real target; the ranking does not change.
 depth-resolved numbers say those are **short-prompt cohort figures measured on servers
 configured for 150k/240k**, not decode rates at that depth:
 - D (`SPEC=mtp CTX=long`, fp8): 92.6–101.8 tok/s on the C1 cohort of ~1–2k prompts
-  [REPO-MEASURED: docs/vllm-0.29.md lines 271, 332], but **68.1 tok/s at 112k depth**
-  [REPO-MEASURED: docs/long-context.md lines 48–56, issue #11] and 80.3 @ 25k / 70.7 @ 60k
-  [REPO-MEASURED: docs/gotchas.md gotcha 40, lines 825–830]. At true 150k depth expect
-  ~60–70 [ESTIMATE: extrapolation of those two series].
-- E (`CTX=huge`, KVarN + DFlash2): 93.6–107.2 tok/s C1 [REPO-MEASURED: docs/vllm-0.29.md
-  lines 290, 333], **73.7 tok/s at 25k, 38.6 at 90k** [REPO-MEASURED: docs/vllm-0.29.md
-  lines 126–127], 32.0 at 112k [REPO-MEASURED: docs/long-context.md line 53]. The "67 mixed"
-  is a moderate-depth number; at true 240k depth the same curve reads ~19–25 tok/s
-  [ESTIMATE: 62 ms/step at 90k + the measured ~0.43 ms/step per +1k token slope → ~127 ms/step
-  at 240k, at ~2.4 tok/step]. The "164 quoting" figure is likewise depth-dependent.
+  [REPO-MEASURED: docs/vllm-0.29.md lines 334 (92.6, native 3090) and 273 (101.8, WSL2
+  4090); was "lines 271, 332"], but **68.1 tok/s at 112k depth**
+  [REPO-MEASURED: docs/long-context.md lines 48–56 (value on 54), issue #11] and 80.3 @ 25k /
+  70.7 @ 60k [REPO-MEASURED: docs/gotchas.md gotcha 40, lines 831–836 (was "825–830"), vLLM
+  0.28.0, salted prompts]. At true 150k depth expect ~60–70 [ESTIMATE: extrapolation of those
+  two series].
+- E (`SPEC=dflash2 CTX=huge` — `.env.example:6` sets `SPEC=dflash2`, README.md:85 adds
+  `CTX=huge` — KVarN + DFlash2): 93.6–107.2 tok/s C1 [REPO-MEASURED: docs/vllm-0.29.md lines
+  335 (93.6, native 3090) and 292 (107.2, WSL2 4090); was "lines 290, 333"], **73.7 tok/s at
+  25k, 38.6 at 90k** [REPO-MEASURED: docs/vllm-0.29.md lines 126–127], 32.0 at 112k (MTP-3,
+  not DFlash2) [REPO-MEASURED: docs/long-context.md line 54; was "line 53"]. The "67 mixed"
+  is the six-task mix at `--ctx 20000` (3.15 tok/step) [REPO-MEASURED: docs/long-context.md
+  line 220], a moderate-depth number. At true 240k depth the same curve reads **~18 tok/s**
+  [ESTIMATE, recomputed 2026-09-29: at 2.4 tok/step, 25k = 32.6 ms and 90k = 62.2 ms per
+  step, so the slope is 0.456 ms/step per +1k tokens (was "~0.43"), giving ~131 ms/step at
+  240k (was "~127") and 18.4 tok/s. A linear extrapolation gives 18.4 at *any* constant
+  tok/step, so the old "~19–25" upper end only holds if the slope flattens with depth]. The
+  "164 while quoting" figure (README.md:85) is the *copy* task at 20k (164 tok/s, 7.83
+  tok/step; the `quote` task reads 58) [REPO-MEASURED: docs/long-context.md lines 217–219],
+  so it too depends on depth and task.
 
-So the honest baseline is: **~65–75 tok/s at true 150k depth (D), ~19–25 tok/s at true 240k
+So the honest baseline is: **~65–75 tok/s at true 150k depth (D), ~18–25 tok/s at true 240k
 depth (E)**, and the ceiling analysis below is done against those, with the short-context
 numbers noted where they are what the repo publishes.
 
@@ -58,14 +122,15 @@ numbers noted where they are what the repo publishes.
 
 | # | Opportunity | Expected gain [ESTIMATE] | Quality risk | Effort |
 |---|---|---|---|---|
-| 1 | **Enable KVarN's shared-dequant verify kernel** (`KVARN_SHARED_VERIFY`, still default-off over an unresolved corruption — a *second*, unrelated KVarN corruption, #208's "!!!!" page-flush, was isolated and fixed in #222 since this analysis) + batch-1 kernel-efficiency pass on the KVarN decode path. The fallback re-dequantizes the whole KV cache **once per query token** (4× at MTP k=3, 8× at DFlash2 k=7) every step. | **240k: +80–200%** (step ~127 → ~35–45 ms); 112–150k KVarN: +40–90% | none (kernel math unchanged; validated in isolation already) | **M** |
-| 2 | **Switch on and validate the 0.30.0 spec-decode wins — the port has LANDED** (PR #189 merged 2026-09-28, `vllm==0.30.0` pinned): adaptive verification (vllm#52228), DFlash AOT-schedule drop (vllm#54374), gc-freeze graph capture (vllm#54646), `FULL_DECODE_ONLY` graphs (vllm#55095), Mamba-state-at-EAGLE-resume (vllm#53945). | **+5–15%** at both depths | none (spec decode is exact) | **S** (validation, not a port) |
-| 3 | **Recover FULL CUDA graphs on the fp8/FlashInfer 150k path and re-enable MTP k=4** (PIECEWISE costs −6.6% step [REPO-MEASURED: gotcha 40]; k=4 is worth ~+7% [REPO-MEASURED: docs/optimizations.md lines 397–403]). Both are gated on the #34 FlashInfer crash, which the 0.29/0.30 pin + FlashInfer 0.6.18.post1 may already fix — a soak test decides. | **150k: +8–14%** | none | **S–M** |
+| 1 | **Enable KVarN's shared-dequant verify kernel** (`KVARN_SHARED_VERIFY`, still default-off over an unresolved corruption — a *second*, unrelated KVarN corruption, #208's "!!!!" page-flush, was isolated and fixed in #222 since this analysis) + batch-1 kernel-efficiency pass on the KVarN decode path. The fallback re-dequantizes the whole KV cache **once per query token** (4× at MTP k=3, 8× at DFlash2 k=7) every step. | **240k: +80–200%** (step ~131 → ~35–45 ms; that step range alone is +190–270%, so the band is conservative); 112–150k KVarN: +40–90% | none (kernel math unchanged; validated in isolation already) | **M** |
+| 2 | **Switch on and validate the 0.30.0 spec-decode wins — the port has LANDED** (PR #189 merged 2026-09-28, `vllm==0.30.0` pinned): adaptive verification (vllm#52228), DFlash AOT-schedule drop (vllm#54374), gc-freeze graph capture (vllm#54646), `FULL_DECODE_ONLY` fallback (vllm#55095), Mamba-state-at-EAGLE-resume (vllm#53945). **2026-09-29:** reading the 0.30.0 source, adaptive verification is opt-in and refuses GDN-hybrid models and non-`ALWAYS` graph backends (FlashInfer on sm86, KVarN), and the other four are correctness/boot fixes, not decode levers (§5 T2). | **~0 as shipped**; +5–15% at both depths only if adaptive verification is patched to run on GDN + the D/E backends | none (spec decode is exact) | **M** (a patch, not just validation; was S) |
+| 3 | **Re-enable MTP k=4 on the fp8/FlashInfer 150k path; FULL CUDA graphs there are not reachable on sm86** (PIECEWISE costs −6.6% step [REPO-MEASURED: gotcha 40, lines 807–816]; k=4 is worth ~+7% [REPO-MEASURED: docs/optimizations.md lines 399–405, was "397–403"]). k=4 is gated on the #34 FlashInfer crash, which the 0.30 pin + FlashInfer 0.6.18.post1 may already fix; a soak test decides. FULL graphs: 0.30.0's FlashInfer still reports `UNIFORM_SINGLE_TOKEN_DECODE` on sm86 (`vllm/v1/attention/backends/flashinfer.py:977-1012`), so no soak turns them on. | **150k: ~+7%** (k=4 only; was +8–14% with the graph half) | none | **S–M** |
 | 4 | **DFlash2 + fp8 at 150k via the FA2-fp8 plugin geometry relaxation** (issue #153: TP=1 needs `(256,4)`/`(128,8)` admitted to the adapter's tested set). Gives DFlash2's acceptance + the lookup lane at 150k with FULL graphs, instead of the TRITON/int8 tier that decays with depth (gotcha 40) or KVarN's per-token verify. | **150k copy/quote: +30–100%**; mixed prose at depth: ~0 (MTP keeps that workload) | none | **M** |
-| 5 | **int4-per-token-head KV + MQ-3D split-KV verify as the hedge 240k path** (`single-user/alternative.sh` + `VLLM_INT4_MQ_3D=1`): measured 38–46 tok/s at 88k on the 3090 [REPO-MEASURED: docs/spec-decode-scratch-token-units.md lines 366–378] vs KVarN's 38.6 at 90k, pool 314,915 tokens, GSM8K 96.0 / 100k needle retrieved [REPO-MEASURED: docs/long-context.md lines 456–465]. | **240k: 1.5–2.5× current E** if #1 stalls | **medium** (PPL at depth and 240k needle not yet published; int4 pth is coarser than KVarN k4v2) | **M** |
+| 5 | **int4-per-token-head KV + MQ-3D split-KV verify as the hedge 240k path** (`single-user/alternative.sh`, which already defaults `VLLM_INT4_MQ_3D=1`, line 47): measured 38–46 tok/s at 88k on the 3090 [REPO-MEASURED: docs/spec-decode-scratch-token-units.md lines 366–378] vs KVarN's 38.6 at 90k, pool 314,915 tokens, GSM8K 96.0 / 100k needle retrieved [REPO-MEASURED: docs/long-context.md lines 442–444, 457–463]. | **240k: 1.5–2.5× current E** if #1 stalls | **medium** (PPL at 100k+ depth and a needle on this serving path are not yet published; the 33k-token batch PPL is +0.3% and a batch-mode 240k needle passed, docs/long-context.md:98–99 — 2026-09-29 correction of "240k needle not yet published") | **M** |
 
-**Read of the whole table:** per-step time at batch 1 is ~70–80% **weight bytes** (a fixed
-17.1 GB) and the rest is KV-cache read+dequant and kernel efficiency. Lossless weight
+**Read of the whole table:** per-step time at batch 1 is ~72–76% **weight bytes** (a fixed
+~14.6 GB of target weights, §2.1; was "~70–80%" of "17.1 GB") and the rest is KV-cache
+read+dequant and kernel efficiency. Lossless weight
 reduction does not exist (the body is already W4A16 Marlin near its roofline; the heads are
 already int4-GPTQ). Therefore the ranking is dominated by (a) **not re-reading/re-dequantizing
 KV per draft token**, and (b) **tokens per step** (drafting quality), with kernel-efficiency
@@ -80,8 +145,10 @@ constraint 2.
   users; ~0 for the repo's en/da/code cohort (its 97.5% coverage is already measured
   [REPO-MEASURED: drafter/README.md lines 17–22]).
 - **Multilingual-or-full head A/B** (`MTP_DRAFT_VOCAB=0`): the same reporter measured the full
-  lm_head *faster* than even a rebuilt truncated head at `CTX=long` (80.6 vs 61–64 tok/s) —
-  contradicts repo doctrine, one box, no maintainer reply. Open question Q3.
+  lm_head *faster* than even a rebuilt truncated head at `CTX=long` (80.6 vs 61–64 tok/s). That
+  contradicts repo doctrine, and it is one box. The maintainer has since replied (2026-09-27/28:
+  the list is language-specific, the `.txt` corpus bug is fixed in #213, gotcha 61 added) and
+  still owes the `CTX=long` k=3 full-vs-truncated A/B; was "no maintainer reply". Open question Q3.
 
 
 ---
@@ -98,104 +165,140 @@ and the repo's own figures:
   `full_attention_interval=4`). hidden 5120; attention: 24 q heads, **4 KV heads, head_dim
   256**; GDN: 16 key heads ×128, 48 value heads ×128; vocab 248,320;
   `max_position_embeddings` 262,144.
-- **Weights per step (read once per forward):** ~15.9 GiB loaded
-  [REPO-MEASURED: docs/spec-decode-scratch-token-units.md line 343] ≈ **17.1 GB** — W4A16
-  Marlin body ~13.2 GB, int4-GPTQ lm_head 0.64 GB, int8 embed (one row gathered per step,
-  negligible), int4-GPTQ MTP module [REPO-MEASURED: docs/quality.md lines 49–58].
+- **Weights per step (read once per forward):** ~15.9 GiB is `Model loading took` on a
+  `SPEC=dflash2` boot (RTX 4090 WSL2, `alternative.sh` int4, `DFLASH_TOKENS=15`)
+  [REPO-MEASURED: docs/spec-decode-scratch-token-units.md line 342, was "line 343"; boot
+  config on lines 330–332] ≈ 17.1 GB. **2026-09-29 correction:** that figure includes the
+  1.19 GB DFlash2 drafter and the int8 embedding table (248,320 × 5,120 × 1 B ≈ 1.27 GB, one
+  row gathered per step). So the target weights actually read per step are ≈ 17.1 − 1.19 −
+  1.27 ≈ **14.6 GB** [ESTIMATE]. The earlier text used 17.1 GB as target-only and added the
+  drafter on top, counting it twice for E. Of that: int4-GPTQ lm_head 248,320 × 5,120 × 0.5 B
+  ≈ 0.64 GB [ESTIMATE, arithmetic; not a repo figure]; the W4A16 Marlin body is the rest,
+  ~13.9 GB (the old "~13.2 GB" had no repo source); int4-GPTQ lm_head and MTP module
+  [REPO-MEASURED: docs/quality.md lines 49–58 (precision only, no byte counts)].
 - **Recurrent state per request:** 48 × (48×128×128) elements = 37.7 M elements = **151 MB
   fp32 / 75.5 MB fp16**, read+written every step [REPO-MEASURED: docs/optimizations.md lines
   54–58 ("~150 MB per request" fp32); fp16 state is the shipped default, docs/quality.md
   line 33].
 - **KV bytes per token** (16 attention layers × 4 heads × 256 dims × K+V):
   bf16 65,536 B [REPO-MEASURED: gotcha 30]; fp8 32,768 B [REPO-MEASURED: docs/long-context.md
-  line 11]; int8-per-token-head ~33,280 B [REPO-MEASURED: gotcha 39, 2080 B/layer]; KVarN
+  line 11 — its "2 KB per token" is per layer; × 16 layers]; int8-per-token-head ~33,280 B
+  [REPO-MEASURED: gotcha 39, 2080 B/layer, line 736; also gotcha 28 line 308]; KVarN
   k4v2_g128 840 B/layer → **13,440 B** [REPO-MEASURED: docs/long-context.md line 15,
-  kvarn/README.md line 51]; int4-per-token-head ~17,900 B [ESTIMATE: 6.96 GiB pool ÷ 405,948
-  tokens, docs/vllm-0.29.md line 420].
+  kvarn/README.md line 66 (was "line 51")]; int4-per-token-head ~17,100 B [ESTIMATE, redone
+  2026-09-29: the old "6.96 GiB pool ÷ 405,948 tokens = ~17,900" divided the fp8 pool at 0.95
+  by the int4pth pool at 0.93 (docs/vllm-0.29.md lines 413, 422) and is 18,409 by its own
+  numbers. Scaling fp8's 0.93 pool instead (6.48 GiB / 204,896 tokens, line 410 = 33,958
+  B/token) by the token ratio 204,896 / 405,948 gives ~17,100].
 - **Drafter weights per step:** DFlash2 W4A16 1.19 GB [REPO-MEASURED: docs/optimizations.md
-  lines 220–227]; MTP int4 ~0.45 GB [ESTIMATE from "~850 MB bf16 → int8", prepare/README.md
-  line 16, then int4 GPTQ fast variant].
+  lines 222–228, was "220–227"]; MTP int4 ~0.45 GB [ESTIMATE from "~850 MB bf16 → int8",
+  prepare/README.md line 16, then int4 GPTQ fast variant].
 - **Card:** RTX 3090, 936 GB/s spec, 82 SMs, sm86, 250 W cap. Sustained effective bandwidth
   ~85–90% at these read sizes [REPO-MEASURED: gotcha 10 — the GDN decode kernel "already runs
-  at ~85% of the 3090's memory bandwidth"; docs/optimizations.md lines 405–410 — the Marlin
-  gap "is the memory system's ramp on 16–92 MB reads, not the kernel"].
+  at ~85% of the 3090's memory bandwidth"; docs/optimizations.md lines 410–412 (was
+  "405–410") — the Marlin gap "is the memory system's ramp on 16–92 MB reads, not the kernel"].
 
 
 ### 2.2 Setup D — `SPEC=mtp CTX=long` (fp8 KV, FlashInfer, k=3, MAX_LEN 150k)
 
-Launcher mapping [REPO-MEASURED: single-user/start_qwen.sh lines 202–204]:
-`--kv-cache-dtype fp8`, `DRAFT_TOKENS=3`, MAX_LEN 150,000. fp8 on sm86 has exactly one
-backend — FlashInfer — because FLASH_ATTN refuses fp8 KV (needs FA3/SM90+) and TRITON
-refuses fp8e4nv below SM89 [REPO-MEASURED: gotcha 40, lines 777–787]. FlashInfer's
-spec-decode path is single-token-decode-only, so the verify step runs **PIECEWISE** (no
-FULL CUDA graph) [REPO-MEASURED: patches/triton-spec-attn-fp8-kv.patch preamble].
+Launcher mapping [REPO-MEASURED: single-user/start_qwen.sh lines 203–206, was "202–204"]:
+`--kv-cache-dtype fp8`, `DRAFT_TOKENS=3`, MAX_LEN 150,000; async scheduling on (`:659-660`).
+fp8 on sm86 has exactly one backend, FlashInfer: FLASH_ATTN refuses fp8 KV (needs FA3/SM90+)
+and TRITON refuses fp8e4nv below SM89 [REPO-MEASURED: gotcha 40, lines 783–788, was
+"777–787"]. FlashInfer's spec-decode path is single-token-decode-only, so the verify step
+runs **PIECEWISE** (no FULL CUDA graph) [REPO-MEASURED: patches/triton-spec-attn-fp8-kv.patch
+preamble, lines 6–7]. That is still true on the 0.30.0 pin: without trtllm-gen (SM90/SM100+
+only), `get_cudagraph_support` returns `UNIFORM_SINGLE_TOKEN_DECODE`
+(`/tmp/vllm-0.30.0` `vllm/v1/attention/backends/flashinfer.py:977-1012`,
+`vllm/utils/flashinfer.py:592-607`).
 
 Per decode step, in order:
 1. **MTP drafter, 3 chained single-token forwards.** Each: one drafter layer + the truncated
    40,960-row lm_head slice (`patches/qwen3_5-mtp-draft-vocab.patch`). The drafter's own
    1-layer KV grows with context; 3 serial passes per step.
 2. **Target verify forward, 4 query tokens, one pass:** 64 layers — W4A16 Marlin GEMMs
-   (17.1 GB), GDN chunk-scan on fp16 state, and 16 layers of fp8 FlashInfer multi-query
+   (~14.6 GB), GDN chunk-scan on fp16 state, and 16 layers of fp8 FlashInfer multi-query
    attention over the full context (KV read once per step).
 3. **Rejection sampler** (sort-free top-k/top-p, `patches/sampler-small-topk-fast-softmax.patch`;
    kernels prewarmed by `patches/spec-sampler-prewarm.patch`).
 4. On accept, k+1 tokens commit and the GDN state rolls forward; on reject it restores from
    the checkpointed position (backstopped by `patches/vllm-pr50021-gdn-spec-bounds.patch`).
 
-Step-time budget at 150k [ESTIMATE, bandwidth-only, 100% efficiency]: weights 17.1 + fp8 KV
-150,000×32,768 B = 4.92 + state 0.15 + drafter ~0.5 = **22.7 GB → 24.2 ms → 41.3 tok/s
-unspeculated ceiling**; at the measured 2.6 tok/step [REPO-MEASURED: docs/vllm-0.29.md
-line 271] → **speculated ceiling ≈ 107 tok/s**. Measured 93–102 at C1 (short), ~68–83 at
-depth → **~63–77% of the byte roofline at depth, ~85% short**. The at-depth gap is the
-PIECEWISE downgrade (−6.6% step [REPO-MEASURED: gotcha 40, lines 803–810]), the FlashInfer
-fp8 batch-1 decode kernel, and per-step host/sampler overhead.
+Step-time budget at 150k [ESTIMATE, bandwidth-only, 100% efficiency; recomputed 2026-09-29
+with the ~14.6 GB target-weight figure from §2.1]: weights 14.6 + fp8 KV 150,000×32,768 B =
+4.92 + state 0.15 + drafter ~0.5 = **20.2 GB → 21.5 ms → 46.4 tok/s unspeculated ceiling**
+(was 22.7 GB → 24.2 ms → 41.3). At the measured ~2.6 tok/step [REPO-MEASURED:
+docs/vllm-0.29.md lines 273 (2.61) and 334 (2.66), was "line 271"] → **speculated ceiling ≈
+121 tok/s** (was ≈ 107). Measured: 93–102 at C1 (short), ~68–80 at depth → **~56–66% of the
+byte roofline at depth, ~77–84% short** (was "~63–77% / ~85%"; the at-depth rows are 25k–112k
+measurements against a 150k roofline). The at-depth gap is the PIECEWISE downgrade (−6.6%
+step [REPO-MEASURED: gotcha 40, lines 807–816, was "803–810"]), the FlashInfer fp8 batch-1
+decode kernel, and per-step host/sampler overhead.
 
-### 2.3 Setup E — `CTX=huge` (KVarN k4v2 KV + DFlash2, MAX_LEN 245,760)
+### 2.3 Setup E — `SPEC=dflash2 CTX=huge` (KVarN k4v2 KV + DFlash2, MAX_LEN 245,760)
 
-Launcher mapping [REPO-MEASURED: single-user/start_qwen.sh lines 197–199, 219–223]:
-`--kv-cache-dtype kvarn_k4v2_g128 --block-size 128`, DFlash2 k=7 (QLEN=8 verify), FULL graphs
-restored for DFlash2 (residue fix `a75ee4b`/`b356e31`; MTP stays PIECEWISE — gotcha 33 lines
-435–446), `--no-async-scheduling` (the lookup lane needs per-step draft feedback,
-docs/optimizations.md lines 285–289).
+Launcher mapping [REPO-MEASURED: single-user/start_qwen.sh lines 198–201 and 220–225, was
+"197–199, 219–223"; DFlash2 k=7 default on line 262; MAX_LEN 245,760 at k≤7 on line 377]:
+`--kv-cache-dtype kvarn_k4v2_g128 --block-size 128`, DFlash2 k=7 (QLEN=8 verify). FULL graphs
+are restored for DFlash2 (residue fix `a75ee4b`/`b356e31`); MTP stays PIECEWISE (gotcha 33,
+lines 435–446; `start_qwen.sh:641-643`). **Async scheduling is ON at the default k=7.**
+`--no-async-scheduling` is set only for `DFLASH_TOKENS>7` with the lookup on
+(`start_qwen.sh:310-316`), because only the long adaptive block needs per-step draft-count
+feedback [REPO-MEASURED: docs/optimizations.md lines 281–291, was "285–289"]. The earlier
+text said CTX=huge always runs `--no-async-scheduling`; that was false at every tree this
+doc has been checked against.
 
 Per decode step:
 1. **DFlash2 drafter, one non-autoregressive pass** (5 layers, 2,048-token sliding window —
    cost independent of context) + optional lookup fill from the request's own history
    (`patches/dflash2-lookup-drafting.patch`).
-2. **Target verify forward, 8 query tokens:** weights (17.1 GB), GDN state, and 16 layers of
-   KVarN attention: the fused Triton kernel walks 128-token tiles — load packed 4-bit keys /
-   2-bit values + scales, dequantize, Hadamard-rotated q·k, online softmax
-   [REPO-MEASURED: kvarn/files/vllm/v1/attention/ops/triton_kvarn_decode.py lines
-   1053–1120].
+2. **Target verify forward, 8 query tokens:** weights (~14.6 GB), GDN state, and 16 layers of
+   KVarN attention. As shipped (`KVARN_SHARED_VERIFY` off), the per-token path launches
+   `_kvarn_fused_decode_stage1` over an `(NQ, Hk, SPLITS)` grid, i.e. one program per query
+   token (`triton_kvarn_decode.py` lines 1008–1021; kernel 529–654). Each program walks
+   128-token tiles: load packed 4-bit keys / 2-bit values + scales, dequantize,
+   Hadamard-rotated q·k, online softmax. The shared kernel that is gated off is
+   `_kvarn_fused_verify_stage1`, lines 1053–1202; the old citation "1053–1120" pointed at it
+   as if it were the path that runs.
 3. Sampler + commit, as D.
 
-Step-time budget at 240k [ESTIMATE, bandwidth-only]: weights 17.1 + KVarN KV 240,000×13,440 B
-= 3.23 + state 0.15 + drafter 1.28 = **21.7 GB → 23.2 ms → 43 tok/s unspeculated ceiling**;
-at 2.5 tok/step → **speculated ceiling ≈ 107 tok/s**; in copy mode at ~8–15 tok/step (lookup
-engaged [REPO-MEASURED: docs/optimizations.md lines 307–314]) the ceiling is 250–400+ tok/s.
-Measured 73.7 @ 25k, 38.6 @ 90k, ~19–25 extrapolated @ 240k → **~35–55% of roofline at 25k,
-~20% at depth**. That gap is finding F1, and it is enormous.
+Step-time budget at 240k [ESTIMATE, bandwidth-only; recomputed 2026-09-29]: weights 14.6 +
+KVarN KV 240,000×13,440 B = 3.23 + state 0.15 + drafter 1.28 = **19.3 GB → 20.6 ms → 48.6 tok/s
+unspeculated ceiling** (was 21.7 GB → 23.2 ms → 43). At 2.5 tok/step → **speculated ceiling ≈
+121 tok/s** (was ≈ 107); the 20k six-task row reads 3.15 tok/step (docs/long-context.md line
+220), so 2.5 is conservative. In copy mode at ~8–15 tok/step (lookup engaged
+[REPO-MEASURED: docs/optimizations.md lines 309–316, was "307–314"]) the ceiling is 250–400+
+tok/s. Measured 73.7 @ 25k, 38.6 @ 90k, ~18 extrapolated @ 240k → **~61% / ~32% / ~15% of the
+240k ceiling** (73.7 is ~52% of its own 25k roofline, ~143 tok/s). The earlier "~35–55% at 25k"
+did not follow from its own numbers (73.7 / 107 = 69%); "~20% at depth" is now ~15%. That gap is
+finding F1, and it is enormous.
 
 ### 2.4 What the roofline says, plainly
 
 | term | 150k fp8 (D) | 240k KVarN (E) |
 |---|---|---|
-| weights | 17.1 GB (75%) | 17.1 GB (79%) |
-| KV read | 4.92 GB (22%) | 3.23 GB (15%) |
-| state + drafter | 0.65 GB (3%) | 1.43 GB (6%) |
-| **step bytes** | **22.7 GB** | **21.7 GB** |
-| ceiling @2.5–2.6 tok/step | ~107 tok/s | ~107 tok/s |
+| weights | 14.6 GB (72%) | 14.6 GB (76%) |
+| KV read | 4.92 GB (24%) | 3.23 GB (17%) |
+| state + drafter | 0.65 GB (3%) | 1.43 GB (7%) |
+| **step bytes** | **20.2 GB** | **19.3 GB** |
+| ceiling @2.5–2.6 tok/step | ~121 tok/s | ~121 tok/s |
+
+(2026-09-29: recomputed from the ~14.6 GB target-weight figure; the 2522ef9 table read 17.1 GB
+weights, 22.7 / 21.7 GB step bytes, 75%/79% weights, ~107 tok/s ceilings.)
 
 Three consequences:
 1. **Weights dominate everywhere.** Even a perfect (free) KV cache caps D and E near
-   ~110–125 tok/s at current acceptance. Lossless gains must come from *efficiency*
-   (closing the measured-vs-roofline gap) and *tokens per step*.
-2. **KVarN has already won the byte war at 240k** (KV is 15% of step bytes). The 240k
-   problem is not capacity and not bytes — it is that the kernel *executes* far above its
-   byte time (finding F1).
-3. **To beat ~110–135 tok/s at any depth you need more tokens per step**, not faster
-   kernels — which is why drafting quality (opportunities 3, 4, and the lookup/suffix
-   family) is a first-class lever even though kernels look like the story.
+   ~145–160 tok/s at current acceptance [ESTIMATE: D 14.6 + 0.65 = 15.25 GB → 16.3 ms/step →
+   61 steps/s × 2.6 ≈ 160; E 14.6 + 1.43 = 16.03 GB → 17.1 ms/step → 58 steps/s × 2.5 ≈ 146.
+   The old "~110–125" did not follow from its own 17.1 GB either, which gives 126–137].
+   Lossless gains must come from *efficiency* (closing the
+   measured-vs-roofline gap) and *tokens per step*.
+2. **KVarN has already won the byte war at 240k** (KV is 17% of step bytes). The 240k
+   problem is not capacity and not bytes: the kernel *executes* far above its byte time
+   (finding F1).
+3. **To beat ~120–160 tok/s at any depth you need more tokens per step**, not faster
+   kernels. That is why drafting quality (opportunities 3, 4, and the lookup/suffix family)
+   is a first-class lever even though kernels look like the story.
 
 
 ---
@@ -205,42 +308,59 @@ Three consequences:
 **F1 — The 240k bottleneck: KVarN verify re-dequantizes the whole KV cache once per query
 token, every step (and the shared-dequant fix already exists but is default-off).**
 `kvarn/files/vllm/v1/attention/ops/triton_kvarn_decode.py` `kvarn_verify_attention` (lines
-877–960) documents two modes: a UNIFORM shared-dequant path where "the request's QLEN tokens
-SHARE each block's dequant, so KV bytes and dequant ALU match single-token decode", and a
-per-token fallback with "**QLEN-x redundant dequant**" (docstring, lines ~889–895). The
-shared path is gated behind `envs.KVARN_SHARED_VERIFY`, **default OFF**, because "serving
-with it corrupts the MTP drafter's proposals (invalid [-1,...] spec tokens, embedding index
-asserts at temperature>0, degenerate greedy output) through a mechanism not yet isolated —
-suspicion is an interaction with async scheduling / drafter metadata rather than kernel
-math" (lines ~936–946). The kernel was "numerically validated in isolation (matches the
-per-token kernel within fp32 reduction noise on live inputs)". So at HEAD, every verify step
-on `CTX=huge` runs per-token: **4× redundant dequant at MTP k=3, 8× at DFlash2 k=7**, growing
-linearly with context. Quantified [ESTIMATE]: at 90k the per-token path visits
-8 × (90,000/128) × 16 ≈ 90,000 tile-dequants/step; at ~0.33 µs/tile-visit (implied by the
-repo's own 25k/90k numbers [REPO-MEASURED: docs/vllm-0.29.md lines 126–127]) that is ~30 ms
-of a ~52–62 ms step; sharing the dequant cuts it to ~3.8 ms → step ~25–35 ms → **~2–2.5× at
-depth**. This also explains the observed steepening of the KVarN tax with context
-[REPO-MEASURED: docs/long-context.md lines 57–59, issue #11: 1.22× batch at 100k → 2.13×
-single-user at 112k] — the tax is per-query-token, and single-user verifies 4–8 queries.
+877–1032; was "877–960") documents two modes: a UNIFORM shared-dequant path where "the
+request's QLEN tokens SHARE each block's dequant, so KV bytes and dequant ALU match
+single-token decode", and a per-token fallback with "**QLEN-x redundant dequant**"
+(docstring, lines 894–899; was "~889–895"). The shared path is gated behind
+`envs.KVARN_SHARED_VERIFY` (line 947), **default OFF**, because "serving with it corrupts the
+MTP drafter's proposals (invalid [-1,...] spec tokens, embedding index asserts at
+temperature>0, degenerate greedy output) through a mechanism not yet isolated — suspicion is
+an interaction with async scheduling / drafter metadata rather than kernel math" (a code
+comment above the gate, lines 939–946; was "~936–946" and called the docstring). The kernel
+was "numerically validated in isolation (matches the per-token kernel within fp32 reduction
+noise on live inputs)". So at HEAD, every verify step on `CTX=huge` runs per-token: **4×
+redundant dequant at MTP k=3, 8× at DFlash2 k=7**, growing linearly with context.
+Quantified [ESTIMATE, per-tile cost recomputed 2026-09-29]: at 90k the per-token path visits
+8 × (90,000/128) × 16 ≈ 90,000 tile-dequants/step. The repo's own 25k/90k numbers
+[REPO-MEASURED: docs/vllm-0.29.md lines 126–127] give a slope of (62.2 − 32.6) ms over 65,000
+extra visits ≈ **0.46 µs/tile-visit** at 2.4 tok/step (was "~0.33", which did not follow from
+those numbers). That is ~41 ms of a ~62 ms step (was "~30 ms of a ~52–62 ms step"); sharing
+the dequant cuts it to ~5 ms → step ~26 ms → **~2.4× at 90k** (the "~2–2.5×" claim stands).
+This also explains the observed steepening of the KVarN tax with context [REPO-MEASURED:
+docs/long-context.md lines 36 and 42 (1.22× batch at 100k), 54 and 58–60 (2.13× single-user
+at 112k, ~1.98× of it step time), summary on 71; issue #11; was "lines 57–59"]: the tax is
+per query token, and single-user verifies 4–8 queries.
 **Confidence: HIGH** that this is the dominant 240k cost (code + repo's own depth slope
-agree); MEDIUM that enabling the shared kernel is easy (corruption mechanism unresolved —
-but the launcher already runs `--no-async-scheduling` at CTX=huge for the lookup lane, and
-the suspicion named is async-scheduling/drafter-metadata, so enabling may be a validation
-exercise, not a rewrite). **2026-09-28 note:** the gate and the docstring are unchanged on
-0.30 (`kvarn-0.30.0.patch:49,78`; `triton_kvarn_decode.py:941-945`), and #222 proved the
-bisect-and-fix loop on a *different* KVarN corruption (#208's cross-group page flush —
-fixed by telling the runner which pages moved groups each step, reproducer
-`bench/concurrent_collapse.py`). Neither fix touches this path.
+agree); MEDIUM-LOW that enabling the shared kernel is easy. The corruption mechanism is
+unresolved. **2026-09-29 correction:** the earlier text argued "the launcher already runs
+`--no-async-scheduling` at CTX=huge", so enabling might be a validation exercise. That is
+false: async scheduling is on for the default k=7 DFlash2 profile and for every `SPEC=mtp
+CTX=huge` boot (`start_qwen.sh:310-316, 659-660`), so the named suspect is live on the
+shipped profile. **2026-09-28 note, re-checked 2026-09-29:** the gate and the comment are
+unchanged on 0.30 (`kvarn-0.30.0.patch:49,78`; `triton_kvarn_decode.py:939-946`, was cited as
+"941-945"; no `kvarn/*.patch` touches this file). #222 proved the bisect-and-fix loop on a
+*different* KVarN corruption (#208's cross-group page flush, fixed by telling the runner which
+pages moved groups each step; reproducer `bench/concurrent_collapse.py`). Neither fix touches
+this path. One field data point since then, not repo-measured and not a check of the MTP
+symptom above: in #208 (2026-09-28) a single-3090 reporter ran `bench/concurrent_collapse.py`
+with `KVARN_SHARED_VERIFY=1 SPEC=dflash2 CTX=huge PREFIX_CACHE=1` (async on, k=7). Before
+#222, 0/30 trials collapsed but `corrupted_requests_total` rose by 1 on the second run; after
+#222, three runs were clean.
 
 **F2 — fp8 verify on sm86 is structurally downgraded: PIECEWISE graphs and k=3 (not 4).**
 Two independent constraints on D: (a) FlashInfer's spec-decode path is single-token-only →
-PIECEWISE, measured −6.6% step (27.2 → 25.4 ms) [REPO-MEASURED: gotcha 40 lines 803–810;
-patches/triton-spec-attn-fp8-kv.patch preamble]; (b) k=4 on FlashInfer crashed with an
-illegal memory access on 0.28.0 ("n=4 eventually dies, n=3 stable"), so CTX=long gives up
-~7% [REPO-MEASURED: docs/optimizations.md lines 397–403]. The repo's Triton fp8 split-KV
-verify kernel exists but is sm89+ [REPO-MEASURED: gotcha 57, lines 1285–1299].
-**Confidence: HIGH** (all repo-measured); whether 0.29/0.30 + FlashInfer 0.6.18.post1 lifts
-either gate needs a GPU soak (open question Q4).
+PIECEWISE, measured −6.6% step (27.2 → 25.4 ms) [REPO-MEASURED: gotcha 40 lines 807–816,
+was "803–810"; patches/triton-spec-attn-fp8-kv.patch preamble lines 6–7]. Note that this A/B
+changed dtype and backend together (fp8/FlashInfer/PIECEWISE vs int8/TRITON/FULL); (b) k=4 on
+FlashInfer crashed with an illegal memory access on 0.28.0 ("n=4 eventually dies, n=3
+stable"), so CTX=long gives up ~7% [REPO-MEASURED: docs/optimizations.md lines 399–405, was
+"397–403"]. The repo's Triton fp8 split-KV verify kernel exists but is sm89+ [REPO-MEASURED:
+gotcha 57, lines 1291–1305, was "1285–1299"].
+**Confidence: HIGH** (all repo-measured). **2026-09-29:** gate (a) is structural on the 0.30.0
+pin, not version luck. FlashInfer's `get_cudagraph_support` returns
+`UNIFORM_SINGLE_TOKEN_DECODE` on any GPU without trtllm-gen (SM90/SM12x/SM100+ only;
+`vllm/v1/attention/backends/flashinfer.py:977-1012`, `vllm/utils/flashinfer.py:592-607` in
+`/tmp/vllm-0.30.0`), so a GPU soak can only answer (b) (open question Q4).
 
 
 **F3 — DFlash2's drafter sees only a 2,048-token window, so its acceptance edge collapses on
@@ -248,16 +368,21 @@ non-copy text at depth; it wins at long context only when the lookup lane fills 
 prompt.** Repo doctrine: "DFlash2 past 64k is worth it only for context reproduction and
 loses to SPEC=mtp CTX=long roughly 2:1 on everything else" [REPO-MEASURED: .env.example
 lines 18–21]; 128k acceptance divergence measured in issue #60. The lookup lane restores it
-for copy/quote (164 tok/s quoting at CTX=huge [REPO-MEASURED: single-user/README.md]).
+for copy/quote (164 tok/s on the copy task at `--ctx 20000`, bare-metal 3090; the `quote` task
+reads 58 [REPO-MEASURED: docs/long-context.md lines 217–219; README.md:85 calls it "164 while
+quoting"; the old citation "single-user/README.md" does not contain the figure]).
 **Confidence: HIGH.** Consequence: DFlash2-at-150k (opportunity 4) is a *copy-workload*
 play, not a mixed-prose play.
 
-**F4 — Weights are 75–79% of step bytes and are already near their roofline.** W4A16 Marlin
-retuning measured +0.4% end-to-end [REPO-MEASURED: docs/optimizations.md lines 190–195,
-405–410: "the remaining gap to peak bandwidth is the memory system's ramp on 16–92 MB reads,
-not the kernel"]. lm_head/MTP/drafter are already int4-GPTQ [REPO-MEASURED: docs/quality.md
-lines 49–58]. **Confidence: HIGH.** Consequence: no lossless weight lever remains; W3A16 is
-the only further weight cut and is lossy (table row T7).
+**F4 — Weights are ~72–76% of step bytes (was "75–79%", §2.4) and are already near their
+roofline.** Marlin retuning for the decode shapes (M ≤ 16 on sm86) measured "3-7% per GEMM in
+isolation, nothing measurable end to end — the remaining gap to peak bandwidth is the memory
+system's ramp on 16–92 MB reads, not the kernel" [REPO-MEASURED: docs/optimizations.md lines
+407–412; was "405–410"]. The "+0.4% end-to-end" figure the old text attributed to W4A16 is the
+W4A8 tile table at M=2048, a prefill/batch shape [REPO-MEASURED: docs/optimizations.md lines
+192–197; was "190–195"]. lm_head/MTP/drafter are already int4-GPTQ [REPO-MEASURED:
+docs/quality.md lines 49–58]. **Confidence: HIGH.** Consequence: no lossless weight lever
+remains; W3A16 is the only further weight cut and is lossy (table row T7).
 
 **F5 — The GDN/recurrent path is not the decode bottleneck.** The DeltaNet decode kernel
 already runs at ~85% of memory bandwidth and every tuning variant lands within 3%
@@ -265,13 +390,16 @@ already runs at ~85% of memory bandwidth and every tuning variant lands within 3
 [ESTIMATE: 151 MB ÷ 936 GB/s]. State size bounds *concurrency* (pages scale with the verify
 block, not slots [REPO-MEASURED: gotcha 29]), not single-user speed. **Confidence: HIGH.**
 Consequence: a fused GDN decode kernel (the external pattern — FlashInfer SM100
-`fused_kda_decode` 1.33× at 1 row [EXTERNAL-MEASURED: flashinfer v0.6.18 release notes],
-vLLM #53835 SM110) buys little on sm86 here; deprioritized (rejected idea R6).
+`fused_kda_decode`, 1.33× the vLLM fused kernel at one row on B200 [EXTERNAL-MEASURED:
+flashinfer v0.6.18 release notes, re-read 2026-09-29; it is Kimi Delta Attention, not GDN];
+vLLM #53835 SM110, merged 2026-09-05) buys little on sm86 here; deprioritized (rejected idea
+R6).
 
-**F6 — CPU/host overhead is small: PIECEWISE on the fp8 path (F2), and
-`--no-async-scheduling` at CTX=huge costs <1% at batch 1** [REPO-MEASURED:
-docs/optimizations.md lines 285–289]. The sampler is already patched; the DFlash draft pass
-is a captured graph [REPO-MEASURED: gotcha 20]. **Confidence: HIGH.**
+**F6 — CPU/host overhead is small: PIECEWISE on the fp8 path (F2), and `--no-async-scheduling`,
+where it is used (`DFLASH_TOKENS>7` with the lookup, not the default CTX=huge profile — see
+§2.3), costs <1% at batch 1** [REPO-MEASURED: docs/optimizations.md lines 281–291, was
+"285–289"]. The sampler is already patched; the DFlash draft pass is a captured graph
+[REPO-MEASURED: gotcha 20]. **Confidence: HIGH.**
 
 **F7 — The int8-QK prefill kernel and Marlin int8 GEMM tunes are gated to exact geometry /
 known to misfire on this checkpoint, but those are prefill/batch concerns, not single-user
@@ -280,11 +408,16 @@ int8 activations buy nothing at batch 1, docs/quality.md line 49, and may cost ~
 via acceptance — issue #62, unconfirmed]. **Confidence: HIGH** (not on the D/E decode path).
 
 **F8 — Reliability cliffs on the exact D/E profile: the #34 FlashInfer+MTP Xid-31 at 28–34k
-(cause unattributed [REPO-MEASURED: gotcha 40]), the #107 engine stepping-stalls at ~190k
-MTP/fp8 (upstream candidate vllm#50021, still open), and Bug B residue corruption at
-CTX=huge (mitigated: PIECEWISE for MTP, FULL for DFlash2 [REPO-MEASURED: gotcha 33]).** No
-steady-state tok/s cost, but any change touching the verify path must re-run their sweeps
-(`bench/residue_sweep.py`, `bench/verbatim.py`). **Confidence: HIGH.**
+(cause unattributed [REPO-MEASURED: gotcha 40, lines 789–793]; #34 still OPEN, last maintainer
+status 2026-09-15), the #107 engine stepping-stalls at ~190k MTP/fp8 (#107 still OPEN), and Bug B
+residue corruption at CTX=huge (mitigated: PIECEWISE for MTP, FULL for DFlash2 [REPO-MEASURED:
+gotcha 33]).** The earlier text called vllm#50021 (still OPEN upstream) the "upstream
+candidate" for #107. That link is not in #107's thread, and the repo has shipped the backport
+(`patches/vllm-pr50021-gdn-spec-bounds.patch`) since 9850338 (2026-08-17), before #107 was filed
+on 2026-09-13. #50021 is therefore not an unapplied candidate fix for #107 [INFERENCE: assumes
+the reporter ran the repo series]. No steady-state tok/s cost, but any change touching the
+verify path must re-run their sweeps (`bench/residue_sweep.py`, `bench/verbatim.py`).
+**Confidence: HIGH.**
 
 
 ---
@@ -292,19 +425,19 @@ steady-state tok/s cost, but any change touching the verify path must re-run the
 ## 4. Ranked opportunity table
 
 Gains are [ESTIMATE] at true depth (150k / 240k) vs the honest baselines (~65–75 tok/s D,
-~19–25 tok/s E) unless noted. Quality risk is against Hard constraint 2. Evidence labels as
+~18–25 tok/s E; was "~19–25") unless noted. Quality risk is against Hard constraint 2. Evidence labels as
 defined at the top.
 
 | rank | idea | mechanism | evidence | gain @150k | gain @240k | quality risk (predicted impact) | effort | files / deps |
 |---|---|---|---|---|---|---|---|---|
-| **T1** | Enable + fix KVarN shared-dequant verify (`KVARN_SHARED_VERIFY`), then batch-1 kernel pass (splits/tile sweep) | stop re-dequantizing KV per query token; share dequant across QLEN | [REPO-MEASURED: triton_kvarn_decode.py 877–960; docs/vllm-0.29.md 126–127] + [ESTIMATE §3/F1] | n/a (KVarN not the 150k tier) | **+80–200%** | none — kernel math unchanged; needle re-check only | M | `kvarn/files/.../triton_kvarn_decode.py`, `kvarn_attn.py`; async-scheduling hypothesis test |
-| **T2** | Land 0.30.0 (PR #189) + adaptive verification (#52228), DFlash AOT drop (#54374), gc-freeze (#54646), FULL_DECODE_ONLY (#55095), Mamba-resume (#53945) | fewer wasted drafts when acceptance dips; less scheduler/graph overhead | [EXTERNAL-MEASURED: vLLM v0.30.0 release notes; PR #189 verified pools on 3090] | +5–15% | +5–15% | none (spec decode exact; IFBench/PPL unchanged by construction) | S–M | merge PR #189; launcher flags; re-run acceptance |
-| **T3** | FULL graphs on fp8 verify + MTP k=4 at CTX=long (post-soak) | remove PIECEWISE downgrade; deepen drafts | [REPO-MEASURED: gotcha 40; optimizations.md 397–403] | +8–14% | n/a | none | S–M | `start_qwen.sh` DRAFT_TOKENS, `cudagraph_mode`; gated on #34 soak |
-| **T4** | DFlash2 + fp8 at 150k (FA2-fp8 geometry relaxation, #153) | DFlash2 acceptance + lookup lane at 150k, FULL graphs | [REPO-MEASURED: issue #153; gotcha 40; #194] | copy +30–100%; mixed ~0 | n/a | none | M | plugin adapter gate `(256,4)`/`(128,8)`; port to 0.29/0.30 image; battery |
-| **T5** | int4-per-token-head KV + MQ-3D (`VLLM_INT4_MQ_3D=1`) as hedge 240k path | proper split-KV verify over int4 cache; pool 314,915 tokens | [REPO-MEASURED: spec-decode-scratch doc 366–378; long-context.md 435–465; issue #86] | n/a | 1.5–2.5× current E | **medium** — PPL at depth + 240k needle unpublished; GSM8K 96.0 & 100k needle OK | M | `alternative.sh` + mq3d patches; quality battery |
+| **T1** | Enable + fix KVarN shared-dequant verify (`KVARN_SHARED_VERIFY`), then batch-1 kernel pass (splits/tile sweep) | stop re-dequantizing KV per query token; share dequant across QLEN | [REPO-MEASURED: triton_kvarn_decode.py 877–1032 (was 877–960); docs/vllm-0.29.md 126–127] + [ESTIMATE §3/F1] | n/a (KVarN not the 150k tier) | **+80–200%** | none — kernel math unchanged; needle re-check only | M | `kvarn/files/.../triton_kvarn_decode.py`, `kvarn_attn.py`; async-scheduling hypothesis test (async is ON in the shipped profile) |
+| **T2** | 0.30.0 is landed (PR #189); make adaptive verification (#52228) run on this model. #54374 (DFlash AOT drop), #54646 (gc-freeze), #55095 (FULL_DECODE_ONLY fallback for non-compiled models) and #53945 (Mamba-resume) are correctness/boot fixes already in the pin | fewer wasted drafts when acceptance dips | [EXTERNAL-MEASURED: vLLM v0.30.0 release notes; PR #189 verified identical pools on 3090, docs/vllm-0.30.md 82–91] + [0.30.0 source: opt-in flag, refuses GDN and non-`ALWAYS` backends, §5 T2] | ~0 as shipped; +5–15% if patched | ~0 as shipped; +5–15% if patched | none (spec decode exact; IFBench/PPL unchanged by construction) | M (was S–M) | patch GDN varlen-verify support + D/E backend graph support; `"enable_adaptive_verification":true` in the spec config; re-run acceptance |
+| **T3** | MTP k=4 at CTX=long (post-soak); FULL graphs on the fp8/FlashInfer verify are not reachable on sm86 in 0.30.0 | deepen drafts | [REPO-MEASURED: gotcha 40; optimizations.md 399–405 (was 397–403)] + [0.30.0 source: flashinfer.py 977–1012] | ~+7% (was +8–14%) | n/a | none | S–M | `start_qwen.sh` DRAFT_TOKENS (line 205); gated on #34 soak |
+| **T4** | DFlash2 + fp8 at 150k (FA2-fp8 geometry relaxation, #153) | DFlash2 acceptance + lookup lane at 150k, FULL graphs | [EXTERNAL-MEASURED: club-3090 TP=2 103/192 tok/s, quoted in issue #153] + [REPO-MEASURED: gotcha 40; #194] | copy +30–100%; mixed ~0 | n/a | none | M | plugin adapter gate `(256,4)`/`(128,8)`; port to the 0.30 image; battery |
+| **T5** | int4-per-token-head KV + MQ-3D (`VLLM_INT4_MQ_3D=1`, already `alternative.sh`'s default) as hedge 240k path | proper split-KV verify over int4 cache; pool 314,915 tokens | [REPO-MEASURED: spec-decode-scratch doc 366–378; long-context.md 88–115, 435–466; issue #60] | n/a | 1.5–2.5× current E | **medium** — PPL at 100k+ depth and a 150k/240k needle on this serving path unpublished; 33k PPL +0.3%, batch 240k needle, GSM8K 96.0 & 100k needle OK | M | `alternative.sh` + mq3d patches; quality battery |
 | T6 | Multilingual draft-vocab rebuild (#196) | acceptance on non-en/da/code traffic | [REPO-MEASURED: issue #196] | ~0 on cohort; large for multilingual users | same | none | S | `prepare/build_draft_vocab.py --corpus` |
-| T7 | W3A16 (~3bpw) body, EXL3-style, mixed W3/W4 | cut the dominant 17.1 GB weight term ~20–25% | [EXTERNAL-MEASURED: ExLlamaV3 Qwen3.8-27B@4bpw 48.6 t/s 3090Ti; Flash-Next@3bpw 62.8 t/s] + [ESTIMATE] | +15–20% | +15–20% | **high** — likely exceeds PPL +2% budget; fallback W3-on-MLP-only | M–L | new quant in `prepare/`; Marlin W3 or EXL3 kernel |
-| T8 | Suffix/prompt-lookup proposer for MTP at 150k (backport vLLM main suffix decoding) | copy-mode drafts for the MTP tier (today lookup is DFlash2-only) | [EXTERNAL-MEASURED: SuffixDecoding ~5.3× on agentic/copy; vLLM main spec-decode docs] | copy +20–60% | n/a | none | M | backport `suffix_decoding`; conflicts with DFlash2 lane — pick per profile |
+| T7 | W3A16 (~3bpw) body, EXL3-style, mixed W3/W4 | cut the dominant ~14.6 GB weight term (was "17.1 GB") ~20–25% | [EXTERNAL-MEASURED: ExLlamaV3 Qwen3.8-27B@4bpw 48.6 t/s 3090Ti; Flash-Next@3bpw 62.8 t/s] + [ESTIMATE] | +15–20% | +15–20% | **high** — likely exceeds PPL +2% budget; fallback W3-on-MLP-only | M–L | new quant in `prepare/`; Marlin W3 or EXL3 kernel |
+| T8 | Suffix/prompt-lookup proposer at 150k. vLLM 0.30.0 already ships `method="suffix"` (no backport; was "backport vLLM main"), but it is its own speculator, so it *replaces* MTP, and it forces the V1 runner (`vllm/config/vllm.py:2839-2850`) | copy-mode drafts for the MTP tier (today lookup is DFlash2-only) | [EXTERNAL-MEASURED: SuffixDecoding ~5.3× on agentic/copy; vLLM spec-decode docs] | copy +20–60% (vs MTP only if MTP+suffix were combined, which stock 0.30 cannot do) | n/a | none | M | `pip install arctic-inference==0.1.1` (`vllm/config/speculative.py`); an MTP+suffix hybrid needs code; conflicts with DFlash2 lane — pick per profile |
 | T9 | KVARN_NUM_KV_SPLITS / tile-size autotune at batch 1 | occupancy of the fused kernel | [REPO-MEASURED: triton_kvarn_decode.py 37–78] | n/a | +10–30% (stacked on T1) | none | S | env sweep only |
 | T10 | int8 recurrent state | halve state bytes | [ESTIMATE: 0.08 ms/step] | +0.3% | +0.3% | medium (state precision) for ~0 gain | — | rejected (see R5) |
 
@@ -312,6 +445,13 @@ defined at the top.
 ---
 
 ## 5. Top 5 — implementation sketches and validation plans
+
+**Harness note (2026-09-29).** `bench/labd_bench.py` takes one integer `--ctx` per run
+(`CTX = int(arg("--ctx", 20000))`, line 38), so every comma list below
+(`--ctx 25000,90000,...`) means one run per depth. Past ~65k it also needs
+`--corpus ~/bench/labd_corpus_long.txt` (usage, lines 11–19), or it silently measures a
+shorter prompt. Whether that corpus reaches 150k/240k tokens is not verified here.
+`bench/residue_sweep.py` takes a label as its first argument (line 26).
 
 ### T1 — KVarN shared-dequant verify (the 240k fix)
 
@@ -321,14 +461,21 @@ shared-dequant kernel (`_kvarn_fused_verify_stage1` + stage2 combine) exists, is
 validated in isolation, and is gated off by `KVARN_SHARED_VERIFY` default-0 because serving
 with it corrupted the MTP drafter's proposals "through a mechanism not yet isolated —
 suspicion is an interaction with async scheduling / drafter metadata"
-(triton_kvarn_decode.py lines ~877–960).
+(triton_kvarn_decode.py lines 939–946, the comment above the gate; was "~877–960").
 
 **Implementation sketch.**
 1. Reproduce the corruption minimally: boot `SPEC=mtp CTX=huge` with
-   `KVARN_SHARED_VERIFY=1`, async scheduling ON vs OFF (`ASYNC_SCHED=0`), and run
-   `bench/residue_sweep.py` + a tool-calling soak. The named suspect is async scheduling;
-   single-user `CTX=huge` already forces `--no-async-scheduling` for the DFlash2 lookup, so
-   there is a real chance the shared kernel is already safe on the shipped profile.
+   `KVARN_SHARED_VERIFY=1`, async scheduling ON (the launcher default) vs OFF
+   (`ASYNC_SCHED=0`, honoured at `start_qwen.sh:659-660`), and run
+   `bench/residue_sweep.py <label>` + a tool-calling soak. The named suspect is async
+   scheduling. **2026-09-29 correction:** the earlier text said single-user `CTX=huge`
+   already forces `--no-async-scheduling` for the DFlash2 lookup, so "there is a real chance
+   the shared kernel is already safe on the shipped profile". It does not. The launcher turns
+   async off only for `DFLASH_TOKENS>7` with the lookup on (`start_qwen.sh:310-316`), so the
+   shipped k=7 profile runs async, and the async-off arm is a real experiment rather than a
+   confirmation. The #208 field run (F1) used the shared path on async k=7 DFlash2 and saw
+   one corrupted request before #222 and none after. That is weak evidence the DFlash2 side
+   may be safe; it does not test the MTP symptom.
 2. If the corruption is async-only: gate the shared path on `not async_scheduling` (or on
    the V2-runner uniform-decode shape) rather than on a debug env var; promote the env to a
    registered knob with a safe default.
@@ -338,7 +485,10 @@ suspicion is an interaction with async scheduling / drafter metadata"
    source). Pin the plan from the same snapshot the scheduler used for the step.
 4. Then the batch-1 efficiency pass (T9): sweep `KVARN_NUM_KV_SPLITS` (16/32/64) and the
    stage-1 tile `BLOCK_N` at 90k/150k/240k; check SM occupancy of the `(B, Hk, splits)` grid
-   at batch 1 (4 KV heads × splits on 82 SMs).
+   at batch 1 (4 KV heads × splits on 82 SMs). The unset default is already
+   context-adaptive: 32 splits up to 256 blocks, 64 above (`adaptive_num_kv_splits`,
+   triton_kvarn_decode.py lines 61–78), so at 90k+ the sweep starts from 64. `BLOCK_N` is
+   autotuned over {16, 32, 64} (lines 50–58).
 
 Diff outline: in `kvarn_verify_attention`, replace the `envs.KVARN_SHARED_VERIFY` clause with
 a predicate on scheduler mode + validated geometry; in `kvarn_attn.py` plumb the flag;
@@ -348,7 +498,7 @@ document in `kvarn/README.md`. ~50–150 lines + tests.
 - Decode vs depth: `bench/labd_bench.py <tag> --ctx 25000,90000,150000,240000 --tasks
   qa,summary` plus a verbatim-copy cell (`bench/labd_bench.py <tag> --ctx 20000` with the
   document-copy task). Arms: flag off vs on, same boot. **Pass:** step time at 90k drops
-  ≥ 30% (target decode ≥ 55 tok/s at 90k, ≥ 45 at 240k from the ~19–25 baseline); no arm
+  ≥ 30% (target decode ≥ 55 tok/s at 90k, ≥ 45 at 240k from the ~18–25 baseline); no arm
   slower than baseline by >3%.
 - Correctness/quality: `bench/quality_battery.py huge-shared --gsm-n 200` (GSM8K ≥ baseline
   −1.0 pt → ≥ 95.0–95.5); perplexity vs E baseline (8.236 → ≤ +2% → ≤ 8.40);
@@ -369,21 +519,63 @@ T9 sweep alone (splits/tile) is a cheap partial.
 
 **Mechanism.** The port PR **landed** on 2026-09-28 (d88544b: `vllm==0.30.0` pinned, the
 series re-exported, four apply-invisible regressions fixed; verified on the reference 3090
-with identical KV pools on every shipped mode [REPO-MEASURED: PR #189 description, now
-merged]). What remains of this row is the validation-and-enablement half. 0.30.0 carries: acceptance
-estimation for adaptive verification (vllm#52228, merged 2026-09-14) — the engine shortens
-the draft when acceptance is low, which matters most exactly where verify cost is highest
-(long context); DFlash drafters dropping FlashAttention's AOT schedule (vllm#54374);
-gc-freeze during graph capture (vllm#54646); `FULL_DECODE_ONLY` graphs (vllm#55095); Mamba
-state cached at the EAGLE resume position (vllm#53945, a correctness enabler for EAGLE-class
-drafters on hybrid models).
+with identical KV pools on every shipped mode [REPO-MEASURED: PR #189 description, merged
+2026-09-28T11:54Z; docs/vllm-0.30.md lines 82–91]). What remains of this row is the
+enablement half. 0.30.0 carries (all confirmed in the v0.30.0 release notes and in
+`/tmp/vllm-0.30.0`):
+- acceptance estimation for adaptive verification (vllm#52228, merged 2026-09-14;
+  `vllm/v1/worker/gpu/spec_decode/acceptance_estimator.py`): the engine shortens the draft
+  when predicted acceptance is low, which matters most where verify cost is highest (long
+  context);
+- DFlash drafters dropping FlashAttention's AOT schedule (vllm#54374, merged 2026-09-04;
+  `spec_decode/dflash/speculator.py:189-200`). This is a correctness fix: acceptance
+  collapsed to 1.0 under FULL graphs when the target was not on FlashAttention;
+- gc-freeze during V2 graph capture (vllm#54646, merged 2026-09-01; `vllm/utils/gc_utils.py`).
+  This is a capture/boot-time and capture-safety fix, not a decode-rate change;
+- a `FULL_DECODE_ONLY` fallback for *non-compiled* models (vllm#55095, merged 2026-09-11;
+  "non-compiled models fall back to `FULL_DECODE_ONLY` graphs" in the release notes). The
+  earlier "`FULL_DECODE_ONLY` graphs" read it as a new graph mode; `FULL_DECODE_ONLY` already
+  existed in 0.29.0, and this compiled model is not the fallback's target;
+- Mamba state cached at the EAGLE resume position (vllm#53945, merged 2026-09-08; a
+  prefix-cache correctness fix). It is listed in the 0.30.0 notes, but its
+  `shared_prefix_boundary` symbol also appears in the local 0.29.0 venv's
+  `v1/core/kv_cache_manager.py`, and no repo patch adds it. So at least part of it predates
+  the 0.30 pin [unresolved which part].
+
+**What the 0.30.0 source says about enabling adaptive verification (2026-09-29, static
+reading, not booted).** It is opt-in: `enable_adaptive_verification: bool = False`
+(`vllm/config/speculative.py:539`), set via the speculative-config JSON. The launcher does not
+set it (`start_qwen.sh:274, 500`). With it on, `maybe_create_adaptive_verification_manager`
+(`vllm/v1/worker/gpu/spec_decode/adaptive_verification.py:448-497`) raises `ValueError` in
+two cases:
+(1) any checked layer's backend does not support a device/CPU query-length mismatch. The
+checked set is every KV-cache-group layer minus the drafter's
+(`vllm/v1/worker/gpu/model_runner.py:621-628`), which includes the 48 GDN layers, and SSM
+backends opt out (`vllm/v1/attention/backend.py:212-224`; `gdn_attn.py:37` `is_ssm` → True).
+(2) any target attention builder reports less than `AttentionCGSupport.ALWAYS`: FlashInfer on
+sm86 reports `UNIFORM_SINGLE_TOKEN_DECODE` (D), and KVarN reports `UNIFORM_BATCH`
+(`kvarn/files/vllm/v1/attention/backends/kvarn_attn.py:425-428`) (E).
+So on this GDN hybrid, neither D nor E can turn it on without patching GDN varlen-verify
+support and the attention backends' graph support. Also, #52228 is Model Runner V2 only
+(`vllm/config/vllm.py:2894-2895` lists it as unsupported on V1). The field's own docstring
+says "Currently only supported for method=\"dspark\"" (`vllm/config/speculative.py:540-541`),
+but config validation does not enforce that: the only non-dspark check rejects it together
+with `use_local_argmax_reduction` (`speculative.py:1564-1573`), and the DFlash2 speculator
+reads the flag (`vllm/v1/worker/gpu/spec_decode/dflash2/speculator.py:216`). The DFlash2
+profiles run V2; whether `SPEC=mtp` resolves to V2 on this model
+(`vllm/config/vllm.py:675-723`) is not checked here.
 
 **Implementation sketch.** ~~Land PR #189 under the repo's two-box bar~~ — done
-(2026-09-28). Remaining: enable adaptive verification for the D and E
-profiles (confirm #52228 covers MTP and DFlash2 on the V2 runner; it is documented as "every
-draft-model speculator"), keep the launcher's explicit prefix-cache retention (already
-shipped in #189 — `single-user/start_qwen.sh:524-570` pins 13056/14592 against the 0.30
-default change, vllm#55760), and re-run the mode acceptance tables.
+(2026-09-28). Remaining: (a) patch the two refusals above (GDN state planning from device
+query lengths; `ALWAYS`-class varlen graph capture for FlashInfer-on-sm86 or the int8/TRITON
+tier, `triton_attn.py:100` already reports `ALWAYS`, and for KVarN), then set
+`"enable_adaptive_verification":true` for the D and E profiles. This is a real patch, not a
+flag flip, and the D half may only be reachable on the int8/TRITON tier. (b) Keep the
+launcher's explicit prefix-cache retention (already shipped in #189 —
+`single-user/start_qwen.sh:524-570` pins 13056/14592 against 0.30's unset default of 0,
+`vllm/config/cache.py:148`; vllm#55760's dense-for-Mamba+EAGLE resolution is not in 0.30.0,
+see the header; was "the 0.30 default change, vllm#55760"). (c) Re-run the mode acceptance
+tables.
 
 **Benchmark + quality validation (Setups B, D, E).** `bash bench/run_benchmarks.sh single`
 twice per mode (keep second run), C1–C8 + tok/step, 0.29 vs 0.30 on the same box in one
@@ -391,60 +583,76 @@ session; plus `bench/labd_bench.py --ctx 90000,150000` on D and E for the depth 
 **Pass:** no mode regresses >3% decode; D or E gains ≥ 5%; `bench/quality_battery.py` per
 mode within the constraint-2 budget (GSM8K ≥ −1.0 pt, PPL ≤ +2%); Bug-B and needle sweeps
 clean on E. **Fallback:** if adaptive verification measurably cuts tok/step (estimator
-mispredicts at depth), keep 0.30 but leave it off — the other 0.30 wins stand alone.
+mispredicts at depth), keep 0.30 but leave it off. The other 0.30 items are correctness/boot
+fixes that are already in the pin.
 
-**Strongest reason it might NOT help:** adaptive verification's estimator could under-draft
-at depth (acceptance at long context is lower and spikier), trading verify cost for tok/step
-and netting ~0; and the MRv1↔MRv2 divergence may put some 0.30 spec-decode wins out of this
-model's reach. The pools being identical means even a wash costs nothing but the port effort.
+**Strongest reason it might NOT help:** the refusals above mean nothing can be measured
+until the GDN/backend patch exists, and that patch may be the whole cost of the row. Past
+that, adaptive verification's estimator could under-draft at depth (acceptance at long
+context is lower and spikier), trading verify cost for tok/step and netting ~0. The pools
+being identical means the landed port itself cost nothing.
 
 
 ---
 
-### T3 — FULL CUDA graphs + MTP k=4 on the fp8 150k path
+### T3 — MTP k=4 on the fp8 150k path (FULL CUDA graphs: not reachable on sm86)
 
 **Mechanism.** D runs its verify PIECEWISE because FlashInfer's spec-decode path is
-single-token-only (−6.6% step [REPO-MEASURED: gotcha 40 lines 803–810]) and at k=3 because
-k=4 crashed on 0.28.0's FlashInfer ("n=4 eventually dies, n=3 stable", −~7%
-[REPO-MEASURED: docs/optimizations.md lines 397–403]). Both gates are version-sensitive:
-the 0.29→0.30 pin bumps FlashInfer to 0.6.18.post1 [REPO-MEASURED: PR #189 description].
+single-token-only (−6.6% step [REPO-MEASURED: gotcha 40 lines 807–816, was "803–810"]) and at
+k=3 because k=4 crashed on 0.28.0's FlashInfer ("n=4 eventually dies, n=3 stable", −~7%
+[REPO-MEASURED: docs/optimizations.md lines 399–405, was "397–403"]). The earlier text called
+both gates version-sensitive because the 0.30 pin brings FlashInfer 0.6.18.post1
+[REPO-MEASURED: PR #189 description, "Dependencies"]. **2026-09-29:** only the k=4 gate is.
+The graph gate is structural on the pinned vLLM: 0.30.0's
+`FlashInferMetadataBuilder.get_cudagraph_support` returns `UNIFORM_SINGLE_TOKEN_DECODE`
+whenever trtllm-gen is unavailable, which is every GPU but SM90/SM12x/SM100+
+(`vllm/v1/attention/backends/flashinfer.py:977-1012`, `vllm/utils/flashinfer.py:592-607`).
+A multi-token verify batch therefore never gets a FULL graph on sm86, whatever
+`cudagraph_mode` says.
 
 **Implementation sketch.**
 1. On the 0.30 image: soak `SPEC=mtp CTX=long DRAFT_TOKENS=4` with the F8 watch items
-   (concurrent-garbage check from #121, long multi-turn traffic, `dmesg` watch for Xid).
-   The crash signature was "one request finishes while another is mid-generation", so the
-   soak must mix finishing/starting requests at 28–34k context.
-2. If stable: ship `DRAFT_TOKENS=4` at CTX=long and test `--cudagraph-mode FULL` (or
-   FULL_DECODE_ONLY from #55095) on the verify path; measure step time and tok/step.
-3. If k=4 still crashes: keep k=3 and pursue only the graph-mode half; the #34 issue stays
-   the tracker.
+   (concurrent-garbage check from #121, still OPEN; long multi-turn traffic; `dmesg` watch
+   for Xid). The crash signature was "one request finishes while another is mid-generation",
+   so the soak must mix finishing/starting requests at 28–34k context.
+2. If stable: ship `DRAFT_TOKENS=4` at CTX=long (`start_qwen.sh:205`); measure step time and
+   tok/step. ~~test `--cudagraph-mode FULL` (or FULL_DECODE_ONLY from #55095) on the verify
+   path~~. Withdrawn: FULL is unreachable on FlashInfer/sm86 (above), and #55095 is a fallback
+   for non-compiled models. The only FULL-graph route for fp8-class KV on sm86 stays the
+   int8/TRITON escape (gotcha 40, which reports `ALWAYS`: `triton_attn.py:100` in 0.30.0).
+3. If k=4 still crashes: keep k=3; the #34 issue (still OPEN) stays the tracker.
 
 **Validation (Setup D).** `bench/run_benchmarks.sh single` (C1/C2 at default + greedy,
 tok/step), plus `bench/labd_bench.py --ctx 60000,112000,150000 --tasks qa,summary` for the
-depth curve; 4 h stability soak with request churn. **Pass:** decode +≥ 8% at C1 and at
-112k, zero Xid/EngineDeadError, quality within budget (`bench/quality_battery.py long-k4
---gsm-n 200`: GSM8K ≥ 95.5; PPL ≤ +2%). **Fallback:** `DRAFT_TOKENS=3` + FULL graphs only.
+depth curve; 4 h stability soak with request churn. **Pass:** decode +≥ 5% at C1 and at 112k
+(was +≥ 8%, which assumed the graph half), zero Xid/EngineDeadError, quality within budget
+(`bench/quality_battery.py long-k4 --gsm-n 200`: GSM8K ≥ 95.5; PPL ≤ +2%). **Fallback:**
+`DRAFT_TOKENS=3` (was "+ FULL graphs only", not reachable).
 
 **Strongest reason it might NOT help:** the #34 crash is unattributed (FlashInfer workspace
-vs async-scheduling window) — it may reproduce on 0.30 too, in which case only the smaller
-graph-mode gain (~+6.6% step, partially offset by the measured int8-acceptance give-back if
-the KV dtype has to change) survives.
+vs async-scheduling window) and may reproduce on 0.30 too. The earlier fallback, "only the
+smaller graph-mode gain (~+6.6% step) survives", does not exist on FlashInfer/sm86. That gain
+is only available by switching to the int8/TRITON tier, where int8 KV gives ~4% back in
+acceptance (gotcha 40, lines 812–816).
 
 ---
 
 ### T4 — DFlash2 + fp8 at 150k (FA2-fp8 geometry relaxation, issue #153)
 
 **Mechanism.** Today DFlash2 at >64k must take the TRITON/int8 tier (decays with depth:
-−34% decode at 60k [REPO-MEASURED: gotcha 40 lines 825–832]) or KVarN (F1). The FA2-fp8
-plugin proved DFlash2+fp8 on sm86 at TP=2 (103/192 tok/s [REPO-MEASURED: issue #153]) but
-its adapter refuses TP=1 geometries: the model needs `(256,4)` target / `(128,8)` drafter,
-the adapter tested `(256,1/2)` and `(128,4)`. The maintainer's read: the per-head work at
-TP=1 is identical (GQA ratios 6 and 4 at every TP), so this is "a gate relaxation plus a
-correctness run, not new cubins" [REPO-MEASURED: issue #153 maintainer comment].
+−34% decode at 60k [REPO-MEASURED: gotcha 40 line 833, was "lines 825–832"]) or KVarN (F1).
+The FA2-fp8 plugin proved DFlash2+fp8 on sm86 at TP=2: 103/192 tok/s [EXTERNAL-MEASURED:
+club-3090 #1274 on vLLM 0.29.0, 2× 3090 PCIe, quoted in issue #153's body; was labelled
+REPO-MEASURED]. Its adapter refuses TP=1 geometries: the model needs `(256,4)` target /
+`(128,8)` drafter, and the adapter tested `(256,1/2)` and `(128,4)`. The maintainer's read:
+the per-head work at TP=1 is identical (GQA ratios 6 and 4 at every TP), so this is "a gate
+relaxation plus a correctness run, not new cubins" [REPO-MEASURED: issue #153 maintainer
+comment, 2026-09-22; #153 still OPEN, and that comment marked it blocked on #148, which has
+since landed, and on the adapter's geometry set].
 
 **Implementation sketch.** Patch the plugin adapter's geometry set to admit `(256,4)` /
 `(128,8)`; run its `check_full.py` on one 3090 at those shapes; port the plugin to the
-0.29/0.30 image (it builds against a pinned 0.27.1 image); serve `SPEC=dflash2` +
+0.30 image (it builds against a pinned 0.27.1 image); serve `SPEC=dflash2` +
 `--kv-cache-dtype fp8` on FLASH_ATTN with FULL graphs at MAX_LEN 150000. Then measure.
 This creates a "Setup D-prime": DFlash2 acceptance + the lookup lane at 150k.
 
@@ -454,10 +662,12 @@ plus `bench/labd_bench.py --ctx 60000,112000,150000` with the document-copy/verb
 decode ≥ MTP-at-150k +30% with identical verbatim fidelity (`bench/verbatim.py` coverage
 ≥ baseline); mixed-task decode ≥ MTP − 5%; quality per budget
 (`bench/quality_battery.py dflash2-fp8 --gsm-n 200`; PPL — fp8 KV is already the D-tier
-dtype with published PPL parity, docs/long-context.md line 33).
-**Fallback:** if the adapter author will not take the shapes, maintain the two-line gate as
-a repo patch against the plugin with CI verifying against pinned upstream (option (a) in the
-maintainer's comment).
+dtype with published PPL parity, docs/long-context.md line 34, was "line 33").
+**Fallback:** if the adapter author will not take the shapes, maintain the gate change as a
+repo patch against the plugin with CI verifying against pinned upstream. This is close to
+option (a) in issue #153's body (source-port `fa2-fp8kv.patch`, checked by
+`check_upstream.py`), which the maintainer's comment favours over the prebuilt binary; the
+old text called it "option (a) in the maintainer's comment".
 
 **Strongest reason it might NOT help:** DFlash2's advantage at depth is concentrated on copy
 work (F3); on mixed prose at 150k it may still lose to MTP ~2:1, so D-prime could end up a
@@ -469,10 +679,13 @@ soak/quality validation, so the correctness run is real work, not a formality.
 ### T5 — int4-per-token-head KV + MQ-3D split-KV verify (hedge 240k path) — LOSSY
 
 **Mechanism.** vLLM's stock `int4_per_token_head` cache now works with DFlash2 on this repo
-(314,915-token pool at 256k [REPO-MEASURED: docs/long-context.md lines 441–449]) and the
-MQ-3D multi-query 3D split-KV verify kernel (`patches/spec-decode-int4-kv-mq3d.patch` +
-`VLLM_INT4_MQ_3D=1`) is the difference between ~9 and 94–108 tok/s [REPO-MEASURED: issue
-#60]. The captured-path A/B on the reference 3090: 2D→3D at 24k/49k/88k = 119→205 /
+(314,915-token pool at 256k [REPO-MEASURED: docs/long-context.md lines 442–444, was
+"441–449"]). The MQ-3D multi-query 3D split-KV verify kernel
+(`patches/spec-decode-int4-kv-mq3d.patch` + `VLLM_INT4_MQ_3D=1`, which `alternative.sh` has
+defaulted to since before this analysis, line 47) is the difference between ~9 and 94–108
+tok/s at ~128k [a commenter's attribution in issue #60, not a controlled A/B; that issue is
+CLOSED].
+The captured-path A/B on the reference 3090: 2D→3D at 24k/49k/88k = 119→205 /
 75→160 / 19→46 tok/s degenerate-repeat and 44→79 / 35→47 / 15→38 prose [REPO-MEASURED:
 docs/spec-decode-scratch-token-units.md lines 366–378], with PPL/GSM8K parity between the
 two kernel orders (8.2079/94.5 vs 8.2087/95.5, same file lines 358–364). KVarN at the same
@@ -480,19 +693,28 @@ two kernel orders (8.2079/94.5 vs 8.2087/95.5, same file lines 358–364). KVarN
 KVarN's depth rate, with a flatter slope (2.42–2.5× split-KV win held at 88k) and 1.23× the
 pool. If T1 stalls, this is the 240k path.
 
-**Implementation sketch.** `bash single-user/alternative.sh` with `VLLM_INT4_MQ_3D=1`,
-`DFLASH_TOKENS=7` (15 does not fit at 256k — gotcha 47), MAX_LEN 240000. The work is
-validation, not code: produce the missing quality-at-depth evidence, then decide KVarN vs
-int4 as the shipped CTX=huge default on quality grounds (int4 pth has no Hadamard/rotation —
-it is coarser than KVarN k4v2 on outlier channels).
+**Implementation sketch.** `bash single-user/alternative.sh` (`VLLM_INT4_MQ_3D=1` is its
+default), `DFLASH_TOKENS=7` (15 does not fit at 256k — gotcha 47, lines 1081–1084),
+MAX_LEN 240000 (its default is 256000, line 83). Since #232 (36936ec) it passes
+`--prefix-cache-retention-interval 0` when no KV tier is configured (lines 100–115). That
+matters for multi-turn prefix reuse, not for these decode cells. The work is validation, not
+code: produce the missing quality-at-depth evidence, then decide KVarN vs int4 as the shipped
+CTX=huge default on quality grounds. **2026-09-29 correction:** the earlier "int4 pth has no
+Hadamard/rotation" is false. The repo documents it as "dynamic per-token, per-head scales; the
+int4 one with a rotation and asymmetric zero-points" (docs/long-context.md line 88). Whether
+its rotation matches KVarN's Hadamard + variance normalization on outlier channels is not
+established; per-token-head scaling is still coarser than KVarN's per-tile scheme.
 
 **Validation (Setup E-prime).**
 - Quality first (it gates everything): `bench/quality_battery.py int4kv-240 --gsm-n 200`
   (GSM8K ≥ 95.0 vs the 96.0–96.5 band → within −1.0 pt); perplexity vs the E baseline
-  (KVarN reads 8.236 [REPO-MEASURED: docs/long-context.md line 33]; pass ≤ +2% → ≤ 8.40;
-  note int4 KV PPL at depth is currently unpublished, so this is a measurement, not a
-  formality); `bench/needle_test.py 150000 0.9` and `240000 0.9` retrieved (100k already
-  retrieved [REPO-MEASURED: docs/long-context.md lines 456–465]); IFBench ≥ 77.3 if the PPL
+  (KVarN reads 8.236 [REPO-MEASURED: docs/long-context.md line 34, was "line 33"]; pass ≤ +2%
+  → ≤ 8.40. int4 KV PPL on the 33k-token battery is published, 8.257 (+0.3%) in batch mode
+  (docs/long-context.md line 98), but PPL at 100k+ depth and on this DFlash2/MQ-3D serving
+  path is not, so this is a measurement, not a formality); `bench/needle_test.py 150000 0.9`
+  and `240000 0.9` retrieved (100k already retrieved on this path [REPO-MEASURED:
+  docs/long-context.md lines 457–463]; a 240k needle already passed in batch mode, line 99);
+  IFBench ≥ 77.3 if the PPL
   move is > 1%.
 - Then speed: `bench/labd_bench.py --ctx 90000,150000,240000 --tasks qa,summary` + copy
   cells. **Pass:** decode ≥ KVarN-at-HEAD ×1.5 at 150k+ with the quality gates above met.
@@ -501,52 +723,62 @@ it is coarser than KVarN k4v2 on outlier channels).
   8-bit (k4v8-style mixed mode — values are the 2-bit weak link; KVarN's own ablations
   point at V [EXTERNAL-MEASURED: KVarN repo/paper, github.com/huawei-csl/KVarN]).
 
-**Strongest reason it might NOT help:** the unpublished perplexity at depth may fail the
-+2% budget (int4 pth quantizes per token per head with no rotation; long-context retrieval
-leans on outlier keys), in which case the whole path is a capacity feature, not a speed
-feature, and T1 (lossless) remains the only 240k route.
+**Strongest reason it might NOT help:** the unpublished perplexity at depth may fail the +2%
+budget (int4 pth quantizes per token per head; its rotation is documented but not compared
+with KVarN's; long-context retrieval leans on outlier keys). In that case the whole path is a
+capacity feature, not a speed feature, and T1 (lossless) remains the only 240k route.
 
 ---
 
 ## 6. Ideas rejected, and why (including maintainer-rejected)
 
-- **R1 — Marlin tile tuning / int8 activations at batch 1.** Measured, not assumed: +0.4%
-  end-to-end ("the remaining gap to peak bandwidth is the memory system's ramp on 16–92 MB
-  reads, not the kernel") [REPO-MEASURED: docs/optimizations.md lines 190–195, 405–410];
+- **R1 — Marlin tile tuning / int8 activations at batch 1.** Measured, not assumed: the
+  decode-shape retune (M ≤ 16, sm86) was "nothing measurable end to end" ("the remaining gap
+  to peak bandwidth is the memory system's ramp on 16–92 MB reads, not the kernel")
+  [REPO-MEASURED: docs/optimizations.md lines 407–412, was "405–410"], and the W4A8 tile table
+  at M=2048 was +0.4% end-to-end [lines 192–197, was "190–195"];
   int8 activations buy nothing at batch size 1 [REPO-MEASURED: docs/quality.md line 49] and
-  may cost ~9% decode via acceptance (issue #62, unconfirmed).
+  may cost ~9% decode via acceptance (issue #62, CLOSED: 127.7 → 116.0 tok/s, "not claiming as
+  a result").
 - **R2 — Fine-tuning the MTP head.** Done and rejected with data: KL halves, greedy top-1
   unchanged; Qwen's head is "already at the ceiling of a single-layer chain drafter"
-  [REPO-MEASURED: drafter/README.md lines 29–37; docs/optimizations.md lines 405–407].
+  [REPO-MEASURED: drafter/README.md lines 29–37 (quote on 33–34); docs/optimizations.md lines
+  407–409, was "405–407"].
 - **R3 — Skipping the drafter when the lookup overwrites all its proposals.** Tried twice,
   loses net 6% ("the drafter is covering the positions past the end of the match")
   [REPO-MEASURED: gotcha 26].
 - **R4 — n-gram chains at sampling temperature.** Fundamental (−8% C1): a point-mass
   proposal accepts with p(token); greedy-only gate shipped [REPO-MEASURED: issue #38].
-- **R5 — int8 / lower-precision recurrent state.** Speed gain ~0.08 ms/step (state is 0.7%
-  of step bytes) for a real precision risk — backwards by any measure.
+- **R5 — int8 / lower-precision recurrent state.** Speed gain ~0.08 ms/step (state is ~0.7–0.8%
+  of step bytes: 0.15 / 20.2 GB) for a real precision risk — backwards by any measure.
 - **R6 — Fused single-launch GDN decode kernel (the SM100/SM110 pattern).** The GDN decode
   kernel already runs at ~85% of memory bandwidth; variants land within 3%
   [REPO-MEASURED: gotcha 10]. Launch overhead is hidden by CUDA graphs on the shipped
-  profiles. The external 1.33× figure is on SM100 where the baseline is different.
-- **R7 — TurboQuant KV backend (in vLLM 0.30).** KVarN's own comparison: ~2.4× TurboQuant's
-  throughput, and vLLM's blog numbers show 40–52% lower throughput for the capacity
-  [EXTERNAL-MEASURED: kvarn README references; vllm.ai/blog/2026-05-11-turboquant]. KVarN
-  already wins this slot.
+  profiles. The external 1.33× figure is Kimi Delta Attention on SM100 (B200), where the baseline is different.
+- **R7 — TurboQuant KV backend (in vLLM 0.30).** The backend exists in 0.30.0
+  (`vllm/v1/attention/backends/turboquant_attn.py`). KVarN's own comparison: ~2.4×
+  TurboQuant's throughput, and vLLM's blog numbers show 40–52% lower throughput for the capacity
+  [EXTERNAL-MEASURED: KVarN upstream README; vllm.ai/blog/2026-05-11-turboquant — not
+  re-verified 2026-09-29, and this repo's `kvarn/README.md` does not carry the comparison, so
+  the old "kvarn README references" label is corrected]. KVarN already wins this slot.
 - **R8 — Eviction-based long-context methods (SnapKV/H2O etc.).** Forbidden by Hard
   constraint 2/3 (they drop tokens from the context). Not evaluated further.
 - **R9 — Approximate/sparse attention (training-free).** Retrieval-at-depth is a hard
   requirement; training-free sparse attention routinely degrades needles, and the KV read is
-  only 15–22% of step bytes at 150k fp8 anyway (§2.4), so the upside is capped. High risk,
-  low ceiling.
+  only 17–24% of step bytes (§2.4, was "15–22%") at 150k fp8 / 240k KVarN anyway, so the
+  upside is capped. High risk, low ceiling.
 - **R10 — EAGLE-3 / Medusa retrain.** Needs a training pipeline and Mamba-state-at-resume
-  (only fixed in 0.30, vllm#53945); DFlash2 already occupies the block-drafter slot with
-  better measured acceptance (4.80 vs 4.28 tok/step on bf16 [REPO-MEASURED:
-  docs/optimizations.md lines 205–208]). Revisit only if T2 frees the hybrid-EAGLE path.
+  (vllm#53945, listed in the 0.30.0 release notes; see T2 for a sign that part of it was
+  already in 0.29.0; was "only fixed in 0.30"). DFlash2 already occupies the block-drafter slot
+  with better measured acceptance (4.80 vs 4.28 tok/step on bf16 [REPO-MEASURED:
+  docs/optimizations.md lines 209–211, was "205–208"; a figure DFlash2's authors report]).
+  Revisit only if T2 frees the hybrid-EAGLE path.
 - **R11 — More draft depth at k=5+.** Measured: "going deeper (k=5) loses again: 106 / 105.
-  k=4 is the knee" [REPO-MEASURED: docs/optimizations.md line 397].
-- **R12 — Bigger prefill chunks / TTFT work.** Out of scope (prefill, not decode); also
-  measured not to boot above 2048 [REPO-MEASURED: gotcha 43].
+  k=4 is the knee" [REPO-MEASURED: docs/optimizations.md line 399, was "line 397"].
+- **R12 — Bigger prefill chunks / TTFT work.** Out of scope (prefill, not decode). The earlier
+  "measured not to boot above 2048" is wrong: 4096 boots at −2.4% pool, and only 8192 refuses
+  under the pinned `KV_MEM` [REPO-MEASURED: gotcha 43, lines 896–915; `docs/optimizations.md`
+  lines 189–191 still says 4096 fails, which gotcha 43 corrects].
 
 
 
@@ -555,40 +787,56 @@ feature, and T1 (lossless) remains the only 240k route.
 ## 7. Open questions only a real GPU run can answer (as specific experiments)
 
 - **Q1 (T1 enabler).** Boot `SPEC=mtp CTX=huge KVARN_SHARED_VERIFY=1` under
-  `ASYNC_SCHED=0` and under async, one request at a time, `bench/residue_sweep.py` +
-  30-min tool-call soak. Does the corruption reproduce with async off? If not, T1 is a
-  validation-and-gating task; if yes, the vq-plan snapshot bisect in T1 step 3 is the next
-  experiment.
+  `ASYNC_SCHED=0` and under async (the shipped default, `start_qwen.sh:659-660`), one request
+  at a time, `bench/residue_sweep.py <label>` + 30-min tool-call soak. Does the corruption
+  reproduce with async off? If not, T1 is a validation-and-gating task, but the gate must then
+  turn async off for CTX=huge or the shared path. The earlier "already off" premise is false
+  (§2.3). If yes, the vq-plan snapshot bisect in T1 step 3 is the next experiment.
 - **Q2 (the honest depth curve).** What are D and E decode tok/s at *true* 150k and 240k on
   the reference 3090 today, at fixed tok/step? Run `bench/labd_bench.py --ctx
   25000,60000,90000,112000,150000` (D) and `--ctx 90000,150000,200000,240000` (E) on one
-  boot each, reporting step ms and tok/step separately. The published 95–100 / 67–164 are
-  short/moderate-depth numbers (see the baseline note at the top); every target in this plan should be re-baselined on
+  boot each, reporting step ms and tok/step separately (one `--ctx` per run, long corpus past
+  65k — §5 harness note). The published 95–100 / 67–164 are short/moderate-depth numbers (see
+  the baseline note at the top; the 67/164 pair is `--ctx 20000`); every target in this plan
+  should be re-baselined on
   this curve.
 - **Q3 (#196 contradiction).** At `CTX=long`, A/B `MTP_DRAFT_VOCAB=1` (shipped list) vs a
   rebuilt multilingual list vs `=0` (full head) on the reference 3090, en/da/code cohort
   plus a Chinese-prose cell. The reporter measured full head *faster* than the truncated
   head at 150k (80.6 vs 61–64 tok/s) — if that reproduces, the draft-vocab truncation is a
   pessimization at long context and the launcher should stop shipping it there; if it does
-  not, the fix is just the corpus rebuild (T6).
+  not, the fix is just the corpus rebuild (T6). Status 2026-09-29: #196 OPEN; the maintainer
+  replied 2026-09-27/28 and still owes exactly this `CTX=long` k=3 comparison.
 - **Q4 (T3 enabler).** On the 0.30 image (now the *shipped* image — #189 merged, so no
   special build is needed) with the FlashInfer set `vllm==0.30.0` resolves: does
-  `DRAFT_TOKENS=4` at `CTX=long` still Xid/IMA under request churn at 28–34k (#34), and
-  does FULL (or FULL_DECODE_ONLY) graph mode on the fp8 verify pass the concurrent-garbage
-  check from #121? Both are boot-and-soak, no code.
+  `DRAFT_TOKENS=4` at `CTX=long` still Xid/IMA under request churn at 28–34k (#34), and does
+  it pass the concurrent-garbage check from #121 (still OPEN; stock D passed 9/9 + 3/3 on the
+  reference 3090 on 0.29, maintainer comment 2026-09-23)? Boot-and-soak, no code. The earlier
+  second half, "does FULL (or FULL_DECODE_ONLY) graph mode on the fp8 verify pass", is dropped:
+  FlashInfer/sm86 cannot capture it in 0.30.0 (F2).
 - **Q5 (KVarN kernel occupancy).** Profile one decode step at 90k and 240k on E
-  (`KVARN_SPEC_DEBUG=1` + nsys): what fraction of step time is `_kvarn_fused_verify_*`
-  stage-1 vs stage-2 vs the drafter vs the target GEMMs, and what is the achieved
-  bytes/tile-visit vs the 0.114 µs/tile byte time? This decides whether T1 alone suffices
-  or the T9 tile/split retune is also needed.
-- **Q6 (T2 scope).** Does vllm#52228's adaptive verification actually engage for MTP and
-  DFlash2 on this model under the V2 runner at batch 1 (log the per-step draft count under a
-  mixed workload), and does it help or hurt tok/step at 112k depth?
+  (`KVARN_SPEC_DEBUG=1` + nsys): what fraction of step time is the verify attention
+  (as shipped: `_kvarn_fused_decode_stage1`/`_stage2` on the per-token grid; with the flag,
+  `_kvarn_fused_verify_stage1` + stage-2; the old text named only the latter) vs the drafter
+  vs the target GEMMs, and what is the achieved bytes/tile-visit vs the 0.114 µs/tile byte
+  time (128 × 840 B ÷ 936 GB/s = 0.115 µs)? This decides whether T1 alone suffices or the T9
+  tile/split retune is also needed.
+- **Q6 (T2 scope).** Rewritten 2026-09-29: first, does a boot with
+  `"enable_adaptive_verification":true` in the speculative config refuse, as the 0.30.0 source
+  implies (GDN layers are SSM, and FlashInfer/KVarN are not `ALWAYS`; §5 T2)? If it does, the
+  question becomes the cost of a GDN varlen-verify patch. Only then: does it engage for MTP
+  and DFlash2 at batch 1 (log the per-step draft count under a mixed workload), and does it
+  help or hurt tok/step at 112k depth?
 - **Q7 (int4 KV quality).** Perplexity of the int4-per-token-head cache at 100k+ depth, and
-  needles at 150k/240k (T5's gate). Unpublished today; the answer decides KVarN vs int4 as
-  the shipped CTX=huge dtype.
-- **Q8 (#107 stalls).** Do the stepping-stalls at ~190k MTP/fp8 reproduce on 0.30, and does
-  the still-open upstream vllm#50021 (or the repo's backport) cover the sawtooth shape?
+  needles at 150k/240k on the DFlash2/MQ-3D serving path (T5's gate). The 33k-token PPL (+0.3%)
+  and a batch-mode 240k needle are published (docs/long-context.md lines 98–99); the at-depth
+  PPL and the serving-path needles are not. The answer decides KVarN vs int4 as the shipped
+  CTX=huge dtype.
+- **Q8 (#107 stalls).** Do the stepping-stalls at ~190k MTP/fp8 reproduce on 0.30 (#107 still
+  OPEN; the last maintainer note, 2026-09-23, asked for a no-async 0.29 run as the bisect
+  step)? The earlier "does the still-open upstream vllm#50021 (or the repo's backport) cover
+  the sawtooth shape" is moot: the backport has been in the series since 2026-08-17, so #107's
+  stalls were seen with it applied (F8).
   Reliability, not throughput, but it gates any "run at 190k+" recommendation.
 
 ---
@@ -597,35 +845,50 @@ feature, and T1 (lossless) remains the only 240k route.
 
 Not part of the plan (Hard constraint 3), recorded because the repo has measured it:
 - **2× 3090 TP=2:** +16–35% decode at batch 1 with P2P/PCIe [REPO-MEASURED: issue #40];
-  168.6–172.7 tok/s C1 on 2× 3090 NVLink [REPO-MEASURED: issues #159/#164]; **−24% without
-  P2P** [REPO-MEASURED: issue #190]; 182.8 tok/s C1 after `expandable_segments:False`
-  [REPO-MEASURED: docs/multi-gpu.md lines 122–128]. TP=3 is invalid for this model (4 KV
-  heads, 64 layers) [REPO-MEASURED: docs/multi-gpu.md lines 15–26].
+  168.6–172.7 tok/s C1 on 2× 3090 NVLink [REPO-MEASURED: issue #159; the figures are not in
+  #164, which is the batch-harness report]; TP=2 **−24% without P2P** on 2× RTX 4090 (not
+  3090) [REPO-MEASURED: issue #190; docs/multi-gpu.md lines 179–191 read 151.1 → 118.7 C1,
+  −21%]; 182.8 tok/s C1 after `expandable_segments:False` [REPO-MEASURED: docs/multi-gpu.md
+  lines 141–147, was "122–128"]. TP=3 is invalid for this model (4 KV heads, 64 layers)
+  [REPO-MEASURED: docs/multi-gpu.md lines 15–29].
 - **MTP at TP>1:** int8 KV on TRITON_ATTN beats fp8/FlashInfer 1.43–1.89× on sm120
-  [REPO-MEASURED: docs/multi-gpu.md lines 156–164]; **measured on Ampere since this
-  analysis**: 2× 3090 TP=2 (patched-driver P2P, no NVLink) 156.0 vs 90.9 tok/s, 1.72×
-  [REPO-MEASURED: docs/multi-gpu.md line 226, issue #217] — the same shape as sm120,
-  and TP1 int8/TRITON passes the #121 concurrent-garbage check on the reference 3090.
+  [REPO-MEASURED: docs/multi-gpu.md lines 219–227, was "156–164"]; **measured on Ampere since
+  this analysis**: 2× 3090 TP=2 (patched-driver P2P, no NVLink) 156.0 vs 90.9 tok/s, 1.72×
+  [REPO-MEASURED: docs/multi-gpu.md line 228, was "line 226"; issue #217, CLOSED] — the same
+  shape as sm120. TP1 int8/TRITON also passes the #121 concurrent-garbage check on the reference
+  3090 (9/9 + 3/3 on vLLM 0.29, #121 comment 2026-09-23).
+- **Pipeline parallelism (new since 2522ef9, d5e2a01/#236):** one field report (#160, vLLM
+  0.28.0, 3090 + A4000, no P2P) found PP=2 + MTP a net loss: 19.8 tok/s single stream against
+  32.9 with `SPEC=off`, and MTP acceptance 45.6% → ~8% [REPO-MEASURED: docs/multi-gpu.md lines
+  249–277]. Not a lever for this plan.
 - The second card buys a second memory system, which is exactly what batch-1 decode is
   bound by (§2.4) — hence the outsize gains; but it is not the 24 GB plan.
 
 ## Appendix B — sources
 
 Repo (this tree): README.md; PATCHES.md; docs/{optimizations,long-context,benchmarks,
-quality,gotchas,vllm-0.29,spec-decode-scratch-token-units,main-track,multi-gpu}.md;
-single-user/README.md; single-user/start_qwen.sh; .env.example; kvarn/README.md;
-kvarn/files/vllm/v1/attention/ops/triton_kvarn_decode.py; drafter/README.md;
+quality,gotchas,vllm-0.29,vllm-0.30,spec-decode-scratch-token-units,main-track,multi-gpu}.md;
+single-user/README.md; single-user/start_qwen.sh; single-user/alternative.sh; .env.example;
+kvarn/README.md; kvarn/kvarn-0.30.0.patch;
+kvarn/files/vllm/v1/attention/ops/triton_kvarn_decode.py;
+kvarn/files/vllm/v1/attention/backends/kvarn_attn.py; drafter/README.md;
 prepare/README.md; patches/spec-decode-attn.patch; patches/triton-spec-attn-fp8-kv.patch;
-bench/{quality_battery.py,run_benchmarks.sh}; model config from
-huggingface.co/dbirks/Qwen3.8-27B-W4A16-AutoRound/raw/main/config.json.
+bench/{quality_battery.py,run_benchmarks.sh,labd_bench.py,residue_sweep.py}; model config from
+huggingface.co/dbirks/Qwen3.8-27B-W4A16-AutoRound/raw/main/config.json (re-read 2026-09-29:
+64 layers, interval 4, 24/4 heads × 256, GDN 16×128 / 48×128, vocab 248,320, 262,144
+positions). Pinned vLLM source: v0.30.0 checkout (`/tmp/vllm-0.30.0`, commit ced6857) for
+every `vllm/...` path cited in this pass.
 
 GitHub (syv-ai/HyperQwen): issues #11, #25, #34, #38, #40, #52, #57, #60, #62, #73, #86,
 #103, #105, #107, #121, #153, #159, #160, #164, #174, #190, #192, #194, #196; PR #42, #46,
 #148, #188, #189 (merged 2026-09-28). Post-analysis: issues #195, #208, #213, #216–#218,
 #221 and PRs #198–#203, #207, #212, #214, #215, #220, #222–#226 (see the re-verified note
-at the top). Upstream vLLM PRs: #50021 (open), #52228, #53945, #54374, #54646,
-#55041, #55095, #55450, #55760, #58024–#58028 (open), #54282, #52789; vLLM v0.30.0 release
-notes (2026-09-22).
+at the top); since 2522ef9: #219, #230, #231, #232, #234, #235, #236. States as of
+2026-09-29: OPEN #34, #107, #121, #153, #196, #208; CLOSED #11, #38, #40, #60, #62, #86, #159,
+#164, #190, #194, #217; MERGED #189, #222. Upstream vLLM PRs: #50021 (still open), #52228
+(merged 2026-09-14), #53945 (09-08), #54374 (09-04), #54646 (09-01), #55095 (09-11), #55760
+(09-08, not in 0.30.0), #53835 (09-05), #55041, #55450, #58024–#58028 (open), #54282, #52789
+(the last six not re-checked 2026-09-29); vLLM v0.30.0 release notes (published 2026-09-22).
 
 External: FlashInfer v0.6.18/v0.7.0 release notes (flashinfer-ai/flashinfer); SGLang
 releases (sgl-project/sglang); llama.cpp (ggml-org/llama.cpp) and BeeLlama
