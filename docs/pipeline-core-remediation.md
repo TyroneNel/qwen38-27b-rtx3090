@@ -5,6 +5,50 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+**Re-verified 2026-09-29 against upstream/main @ d5e2a01 (vLLM 0.30.0).**
+
+- Unchanged: none of the seven commits since 2522ef9 (8d9848d #231, e355f9f
+  #234, 36936ec #232, 1bb8e4e #235, d2ff871 #230, 8cf642e #219, d5e2a01 #236)
+  touches `prepare/`, `drafter/`, `docker/prepare.sh`,
+  `patches/qwen3_5-mtp-draft-vocab.patch`, `bench/` or `.github/`
+  (`git diff --stat 2522ef9 upstream/main -- prepare drafter docker/prepare.sh
+  patches/qwen3_5-mtp-draft-vocab.patch bench .github` is empty). Every line
+  citation below was re-read at d5e2a01 and holds; nothing was fixed upstream,
+  nothing new was introduced. No open PR touches `prepare/` or `drafter/`
+  (`gh pr list -R syv-ai/HyperQwen --state open`).
+- Corrected (imprecise at 2522ef9 too, same bytes): the drafter non-atomic
+  write list gains `export_mtp.py:54,139` (1.2); the in-place-truncation list
+  gains `export_mtp.py:91,93,102,139` and drops `requant_mtp_gptq.py:57`,
+  which follows its own unlink (1.5, §2); "ten files name `weight_packed`" is
+  ten `.py` files, eleven with `drafter/README.md` (1.2); the plain-text
+  branch of `build_draft_vocab.py` is `:63-75`, not `:63-71` (1.5); the
+  backup protocol's "dozen files" is ten `.py` files plus `verify.sh:269` and
+  `prepare/README.md:58` (1.6); Done-when 1's grep `round(g / scale)` matched
+  4 of the 6 RTN sites (it misses `quant_heads_stream.py:85`'s `g / s` and
+  `gptq_utils.py:83`'s `scale[..., None]`) — replaced (§6), and every §6 grep
+  now carries `--include='*.py'`; Done-when 4 expected "core + consumers" in
+  `prepare/ drafter/`, which hold no consumer — now "the core only" (§6);
+  `quant_embed.py`'s run order after `quant_lm_head.py` is enforced by
+  `docker/prepare.sh:62-63,83-84`, not "only by the docstring" (1.6); the
+  `export_mtp.py:53` quote is now verbatim (`os.remove(D + f)   # …`, 1.5);
+  §4's `--status`-style check names a flag no script has yet (candidate 7);
+  the plan's "(2.1)" cross-references pointed at a section that does not
+  exist — now "§2".
+- Unchanged, re-read line by line: the five RTN copies and the 1e-10 vs
+  1e-8 / keepdim split (`gptq_utils.py:77-84`, clamp at `:82`), the nine
+  write-tail sites, `atomic_publish.py` (74 lines, eight importers), the
+  fp16/bf16 encodings (`quant_lm_head.py:70-71`, `quant_embed.py:70-71`,
+  `quant_heads_stream.py:178`), the six-site/four-spelling MTP list, the five
+  shims, the two draft-head writers and the patch consumer (`:33-42`), the
+  `gptq_lm_head.py:83-86` comment, the six suffixes; #195 closed and
+  #198–#203, #212, #213 merged (`gh`).
+- Added: `drafter/train_mtp.py:395` imports `gptq_utils` bare, with no shim —
+  evidence the five `drafter/` shims are redundant when run as scripts (1.7);
+  the two `prepare/` scripts outside the eight importers
+  (`fetch_dflash2.py`, `fetch_thirdparty.py`) only call `snapshot_download`
+  (1.2); `bench/test_prepare_crash.py` puts `prepare/` on `sys.path` itself
+  because it runs the scripts through `runpy` (1.7).
+
 **Re-verified 2026-09-28 against upstream/main @ 2522ef9 (vLLM 0.30.0).**
 
 - The #195 atomic-publish saga (2f9b1e6 #198, fba2bd2 #199, a2a904c #200,
@@ -70,7 +114,9 @@ re-download — `intact()`, `:41-53`, #203). All eight `prepare/` writers
 import it (`quant_lm_head.py:29`, `quant_embed.py:29`, `quant_mtp.py:30`,
 `quant_heads_stream.py:47`, `build_draft_vocab.py:35`,
 `fetch_fast_variant.py:18`, `harden_chat_template.py:30`,
-`translate_chat_template.py:40`); each still sequences the calls itself
+`translate_chat_template.py:40`; the other two `prepare/*.py`,
+`fetch_dflash2.py:18` and `fetch_thirdparty.py:35`, write only through
+`snapshot_download`); each still sequences the calls itself
 ("The index is the commit point, so it goes last" — `quant_lm_head.py:106-111`
 and twins). `prepare/README.md:62-66` documents the protocol and its
 crash-injection test (`bench/test_prepare_crash.py`).
@@ -94,13 +140,16 @@ assembly:
 | `drafter/quant_dflash2.py` | `:79-81` | (single-file model, no index) | groups **fabricated**, not cloned, `:103-116` | built fresh, `:100-102` |
 | `prepare/build_draft_vocab.py` (slice; no pack call) | `:141-143` | `:148-149` | — | — |
 
-Ten files name `weight_packed` (grep): the nine writers above plus
+Ten `.py` files name `weight_packed` (`git grep -l weight_packed -- prepare
+drafter`; eleven files with `drafter/README.md`, corrected 2026-09-29): the
+nine writers above plus
 `drafter/train_mtp.py:203-204`, which only reads the packed entries to find
 shards. Three details the table hides: the group ordinals are hardcoded per
 script and chained (`quant_embed.py:83` clones the `group_1` that
 `quant_lm_head.py` wrote — an ordering dependency); `drafter/` writes are
-still non-atomic (`save_file`/`json.dump` in place: `export_mtp.py:91-93,102,
-125,129`, `requant_mtp_gptq.py:57,63`, `gptq_lm_head.py:105-109`,
+still non-atomic (`save_file`/`json.dump` straight to the final path:
+`export_mtp.py:54,91-93,102,125,129,139` — `:54` and `:139` were missing from
+this list at 2522ef9 — `requant_mtp_gptq.py:57,63`, `gptq_lm_head.py:105-109`,
 `quant_dflash2.py:94,117`); and the killed-run resume check ("already packed
 … completing an interrupted run") that the atomic protocol needs is itself a
 per-script copy, five times: `quant_lm_head.py:52-56`, `quant_embed.py:52-56`,
@@ -144,13 +193,15 @@ entries — is consumed by `patches/qwen3_5-mtp-draft-vocab.patch:33-42`
 - `prepare/build_draft_vocab.py:114-150` — slices rows out of the **already
   packed** lm_head (slice `:114-127`; the canonical writer; fused to a
   corpus-counting data tool, `:45-112`, counting plain-text corpora since
-  bc6d9e7 #213, `:63-71`). Since 850d2ad #201 it writes **atomically**:
+  bc6d9e7 #213, `:63-75` — was cited `:63-71`, which stops mid-branch).
+  Since 850d2ad #201 it writes **atomically**:
   `backup_once(..., ".bak-draft")` + `save_tensors` (`:140-144`), the ids by
   `torch.save` to `.tmp` + `publish` (`:145-146`), the weight_map edit and
   the index **last** (`:147-150`),
-- `drafter/export_mtp.py:108-130` — requantizes a **trained bf16** draft head
+- `drafter/export_mtp.py:108-130` (plus the `group_4` config write when
+  HBITS≠BITS, `:131-139`) — requantizes a **trained bf16** draft head
   with its own RTN copy + write tail (the fifth RTN site, 1.1), still with
-  plain `save_file` + `json.dump` in place (`:125,:129`) — **not** atomic;
+  plain `save_file` + `json.dump` in place (`:125,:129,:139`) — **not** atomic;
   `drafter/` never got atomic_publish,
 and `export_mtp.py:104-106` *also* subprocesses the first one when the
 checkpoint lacks a trained head. Two writers with a real semantic difference
@@ -172,10 +223,15 @@ the ids "with torch.save (in place …)", but since #201 both go through
 tmp+rename (`build_draft_vocab.py:144-146`; `publish` "never changes a
 hardlinked copy", `atomic_publish.py:11`). The copy-not-link code the comment
 justifies (`gptq_lm_head.py:87-93`) stays load-bearing as long as *any*
-writer truncates in place — and drafter's still do (`export_mtp.py:125,129`,
-`requant_mtp_gptq.py:57,63`, `gptq_lm_head.py:106,109`). The guardrail itself
+writer truncates in place — and drafter's still do (`export_mtp.py:91,93,
+102,125,129,139`, `requant_mtp_gptq.py:63`, `gptq_lm_head.py:106,109`;
+corrected 2026-09-29: at 2522ef9 this list read `export_mtp.py:125,129`,
+`requant_mtp_gptq.py:57,63` — but `:57` writes a path its own `:55-56` just
+unlinked, and `export_mtp.py:91,93,102,139` open an existing file — the
+`:54` extras, the `:35` index copy, the `:34` config copy — for writing).
+The guardrail itself
 is transmitted as one comment (`export_mtp.py:53`,
-`os.remove(D+f)  # never truncate a hardlink`) and two uncommented unlinks
+`os.remove(D + f)   # never truncate a hardlink`) and two uncommented unlinks
 (`requant_mtp_gptq.py:55-56`, `gptq_lm_head.py:103-104`). A bug that already
 bit once is a guardrail only where someone remembered to write it — and its
 own retelling has already drifted from the code.
@@ -195,11 +251,17 @@ except where noted:
 | `.bak-draft` | `build_draft_vocab.py:140` | — |
 | `.bak-orig` | `quant_heads_stream.py:148-153` — an `os.link`, deliberately not `backup_once` (no copying 18.6 GB) | `gptq_lm_head.py:26-30` |
 
-A filename protocol crossing a dozen files, still never written down in one
-place. Two cross-script couplings to know: `quant_embed.py` backs up only its
+A filename protocol crossing a dozen files — ten `prepare/`+`drafter/` `.py`
+files (`git grep -l '\.bak' -- 'prepare/*.py' 'drafter/*.py'`, including
+`fetch_thirdparty.py:42`'s message naming `.bak-orig`), plus `verify.sh:269`
+(skips `.bak` shards) and `prepare/README.md:58` (`.bak*`) — still never
+written down in one place. Two cross-script couplings to know:
+`quant_embed.py` backs up only its
 shard — config.json and the index get no new backup, relying on
-`quant_lm_head.py`'s `.bak-quant` (run order enforced only by the docstring,
-`quant_embed.py:2`); and `export_mtp.py:34-35` still restores "pre-MTP-quant"
+`quant_lm_head.py`'s `.bak-quant` (run order enforced by `docker/prepare.sh`'s
+step order, `:62-63` then `:83-84`, and for a manual run only by the
+docstring, `quant_embed.py:2`; at 2522ef9 this read "enforced only by the
+docstring"); and `export_mtp.py:34-35` still restores "pre-MTP-quant"
 state by copying `.bak-mtp` files back over the live ones.
 
 ### 1.7 The import shims
@@ -210,7 +272,14 @@ state by copying `.bak-mtp` files back over the live ones.
 `gptq_utils`. `prepare/` has no shim and needs none: the eight
 `from atomic_publish import ...` lines work because the interpreter puts the
 script's own directory on `sys.path` — the pattern §2 relies on, already in
-production.
+production. The same holds in `drafter/`: every one of the five shims inserts
+the script's own directory (`os.path.dirname(os.path.abspath(__file__))`, or
+`HERE`, defined that way at `capture_dflash2.py:17`), which is already
+`sys.path[0]` under `python drafter/<script>.py`, and `train_mtp.py:395`
+imports `gptq_utils` with no shim at all (added 2026-09-29). The one caller
+that does not get the script directory for free is `runpy`:
+`bench/test_prepare_crash.py` adds `prepare/` to `sys.path` itself
+(`:86`, `:228`) before `runpy.run_path` (`:87-88`, `:235`).
 
 ## 2. The design: `prepare/pipeline_core.py`
 
@@ -234,7 +303,7 @@ MTP_LINEARS: the eight names, once (1.4)
 rtn_quantize(W, bits, group, *, eps, keepdim=True)
     the 1.1 math with the eps EXPLICIT — each migrated caller passes its
     current value (1e-10 or 1e-8), so outputs are bit-identical per script
-    (the acceptance gate in §4); the signature documents the difference
+    (the acceptance gate in 3.1, run again per §4); the signature documents the difference
 
 write_packed(tensors, key, q, scale, bits, scale_dtype)
     the 1.2 contract assembly (pack → dtype → shape → weight_map → group
@@ -257,9 +326,13 @@ assemble_variant(src, dst, hardlink=[patterns], copy=[patterns])
 fresh_write(path, save_fn)
     unlink-before-write, for drafter/'s remaining in-place writers only
     (publish() already never truncates a hardlink, atomic_publish.py:11;
-    the live in-place sites: export_mtp.py:125,129,
-    requant_mtp_gptq.py:57,63, gptq_lm_head.py:106,109,
-    quant_dflash2.py:94,117) — gptq_lm_head.py:83-86's bug can never be
+    the live in-place sites, recounted 2026-09-29 (1.5):
+    export_mtp.py:91,93,102,125,129,139, requant_mtp_gptq.py:63,
+    gptq_lm_head.py:106,109, quant_dflash2.py:94,117 — at 2522ef9 this
+    list read export_mtp.py:125,129 and requant_mtp_gptq.py:57,63; the
+    unlink-guarded writes export_mtp.py:54, requant_mtp_gptq.py:57 and
+    gptq_lm_head.py:105 already follow this pattern by hand) —
+    gptq_lm_head.py:83-86's bug can never be
     reintroduced silently
 
 write_draft_head(model_dir, ids_or_head, *, source="sliced"|"trained")
@@ -293,7 +366,7 @@ slicing writer. The shape is pre-approved by precedent: #195's
 importers, its own crash-injection test at `bench/test_prepare_crash.py`).
 **Bit-identical acceptance:** run each migrated script on a copy of a small
 prepared fixture model, before and after, and `diff` the resulting
-shard/index/config bytes — the eps-per-caller rule (2.1) exists to make this
+shard/index/config bytes — the eps-per-caller rule (§2) exists to make this
 gate pass.
 
 ### 3.2 PR B — the drafter/ migration
@@ -327,7 +400,7 @@ suffixes, group ordinals) lands with the code.
 | scale-dtype: lm_head→fp16, embed→bf16 (the 1.3 fact as an assertion) | the invisible difference is now tested, not commented |
 | `fresh_write` on a hardlinked pair: source inode's bytes unchanged after variant rewrite | the 1.5 bug is a regression test, not a comment |
 | ignore-list repair idempotent and complete over the 8 MTP names | the 1.4 side job, now explicit |
-| fixture end-to-end: `quant_lm_head.py` on a tiny synthetic model dir, then `--status`-style name checks | the scripts work through the core (fixture style per `test_model_verification.py:27-51`) |
+| fixture end-to-end: `quant_lm_head.py` on a tiny synthetic model dir, then `--status`-style name checks (no script has `--status` at d5e2a01 — `git grep -- --status -- prepare drafter` is empty; it is candidate 7's proposal, `prepare-status-remediation.md` §2.1 — so until that lands, the checks read the index directly) | the scripts work through the core (fixture style per `test_model_verification.py:27-51`) |
 
 Plus PR A's bit-identical gate (3.1) run once per migrated script.
 
@@ -335,22 +408,31 @@ Plus PR A's bit-identical gate (3.1) run once per migrated script.
 
 | risk | likelihood | mitigation |
 |---|---|---|
-| Unifying the RTN changes produced checkpoints (eps, keepdim) | medium | per-caller explicit eps (2.1) + the bit-identical gate (3.1); a script whose output changes fails its own migration PR |
-| Over-unification: merging the two loaders "because they both read safetensors" | medium | explicitly out of scope (2.1) — the streaming rewriter is genuinely different I/O; the plan shares math and protocol, not I/O |
-| The core becomes a kitchen sink (the "framework" failure mode) | medium | the "not in the module" list is written down (2.1); review rule: constants, math, one-writer contracts — no control flow that a caller owns |
+| Unifying the RTN changes produced checkpoints (eps, keepdim) | medium | per-caller explicit eps (§2) + the bit-identical gate (3.1); a script whose output changes fails its own migration PR |
+| Over-unification: merging the two loaders "because they both read safetensors" | medium | explicitly out of scope (§2) — the streaming rewriter is genuinely different I/O; the plan shares math and protocol, not I/O |
+| The core becomes a kitchen sink (the "framework" failure mode) | medium | the "not in the module" list is written down (§2); review rule: constants, math, one-writer contracts — no control flow that a caller owns |
 | drafter/ scripts gain a new import failure mode (repo-root shim) | low | one documented pattern replacing five ad-hoc ones; CI's test file imports the core both ways |
 | `export_mtp.py`'s dual nature (delegates AND re-implements) hides a third draft-head path | low | PR C makes the writers one function with a named `source=` parameter; the subprocess call at `:104-106` remains as orchestration |
 
 ## 6. Done when
 
-1. `grep -rn 'round(g / scale)' prepare/ drafter/` → one site (the core).
-2. `grep -rn 'MTP_LINEARS\|"mtp.fc"' prepare/ drafter/` → one definition,
-   imported everywhere (the dict in `train_mtp.py` and the tuple in
-   `quant_lm_head.py` are gone).
+1. `grep -rn --include='*.py' 'torch.round(g / s' prepare/ drafter/` → one
+   site (the core). Today: six — the five RTN copies and
+   `gptq_utils.py:83`. (At 2522ef9 this item read `grep -rn 'round(g /
+   scale)'`, which matches only four of the six: it misses
+   `quant_heads_stream.py:85`'s `g / s` and `gptq_utils.py:83`'s
+   `g / scale[..., None]`.)
+2. `grep -rn --include='*.py' 'MTP_LINEARS\|"mtp.fc"' prepare/ drafter/` →
+   one definition, imported everywhere (the dict in `train_mtp.py` and the
+   tuple in `quant_lm_head.py` are gone). `--include='*.py'` added
+   2026-09-29 on all greps here: `drafter/data/` (gitignored corpora) holds
+   `.jsonl` text that matches, e.g. `sys.path.insert`.
 3. `grep -c 'sys.path.insert' drafter/*.py` → 0 ad-hoc shims (one shared
-   pattern with a comment, if any).
+   pattern with a comment, if any). Today: 5.
 4. `write_draft_head` is the only writer of `mtp.draft_lm_head.*`;
-   `grep -rn 'draft_lm_head.weight_packed' prepare/ drafter/` → core +
-   consumers.
+   `grep -rn --include='*.py' 'draft_lm_head.weight_packed' prepare/ drafter/`
+   → the core only (today: the two writers, `build_draft_vocab.py:141`,
+   `export_mtp.py:122`; the consumers — `docker/prepare.sh:65`, the vLLM
+   patch — live outside these two directories).
 5. `bench/test_pipeline_core.py` green in CI; PR A's bit-identical diffs
    empty for every migrated script.
