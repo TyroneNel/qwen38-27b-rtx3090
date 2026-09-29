@@ -6,6 +6,38 @@ this is the deep dive on that card, with every claim re-verified against the
 tree on 2026-09-26 (and one of the review's sub-claims softened where the
 evidence didn't support it — see 1.2).
 
+**Re-verified 2026-09-29 against upstream/main @ d5e2a01 (vLLM 0.30.0).**
+Seven commits landed since 2522ef9 (#219, #230, #231, #232, #234, #235,
+#236); none touches
+`bench/`, `.github/`, `.gitignore`, `Dockerfile` or `docker/prepare.sh`
+(`git diff --stat 2522ef9 HEAD -- bench/ .github/ .gitignore` is empty;
+each commit's `git show --stat` read):
+
+- **Unchanged upstream:** the two CI gates (`patch-integrity.yml:21,23`),
+  the 39 `*.py`/`*.sh` + 3 data files + `bench/demo/` count (`git ls-tree
+  HEAD bench/`), the six dishonest exits, the exit-2 convention, and the
+  whole rot inventory — every line cite below re-read at d5e2a01 and
+  still at the same line.
+- **#219 (8cf642e) adds no test and no CI step.** It adds a `Makefile`
+  (`verify-install` runs `bash verify.sh --install`, nothing in `bench/`),
+  `scripts/hq-doctor.sh` (no bench call), and `verify.sh --wait`. The
+  `--wait` hunks sit in the header/arg-parse and in the live section after
+  `fi  # INSTALL` (`verify.sh:338`); the heredoc that
+  `test_model_verification.py:19` splits (`verify.sh:132-280`) is still
+  the first `$PY - "$MODEL" <<'EOF'` and is untouched, so no claim here
+  changes (it only shifted 19 lines down, from `:113`).
+- **Corrected at this pass (errors carried since 2522ef9, not upstream
+  changes):** `test_prepare_crash.py` is **not** pure stdlib — `main()`
+  imports torch, safetensors, tokenizers, huggingface_hub,
+  compressed_tensors and transformers (`:356-358`) and its docstring says
+  "CPU and Linux only, minutes"; `test_kvarn_recycled_pages.py` loads
+  `kvarn_attn.py`, which imports vLLM (`kvarn_attn.py:47`);
+  `test_bench_sse_keepalive.py` imports vLLM's
+  `endpoint_request_func` by default (`:34`). All three are image-gate
+  candidates, not stdlib-CI candidates (1.1, 2.2 fixed). `.gitignore`
+  also covers `bench/quality-data/` (1.4 fixed). The 3.1 acceptance line
+  ran a Python file with `bash` (fixed).
+
 **Re-verified 2026-09-28 against upstream/main @ 2522ef9 (vLLM 0.30.0).**
 22 commits landed since 1cf8665; what they changed in this doc's area:
 
@@ -14,15 +46,18 @@ evidence didn't support it — see 1.2).
   and it string-splits `docker/prepare.sh`'s `state()` heredoc (`:37`), so
   the parser-of-a-parser pattern this plan criticizes has **spread**.
 - Three new gate-able tests are **unwired**: `test_prepare_crash.py`
-  (crash-injection, pure stdlib, proper exit; #195/#198),
-  `test_kvarn_recycled_pages.py` (torch-CPU, asserts; #208/#222),
-  `test_bench_sse_keepalive.py` (aiohttp, no GPU; #226).
+  (crash-injection, proper exit; #195/#198 — said "pure stdlib" at
+  2522ef9; it needs torch + the prepare stack, see the 2026-09-29 note),
+  `test_kvarn_recycled_pages.py` (torch-CPU + vLLM import, asserts;
+  #208/#222), `test_bench_sse_keepalive.py` (aiohttp + vLLM's bench
+  module, no GPU; #226).
 - `concurrent_collapse.py` (GPU + live server; #208/#222) joined the
   reproducers — and prints its `COLLAPSED` verdict behind an exit 0.
 - `demo_render.py` (411 lines) is gone, replaced by `bench/demo/`'s
   JS/mjs renderer (#220); `demo_capture.py` got a docstring-only change.
 - The dishonest four, the exit-code inventory, and the rot inventory are
-  unchanged — every line cite below re-verified against 2522ef9.
+  unchanged — every line cite below re-verified against 2522ef9 (and
+  again at d5e2a01, above).
 
 **Scope.** `bench/`'s 39 `*.py`/`*.sh` (+3 data files, +`bench/demo/`):
 which are tests, which are measurements,
@@ -38,7 +73,7 @@ GPU tools' contents.
 | kind | files | verdict? |
 |---|---|---|
 | gate-able CPU tests, **in CI** | `test_model_verification.py`, `test_prepare_state.py` (unittest, `unittest.main():66`; #195/#203) | yes |
-| gate-able, **unwired** | `mq3d_capacity_property.py` (pure stdlib: argparse/itertools/random/sys — verified imports), `verbatim.py` (`_selftest` at `:100`, `__main__` at `:141-143`), `mq3d_scratch_pool_test.py` (torch-CPU; docstring: "Runs inside the image, no GPU"), `test_prepare_crash.py` (pure stdlib — builtins/hashlib/runpy/subprocess/tempfile, no torch — proper `sys.exit(1 if fails else 0)`), `test_kvarn_recycled_pages.py` (torch-CPU, assert-based, prints `OK`), `test_bench_sse_keepalive.py` (aiohttp only, no GPU) | yes, gating nothing |
+| gate-able, **unwired** | `mq3d_capacity_property.py` (pure stdlib: argparse/itertools/random/sys — verified imports), `verbatim.py` (no top-level imports, `import sys` only under `__main__`; `_selftest` at `:100`, `__main__` at `:141-143`), `mq3d_scratch_pool_test.py` (torch-CPU + `import vllm`; docstring: "Runs inside the image, no GPU"), `test_prepare_crash.py` (proper `sys.exit(1 if fails else 0)` at `:377`; **not** stdlib — said "pure stdlib … no torch" at 2522ef9, but `main()` imports torch, safetensors, tokenizers, huggingface_hub, compressed_tensors, transformers at `:356-358`; docstring: "CPU and Linux only, minutes"), `test_kvarn_recycled_pages.py` (torch-CPU, loads `kvarn_attn.py` which imports vLLM; assert-based, prints `OK` at `:63`), `test_bench_sse_keepalive.py` (aiohttp + vLLM's `vllm.benchmarks.lib.endpoint_request_func` by default, `:34`; no GPU — said "aiohttp only" at 2522ef9) | yes, gating nothing |
 | kernel tests (GPU, script-style) | `test_lookup_kernels.py`, `test_marlin_int8_asym.py:85`, `test_prefill_attn_bigpool.py:56`, `test_spec_decode_bigpool.py:71`, `test_spec_decode_fp8.py` (designed skips `:10,14`), `mq3d_layer2_oracle.py:511` | proper 0/1 exits |
 | **broken as a test** | `test_spec_decode_attn.py` | prints `FAIL` (`:77`), **no `sys.exit` anywhere** |
 | benchmark drivers | `run_benchmarks.sh`, `real_rep.sh`, `prefill_ab.sh`, `conc_ladder.py`, `labd_bench.py`, `labd_accept.py`, `spec_attn_ctx_scan.py`, `tune_gdn.py`, `act_calib.py` | 0 by design (measurement) |
@@ -113,7 +148,9 @@ GPU tools' contents.
 - `bench/mq3d_layer2_oracle.py:50` writes its verdicts JSONL into `bench/`
   by default — running the oracle dirties the checkout.
 - `bench/prefill_ab.sh:19` writes to `bench/results-prefill-ab/`, which is
-  **not** in `.gitignore` (`.gitignore` covers `bench/results/` only).
+  **not** in `.gitignore` (`.gitignore:3-4,16` covers `bench/quality-data/`
+  and `bench/results/`; said "`bench/results/` only" at 2522ef9 —
+  `bench/quality-data/` has been there since ee4d48f, 2026-08-18).
 
 ## 2. The design
 
@@ -158,10 +195,16 @@ Per-script changes (small, no measurement logic touched):
   detect the bug it was written for), and `python bench/verbatim.py`
   (exit 1 if its `_selftest` misclassifies any of the 9 canned shapes).
   All pure stdlib, seconds.
-- `test_prepare_crash.py` is the other natural addition (pure stdlib,
-  seconds, proper exit) — but it string-splits `prepare.sh` exactly the
-  way `test_prepare_state.py:37` does, so wiring it doubles down on the
-  heredoc-split; note the coupling in the manifest.
+- `test_prepare_crash.py` is the other natural addition (proper exit) —
+  but **not** in this stdlib job: at 2522ef9 this bullet said "pure
+  stdlib, seconds", yet it imports torch/safetensors/tokenizers/
+  compressed_tensors/transformers (`:356-358`) and runs for minutes (its
+  docstring), so it belongs with `mq3d_scratch_pool_test.py` in the image
+  gate below (as do `test_kvarn_recycled_pages.py` and
+  `test_bench_sse_keepalive.py`, both of which import vLLM). It also
+  string-splits `prepare.sh` exactly the way `test_prepare_state.py:37`
+  does, so wiring it doubles down on the heredoc-split; note the coupling
+  in the manifest.
 - `mq3d_scratch_pool_test.py` needs torch + the patched vLLM but no GPU —
   it runs in the image build (either a `RUN` line after `verify.sh
   --install` in the Dockerfile, or a post-build step in
@@ -206,7 +249,8 @@ plus #226's and #208's); the hygiene lines (2.4). No CI change — the
 repo's behavior is unchanged except that six scripts now tell the truth
 to `$?`.
 
-Acceptance: `bash bench/test_spec_decode_attn.py` (on a GPU box) exits 1
+Acceptance: `venv/bin/python bench/test_spec_decode_attn.py` (on a GPU
+box; its docstring's invocation — this line said `bash` at 2522ef9) exits 1
 when its correctness check FAILs; `python bench/api_smoke.py` exits 1 at
 <12/12 and 0 at 12/12; the manifest covers all 39 files (+ `demo/`).
 
