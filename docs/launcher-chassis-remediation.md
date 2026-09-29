@@ -6,6 +6,33 @@ this is the deep dive on that card. Every number below was measured against the
 tree on 2026-09-26 (method noted where it matters); nothing is carried over
 from the review on trust.
 
+> **Re-verified 2026-09-28 against upstream/main @ 2522ef9 (vLLM 0.30.0).**
+> All numbers re-measured; every line cite re-mapped (files grew: 838/279/142).
+> - 22 upstream commits landed since 1cf8665. The pin flip to vllm==0.30.0
+>   (d88544b, #189) rewrote single's retention block (:524-570) and landed a
+>   **second, simplified copy in `alternative.sh` (:91-99) in the same commit** —
+>   the newest duplication, and its commit message says the block was "extracted
+>   and run over ten input cases (both launchers)": upstream hand-built the
+>   chassis unit test this doc proposes. Batch has no retention block,
+>   correct-by-design (no drafter; the commit message says so).
+> - c970467 (#214) moved the `--kv-cache-memory` append out of the dflash2
+>   branch to follow the SPEC chain (single:507-511) — a one-launcher fix of
+>   exactly the copy-drift bug class the chassis deletes; batch and
+>   `alternative.sh` have no KV_MEM handling at all.
+> - 1a4bf64 (#207) touched both `start_qwen.sh` + verify.sh — the third
+>   both-launcher fix after #185/#176 — and #189 touched all three launchers
+>   at once. 1.5's pressure is undiminished (21 launcher file-touches in the
+>   last 40 commits, was 19).
+> - All 11 drift items stand (re-cited); #9 is worse — the stale kvarn patch
+>   name survived a *second* pin flip (single:221 cites 0.28.0; the tree now
+>   carries `kvarn-v2-runner-0.30.0.patch`). New item 12: #189's two retention
+>   copies are already capability-skewed. Neither #189 nor #214 updated
+>   `resolve_config.sh`'s shadow list — 1.4's predicted failure, on schedule.
+> - Two original numbers did not reproduce and are corrected below: single's
+>   substantive-line count (297 → it is 287 by the stated method at 1cf8665;
+>   289 now) and the "byte-identical" ASYNC_ARGS pair (line 2 has always
+>   differed by the `:-1` fallback — near-verbatim, never identical).
+
 **Scope.** `single-user/start_qwen.sh`, `batch/start_qwen.sh`,
 `single-user/alternative.sh`, the two systemd units, and the validation layer
 (`resolve_config.sh`, `resolve_api_key.sh`, `single-user/select_model.sh`) —
@@ -19,52 +46,57 @@ harness-side client duplication (candidate 3); the service units' contents.
 
 ### 1.1 The census — it is three launchers, not two
 
-| file | lines | unique substantive lines¹ | shared verbatim with single¹ | conditional statements² |
+| file | lines | substantive lines¹ | shared verbatim with single¹ | conditional statements² |
 |---|---|---|---|---|
-| `single-user/start_qwen.sh` | 822 | 297 | — | 47 |
-| `batch/start_qwen.sh` | 271 | 110 | **76 (69%)** | 13 |
-| `single-user/alternative.sh` | 133 | 81 | **40 (49%)** | 6 |
+| `single-user/start_qwen.sh` | 838 | 289 | — | 47 |
+| `batch/start_qwen.sh` | 279 | 110 | **76 (69%)** | 13 |
+| `single-user/alternative.sh` | 142 | 87 | **40 (46%)** | 8 |
 
-¹ Method: `comm -12` on unique non-comment, non-blank lines. With duplicates
-and comments included, single∩batch share **180 lines** (156 unique).
+¹ Substantive = non-comment, non-blank (`grep -cE '^[[:space:]]*[^#[:space:]]'`);
+the shared column is `comm -12` on the `sort -u` of those lines. With duplicates
+and comments included, single∩batch share **182 lines** (158 unique).
 ² `grep -cE '^\s*(if|case|elif) '` — the env/platform decision points.
 
-The exec lines share **12 of 13** literal flags (measured: the union minus
-batch's hardcoded `--async-scheduling` and single's `--sse-keep-alive-interval`).
-`alternative.sh` (the experimental int4-KV profile, PR #42) is the most drifted
-copy — see 1.3.
+The exec lines share **12 of 13** literal flags (re-measured: a 14-flag union
+minus batch's hardcoded `--async-scheduling` and single's
+`--sse-keep-alive-interval`). `alternative.sh` (the experimental int4-KV
+profile, PR #42) is the most drifted copy — see 1.3.
 
 There are also two systemd units, `single-user/qwen-serving.service` (21 lines)
 and `batch/qwen-serving.service` (18 lines), identical except the description,
-the ExecStart path, and a warmup comment — a fourth, shallow copy of "how to
+the ExecStart path, and two comment wordings (one pool line; single's 3-line
+warmup block against batch's one) — a fourth, shallow copy of "how to
 boot this stack," left alone by this plan (1.5).
 
-### 1.2 The chassis: fourteen blocks, where each lives today
+### 1.2 The chassis: fifteen blocks, where each lives today
 
 | # | block | single-user | batch | alternative.sh |
 |---|---|---|---|---|
-| 1 | env prelude (DIR/REPO, `FLASHINFER_DISABLE_VERSION_CHECK`) | :55-59 | :26-30 | :29,31 |
-| 2 | stale-`/dev/shm` offload sweep (#33) | :61-72 | :32-43 | :49-56 (3rd copy) |
-| 3 | CUDA_HOME/nvcc-13 fix (#185) | :75-91 | :46-62 | **absent** |
-| 4 | resolve_config boilerplate | :93-99 | :64-71 | **absent** |
-| 5 | INT8 export guards (#20) | :137-140 | :113-114 + :242-248 | :44-47 |
-| 6 | PREFIX_CACHE arm | :509-514 (+:515-554 single-only extension) | :116-125 | :84,89-90 |
-| 7 | TOOL_ARGS (#59, qwen3_coder) | :646-665 | :127-146 | :130 (hardcoded) |
-| 8 | METRICS_ARGS (#51, #59) | :667-685 | :148-162 | :97-111 (3rd copy) |
-| 9 | VISION block (gotcha 9) | :687-720 | :164-197 | :76,86-87 (simplified) |
-| 10 | WSL2/allocator + KV-connector + TP blocks (#2/#26, #95, #163) | :750-797 | :199-238 | :13-28 (**TP block absent**) |
-| 11 | `VLLM_USE_FLASHINFER_SAMPLER=0` | :798 | :239-241 | :30 |
-| 12 | ASYNC_SCHED→ASYNC_ARGS | :313 + :637-644 | :264 (hardcoded) | :83 + :92-95 |
-| 13 | key resolution | :800-801 (shared resolver) | :250-252 (shared resolver) | :32 (**own flavor**) |
-| 14 | exec `vllm serve` skeleton | :803-822 | :254-271 | :113-133 |
+| 1 | env prelude (DIR/REPO, `FLASHINFER_DISABLE_VERSION_CHECK`) | :55-61 | :26-32 | :29,31 |
+| 2 | stale-`/dev/shm` offload sweep (#33) | :63-74 | :34-45 | :49-56 (3rd copy) |
+| 3 | CUDA_HOME/nvcc-13 fix (#185) | :77-93 | :48-64 | **absent** |
+| 4 | resolve_config boilerplate | :95-101 | :66-73 | **absent** |
+| 5 | INT8 export guards (#20) | :139-142 | :113-116 + :250-256 | :44-47 |
+| 6 | PREFIX_CACHE arm | :515-523 (+:524-644 single-only extension) | :118-133 | :84,89-90 |
+| 7 | TOOL_ARGS (#59, qwen3_coder) | :662-681 | :135-154 | :139 (hardcoded) |
+| 8 | METRICS_ARGS (#51, #59) | :683-701 | :156-170 | :106-120 (3rd copy) |
+| 9 | VISION block (gotcha 9) | :703-736 | :172-205 | :76,86-87 (simplified) |
+| 10 | WSL2/allocator + KV-connector + TP blocks (#2/#26, #95, #163) | :766-813 | :207-246 | :13-28 (**TP block absent**) |
+| 11 | `VLLM_USE_FLASHINFER_SAMPLER=0` | :814 | :247-249 | :30 |
+| 12 | ASYNC_SCHED→ASYNC_ARGS | :315 + :653-660 | :272 (hardcoded) | :83 + :103-104 |
+| 13 | key resolution | :816-817 (shared resolver) | :258-260 (shared resolver) | :32 (**own flavor**) |
+| 14 | exec `vllm serve` skeleton | :819-838 | :262-279 | :122-142 |
+| 15 | PREFIX_RETENTION / `--prefix-cache-retention-interval` (#174, vllm#55760, #189) | :524-570 (measured 13056/14592, else `None`) | **absent — correct: no drafter** | :91-99 (simplified copy, `None` only) |
 
-Byte-identical spot checks (verified by `sed`): the PREFIX_CACHE arm
-`batch:124` == `single:514`; the ASYNC_ARGS pair `single:643-644` ==
-`alternative.sh:94-95`; blocks 1, 2, 7, 9, 10 are near-verbatim between the
-two `start_qwen.sh` (comment drift noted in 1.3).
+Spot checks (verified by `sed`): the PREFIX_CACHE arm's first two lines are
+byte-identical — `batch:131-132` == `single:519-520` (single then extends the
+arm at `:521-523`); the ASYNC_ARGS pair `single:659-660` ≈
+`alternative.sh:103-104` is near-verbatim, never byte-identical (line 2 has
+always differed by single's `:-1` fallback); blocks 1, 2, 7, 9, 10 are
+near-verbatim between the two `start_qwen.sh` (comment drift noted in 1.3).
 
 `select_model.sh` (7 lines) is already the shared model selector — three
-consumers (`single-user/start_qwen.sh:101`, `docker/entrypoint.sh:25`,
+consumers (`single-user/start_qwen.sh:103`, `docker/entrypoint.sh:25`,
 `bench/warmup.sh:41`) plus a CI replay (`bench/test_model_verification.py:76-79`).
 It is the proof that the extract-and-source pattern works in this repo.
 ### 1.3 Confirmed drift between the copies
@@ -73,58 +105,70 @@ Each item verified against the files on 2026-09-26; this is the cost the
 duplication is already charging.
 
 1. **The INT8 export guards disagree** (#20's "export only when non-empty"
-   fix). `batch/start_qwen.sh:247-248` exports `VLLM_MARLIN_INT8_INCLUDE_RE`
+   fix). `batch/start_qwen.sh:255-256` exports `VLLM_MARLIN_INT8_INCLUDE_RE`
    whenever `INT8_LAYERS` is non-empty — even with `INT8_ACT` empty, which
    leaves the engine with an include-regex and no input dtype.
-   `single-user/start_qwen.sh:139-140` and `alternative.sh:46-47` require both.
+   `single-user/start_qwen.sh:141-142` and `alternative.sh:46-47` require both.
    Batch is the outlier; the bug is latent (its `INT8_ACT` defaults to `int8`
-   at `:113`) and fires on `INT8_ACT= INT8_LAYERS=mlp bash batch/start_qwen.sh`.
+   at `:115`) and fires on `INT8_ACT= INT8_LAYERS=mlp bash batch/start_qwen.sh`.
 2. **Batch carries spec-decode metrics flags it can never produce.**
-   `batch/start_qwen.sh:154-161` sets `--per-request-spec-decode-metrics`;
+   `batch/start_qwen.sh:156-170` sets `--per-request-spec-decode-metrics`;
    batch mode enables no speculative decoding. The block was copied from
-   single (`:677-684`), where the flag is real — and the comment headers have
-   already drifted apart (single's `#51`/llama-swap essay at `:667-672` vs
-   batch's two-line summary at `:148-151`).
+   single (`:683-701`), where the flag is real — and the comment headers have
+   already drifted apart (single's `#51`/llama-swap essay at `:683-689` vs
+   batch's two-line summary at `:156-157`).
 3. **Batch's VISION_OFFLOAD comment cites a mode it never runs.**
-   `batch/start_qwen.sh:182-188` explains the default with "on 24 GB
+   `batch/start_qwen.sh:188-196` explains the default with "on 24 GB
    SPEC=dflash2 + VISION=1 does not boot without it … measured here …
    SPEC=dflash2, RTX 3090" — SPEC=dflash2 and the KV_MEM margin it references
-   exist only in single (`:705-711`, the original). A batch reader is sent to
+   exist only in single (`:719-727`, the original). A batch reader is sent to
    concepts their launcher does not have.
-4. **The `HOST` knob exists only in single.** `single-user/start_qwen.sh:805`
-   has `--host ${HOST:-0.0.0.0}`; `batch/start_qwen.sh:256` hardcodes
+4. **The `HOST` knob exists only in single.** `single-user/start_qwen.sh:821`
+   has `--host ${HOST:-0.0.0.0}`; `batch/start_qwen.sh:264` hardcodes
    `--host 0.0.0.0`. Same flag position, one knob lost in the copy.
 5. **Async scheduling is three shapes.** Single computes it
-   (`ASYNC_SCHED` at `:313` for the long DFlash2 verify block → `ASYNC_ARGS`
-   array at `:643-644`); `alternative.sh:83,94-95` duplicates that logic
-   verbatim; `batch/start_qwen.sh:264` hardcodes `--async-scheduling`.
+   (`ASYNC_SCHED` at `:315` for the long DFlash2 verify block → `ASYNC_ARGS`
+   array at `:659-660`); `alternative.sh:83,103-104` duplicates that logic
+   verbatim; `batch/start_qwen.sh:272` hardcodes `--async-scheduling`.
 6. **The CUDA-graph capture-size formula has three homes.**
-   `single-user/start_qwen.sh:442` (`${CG:-...}`-guarded),
-   `alternative.sh:81` (same arithmetic, unguarded), `batch/start_qwen.sh:266`
+   `single-user/start_qwen.sh:444` (`${CG:-...}`-guarded),
+   `alternative.sh:81` (same arithmetic, unguarded), `batch/start_qwen.sh:274`
    (hardcoded `64` in the exec line).
 7. **`alternative.sh` never received two platform fixes** that upstream landed
    in both `start_qwen.sh` files: the CUDA_HOME/nvcc-13 fix (`fa97789`, #185 —
    touched `batch/start_qwen.sh` + `single-user/start_qwen.sh` only) and the
-   TP>1 allocator default (`d2a5538`, #176 — same two files; `alternative.sh`
+   TP>1 allocator default (`d2a5538`, #176 — same two launchers; `alternative.sh`
    has the WSL2 and KV-connector arms at `:13-28` but not the TP arm).
 8. **`alternative.sh` resolves the API key its own way**:
    `export VLLM_API_KEY="$(cat api_key.txt)"` (`:32`) — no env precedence, no
    file check, and under its own `set -e` (`:11`) a missing `api_key.txt`
    kills the script with a bare `cat` error. The shared resolver
    (`resolve_api_key.sh`, written for #113) exists and is unused there.
-9. **A stale patch filename in a comment.** `single-user/start_qwen.sh:219`
-   cites `kvarn-v2-runner-0.28.0.patch`; the file on this line is
-   `kvarn/kvarn-v2-runner-0.29.0.patch` (the 0.29 pin flip in #148 renamed it;
-   the comment was not updated).
+9. **A stale patch filename in a comment.** `single-user/start_qwen.sh:221`
+   cites `kvarn-v2-runner-0.28.0.patch`; the tree now carries
+   `kvarn/kvarn-v2-runner-0.30.0.patch`. The stale name has survived two pin
+   flips (#148 renamed it for 0.29, #189 for 0.30) without an update.
 10. **The model decision lives in five places.** `select_model.sh:4-7` (the
-    shared one), `batch/start_qwen.sh:73` (inline, base-only),
+    shared one), `batch/start_qwen.sh:75` (inline, base-only),
     `alternative.sh:58-59` (inline, **relative** paths — breaks outside the
     repo root, and never prefers `-fast`), `resolve_config.sh:82` (print
     default), `verify.sh:21` (check default).
 11. **The comments are forking.** Batch's WSL2 arm now says "see the long note
-    in single-user/start_qwen.sh" (`batch:200-201`) — the code is duplicated
+    in single-user/start_qwen.sh" (`batch:208-209`) — the code is duplicated
     but the explanation already migrated. The repo is doing this refactor by
     hand, one comment at a time.
+
+12. **The two retention blocks are already capability-skewed** — and #189
+    wrote both in one commit. Single's (`:524-570`) measures the interval
+    (`13056` at 7 drafts, `14592` at 15 — `:558`), warns on unmeasured draft
+    counts (`:560-563`, the #174 eviction essay), honors a three-rung override
+    ladder (the EXTRA_ARGS flag → `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` →
+    `PREFIX_RETENTION`, else `None` — `:566-567`) under `PREFIX_CACHE=1` on
+    any `SPEC_CFG`, and unsets the env spelling afterward (`:569`).
+    `alternative.sh:91-99` kept the shape and dropped the capabilities: no
+    measured values (`None` unless `PREFIX_RETENTION` is set), no env-var
+    rung, no warning, and it fires only on `SPEC=dflash2`. The newest
+    duplication arrived pre-drifted.
 
 ### 1.4 The validation layer has drifted from what it validates
 
@@ -141,7 +185,7 @@ duplication is already charging.
   in EXTRA_ARGS silently shadows the launcher — the exact failure class the
   resolver was built to make visible.
 - **Its MODEL print is wrong on the native single path.** Single calls
-  `resolve_effective_config single` at `:99` but selects the model at `:101`;
+  `resolve_effective_config single` at `:101` but selects the model at `:103`;
   `resolve_config.sh:82` defaults to the base dir, so `[effective-config]
   MODEL=` prints the base model even when the `-fast` variant will be served.
   Docker masks this (entrypoint:23-27 exports MODEL first); a native boot
@@ -151,12 +195,14 @@ duplication is already charging.
 
 ### 1.5 Change pressure
 
-`single-user/` + `batch/` took 19 file-touches in the last 40 upstream commits
-(second only to `patches/`). The launcher-affecting ones repeatedly land in
-the shared blocks: #185 and #176 each had to edit both `start_qwen.sh` files
-(verified: file lists of `fa97789`, `d2a5538`), and #126's model-selection fix
-touched five files for one behavior (`25bd8d2`: select_model, entrypoint,
-single launcher, the CI test, docs).
+`single-user/` + `batch/` took 21 file-touches in the last 40 upstream commits
+(@2522ef9; second only to `patches/` at 103). The launcher-affecting ones
+repeatedly land in the shared blocks: #185 and #176 each had to edit both
+`start_qwen.sh` files (verified: file lists of `fa97789`, `d2a5538`), #126's
+model-selection fix touched six files for one behavior (`25bd8d2`: select_model,
+entrypoint, single launcher, the CI test + its workflow, docs) — and since the
+original measurement #207 touched both launchers + verify.sh, #189 all three
+at once, #214 single's KV_MEM append alone.
 ## 2. The design
 
 ### 2.1 `launcher_common.sh` — the chassis, at the repo root
@@ -170,10 +216,11 @@ expansion, so each block keeps its gotcha essay as the function's comment —
 | function | absorbs (table in 1.2) | notes |
 |---|---|---|
 | `qwen_env_prelude` | blocks 1-3 | DIR/REPO stay with the caller; the flashinfer pin, shm sweep, and CUDA_HOME fix move verbatim, comments included. Fixes 1.3.7 for `alternative.sh` by inclusion. |
-| `qwen_allocator_defaults` | block 10 | WSL2 detect + KV-connector + TP arms → sets `PYTORCH_CUDA_ALLOC_CONF`. The long WSL2 essay (single:751-760) lives here; batch's "see the long note" pointer (1.3.11) dissolves. |
+| `qwen_allocator_defaults` | block 10 | WSL2 detect + KV-connector + TP arms → sets `PYTORCH_CUDA_ALLOC_CONF`. The long WSL2 essay (single:767-776) lives here; batch's "see the long note" pointer (1.3.11) dissolves. |
 | `qwen_int8_exports` | block 5 | the two-condition guard (1.3.1's fix) once; callers keep their own `INT8_ACT`/`INT8_LAYERS` *defaults*, which are genuinely per-mode (batch: `int8`/`mlp`; single: off/`all`; alternative: off/`all`). |
 | `qwen_tool_args` / `qwen_metrics_args` / `qwen_vision_args` | blocks 7-9 | the array builders with their #59 comments. The spec-decode metrics flag moves behind a `mode` parameter so batch stops carrying flags it cannot produce (1.3.2) — or simpler: the flag is harmless-but-dead in batch; keep it only if the owner wants one code path. Called out in the PR, not decided here. |
-| `qwen_async_args` | block 12 | `ASYNC_SCHED` → `ASYNC_ARGS`; single's `:313` setter stays in single (it is dflash2-shaped), the array build shares. |
+| `qwen_async_args` | block 12 | `ASYNC_SCHED` → `ASYNC_ARGS`; single's `:315` setter stays in single (it is dflash2-shaped), the array build shares. |
+| `qwen_retention_args` | block 15 | single's measured ladder (13056/14592), the override order, and the #174 warning move verbatim. #189 already wrote `alternative.sh`'s copy; PR B deletes it for the call — its `None` path is the ladder's own fallback, argv-identical unless `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` is exported (a rung the copy never had; 1.3.12). Batch stays absent — no drafter. |
 | `qwen_serve_argv` | block 14 | the exec line as an **array builder**: fills `ARGV=(venv/bin/vllm serve …)` from the caller's mode parameters. EXTRA_ARGS still expands last and still word-splits (the documented override door — resolve_config.sh:34-35); the array conversion makes the other expansions (`$VISION_ARGS`, `$KV_ARGS`, `$ATTN_ARGS`) explicit instead of relying on unquoted splitting. |
 | key resolution | block 13 | stays in `resolve_api_key.sh` (already shared); `alternative.sh` switches to it (1.3.8). |
 
@@ -181,9 +228,11 @@ expansion, so each block keeps its gotcha essay as the function's comment —
 measurement reports — single's `:24-53` context tiers, batch's `:5-24` state
 economics); the profile branches (CTX×SPEC and the whole DFlash2/MTP/SPEC_CFG/
 KV_MEM/residency machinery in single:191-596; KV in batch:77-110); the PREFIX_
-CACHE extensions single carries (its `:515-554` retention ladder is
-single-shaped today; batch's arm is the base form). Sharing those would move
-complexity, not concentrate it — they fail the deletion test.
+CACHE extensions beyond block 15 that single carries (the CTX=huge match-unit
+line `:521-523`; the capture-mode machinery `:571-644`; batch's arm is the
+base form). Sharing those would move complexity, not concentrate it — they
+fail the deletion test. The retention ladder sat in this list until #189
+made it a second, skewed copy; it is chassis block 15 now (1.3.12).
 
 ### 2.2 `PRINT_ARGV=1` — the dry-run seam
 
@@ -241,6 +290,8 @@ comment. 10 (five model defaults) → `select_model.sh` stays the one
 selector; `alternative.sh:58-59` and `resolve_config.sh:82` defer to it;
 `verify.sh:21` stays its own (it checks, it does not select).
 11 (forking comments) → comments live in the chassis functions.
+12 (skewed retention copies) → `qwen_retention_args`; batch stays absent by
+design.
 ## 3. Rollout
 
 Three PRs, ordered so the behavior-preserving one proves itself before any
@@ -248,7 +299,7 @@ behavior changes land. Each is independently revertable.
 
 ### 3.1 PR A — the chassis + the dry-run seam (no behavior change)
 
-Add `launcher_common.sh`; move blocks 1-3, 5, 7-12 of the two `start_qwen.sh`
+Add `launcher_common.sh`; move blocks 1-3, 5, 7-12, and single's 15 (batch has none) of the two `start_qwen.sh`
 into it **verbatim** (code and comments); both launchers source it; both
 exec lines become `qwen_serve_argv` + the `PRINT_ARGV=1` gate. `alternative.sh`
 is untouched in this PR. The `dflash2-backport`-style temptation to clean up
@@ -264,11 +315,15 @@ main vs the branch must diff empty; `patch-integrity`'s existing
 
 `alternative.sh` sources the chassis and the two resolvers; its own copies of
 the WSL2/KV-connector arms, the stale-shm sweep, the INT8 guards, the
-METRICS/ASYNC arrays, and the SPEC case are deleted. Explicit behavior changes,
+METRICS/ASYNC arrays, the #189 retention copy, and the SPEC case are deleted. Explicit behavior changes,
 each its own commit message line: gains the CUDA_HOME fix (1.3.7a), gains the
 TP allocator arm (1.3.7b), key resolution via `resolve_api_key.sh` (1.3.8),
 absolute model paths (1.3.10), the guarded CG formula (1.3.6), and a
-`PRINT_ARGV` gate of its own. Also fixes 1.3.9's stale comment.
+`PRINT_ARGV` gate of its own. The retention copy being deleted is upstream's
+own (#189 landed it after this plan was written), replaced by the
+`qwen_retention_args` call (1.3.12) — argv-identical unless
+`VLLM_PREFIX_CACHE_RETENTION_INTERVAL` is exported. Also fixes 1.3.9's stale
+comment.
 
 Acceptance: the dry-run argv for its two profiles matches the pre-PR argv
 *except* in the enumerated fixes; a boot smoke on the int4 profile.
@@ -296,8 +351,9 @@ byte-identical for PR A (a smaller "known-different" set for PR B):
 |---|---|
 | defaults (single) | `--kv-cache-dtype bfloat16`, `--speculative-config` with `"method":"mtp"`, CG=32 |
 | `CTX=long SPEC=mtp` | `--kv-cache-dtype fp8`, **no** `--attention-backend FLASH_ATTN` |
-| `CTX=huge SPEC=dflash2 PREFIX_CACHE=1` | `--kv-cache-dtype kvarn_k4v2_g128`, `--block-size 128`, `--prefix-match-unit 128`, the retention interval |
+| `CTX=huge SPEC=dflash2 PREFIX_CACHE=1` | `--kv-cache-dtype kvarn_k4v2_g128`, `--block-size 128`, `--prefix-match-unit 128`, `--prefix-cache-retention-interval 13056` (7-draft default, single:558/567) |
 | `SPEC=dflash2 DFLASH_TOKENS=15` | `--no-async-scheduling`, CG capped at 64 |
+| `KV_MEM=8000000000 SPEC=mtp` | `--kv-cache-memory=8000000000` in argv (the #214 fix: honored in every SPEC mode, not only dflash2 — single:511) |
 | `SPEC=off` | no `--speculative-config` at all |
 | `EXTRA_ARGS="--tensor-parallel-size 2"` | `PYTORCH_CUDA_ALLOC_CONF` printed as `expandable_segments:False` (the warning text asserts too) |
 | `EXTRA_ARGS="--compilation-config …"` | the shadow warning fires (PR C) |
