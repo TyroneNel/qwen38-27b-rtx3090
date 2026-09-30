@@ -6,8 +6,12 @@ this document is the deep dive on that card: the current state measured line by
 line, the design, and the rollout.
 
 **Status 2026-09-30: implemented as three upstream PRs, still against
-upstream/main @ d5e2a01.** PR A is syv-ai/HyperQwen#242 (ready), PR B #243 and
-PR C #244 (drafts, stacked on A). Running the checks on a pristine v0.30.0
+upstream/main @ d5e2a01.** PR A is syv-ai/HyperQwen#242, PR B #243 and PR C
+#244, all ready for review as a stack (each branch contains the ones below
+it). Upstream squash-merges, which breaks a plain stack, so each PR body
+carries a merge guide: squash #244 alone to take all three, or squash one at a
+time with `git rebase --onto origin/main <previous commit>` between merges
+(both ways simulated; same final tree). Running the checks on a pristine v0.30.0
 checkout changed two parts of this plan:
 
 - **1.3 overstated the marker decay.** On a fresh install, `apply_kvarn`'s
@@ -371,7 +375,7 @@ Delete the backport patch and the two 0.27.1 KVarN files; remove the five
 special cases (including the temporary arm in apply.sh); move the PATCHES.md
 row into the retired prose; fix the README count, the series header, the
 check-script comment. After this PR: 44 patch files, 44 series lines, zero
-per-patch exceptions anywhere. **Opened 2026-09-30 as #243 (draft, on #242).**
+per-patch exceptions anywhere. **Opened 2026-09-30 as #243 (stacked on #242).**
 
 Acceptance: both workflows green; `git grep -l dflash2-backport -- ':!docs/*-remediation.md' ':!docs/architecture-review-*.html'`
 finds only `PATCHES.md` (retired prose) and the historical notes in
@@ -390,7 +394,7 @@ minutes") instead of leaving them to the image build (4–12 min in CI; the
 `kvarn/install.sh` switches its applies to `apply.sh --kvarn` (exact reverse
 check, then strict apply); the marker heredoc is deleted, and `verify.sh`'s
 two `_check_applied.py` KVarN rungs become exact reverse checks. **Opened
-2026-09-30 as #244 (draft, on #243)**; gate log: `3 KVarN patches applied
+2026-09-30 as #244 (stacked on #243)**; gate log: `3 KVarN patches applied
 after the series; 47 in total`.
 
 Acceptance: `patch-integrity` green with the KVarN trio in its log;
