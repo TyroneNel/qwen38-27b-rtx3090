@@ -110,13 +110,16 @@ if [ -f "$SP/v1/attention/backends/kvarn_attn.py" ]; then
   if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < kvarn/kvarn-0.30.0.patch >/dev/null 2>&1; then
     $PY -c "from vllm.v1.attention.backends.registry import AttentionBackendEnum; AttentionBackendEnum.KVARN.get_class()" 2>/dev/null && ok "KVarN backend importable, patch applied (KV=kvarn / CTX=huge available)" || fail "KVarN files present but backend does not import"
   else fail "KVarN modules present but kvarn-0.30.0.patch not applied (bash kvarn/install.sh)"; fi
-  if $PY patches/_check_applied.py kvarn/kvarn-v2-runner-0.30.0.patch "$SP" >/dev/null 2>&1; then
+  # Exact, like the kvarn-0.30.0 check above: each KVarN patch reverses cleanly on its own in a fully
+  # installed tree. The content check (_check_applied.py) passes a tree that misses one hunk in a file
+  # whose other hunks carry most of the added lines, so it is not used here.
+  if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < kvarn/kvarn-v2-runner-0.30.0.patch >/dev/null 2>&1; then
     ok "kvarn-v2-runner-0.30.0.patch applied (SPEC=dflash2 + CTX=huge available)"
-  else warn "kvarn-v2-runner-0.30.0.patch not applied (re-run bash kvarn/install.sh for DFlash2 at 240k)"; fi
-  if $PY patches/_check_applied.py kvarn/kvarn-recycled-pages-0.30.0.patch "$SP" >/dev/null 2>&1 \
+  else warn "kvarn-v2-runner-0.30.0.patch not applied, or partly applied (re-run bash kvarn/install.sh for DFlash2 at 240k)"; fi
+  if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < kvarn/kvarn-recycled-pages-0.30.0.patch >/dev/null 2>&1 \
       && grep -q "def note_scheduled_blocks" "$SP/v1/attention/backends/kvarn_attn.py"; then
     ok "kvarn-recycled-pages-0.30.0.patch applied (no late KVarN flush into mamba state, #208)"
-  else warn "kvarn-recycled-pages-0.30.0.patch not applied: CTX=huge + PREFIX_CACHE=1 can print \"!!!!\" (#208; bash kvarn/install.sh)"; fi
+  else warn "kvarn-recycled-pages-0.30.0.patch not applied, or partly applied: CTX=huge + PREFIX_CACHE=1 can print \"!!!!\" (#208; bash kvarn/install.sh)"; fi
 else warn "KVarN not installed (optional; bash kvarn/install.sh for 262k context)"; fi
 
 if [ $INSTALL = 0 ]; then
