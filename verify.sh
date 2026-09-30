@@ -73,17 +73,14 @@ echo "== vLLM patches (order: patches/series)"
 # order, but the earlier one's lines are no longer in the tree, so neither check
 # above can see it. The later patch declares "Supersedes: <basename>" in its header;
 # that only counts if the later patch is itself applied (#67 over #57).
-SERIES=()
-while IFS= read -r name; do
-  SERIES+=("$name")
-done < <(sed -e 's/#.*//' -e 's/^[[:space:]]*//;s/[[:space:]]*$//' -e '/^$/d' patches/series)
-ON_DISK=$(for f in patches/*.patch; do basename "$f"; done | sort)
-IN_SERIES=$(printf '%s\n' "${SERIES[@]}" | sort)
-if [ "$ON_DISK" = "$IN_SERIES" ]; then
+# patches/apply.sh --list prints the series even when it and patches/ disagree, so the
+# checks below still run; the disagreement is a FAIL with each offender named.
+mapfile -t SERIES < <(bash patches/apply.sh --list 2>/dev/null)
+if LIST_ERR=$(bash patches/apply.sh --list 2>&1 >/dev/null); then
   ok "patches/series lists all ${#SERIES[@]} patches"
 else
   fail "patches/series out of sync with patches/ (a patch not in series is never applied):"
-  comm -3 <(printf '%s\n' "$ON_DISK") <(printf '%s\n' "$IN_SERIES") | sed 's/^/    /'
+  printf '%s\n' "$LIST_ERR" | sed '1d'
 fi
 superseded_by() {
   local target="$1" q
