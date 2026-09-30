@@ -5,6 +5,34 @@ other six candidates is [architecture-review-20260926-194530.html](architecture-
 this document is the deep dive on that card: the current state measured line by
 line, the design, and the rollout.
 
+**Status 2026-09-30: implemented as three upstream PRs, still against
+upstream/main @ d5e2a01.** PR A is syv-ai/HyperQwen#242, PR B #243 and PR C
+#244, all ready for review as a stack (each branch contains the ones below
+it). Upstream squash-merges, which breaks a plain stack, so each PR body
+carries a merge guide: squash #244 alone to take all three, or squash one at a
+time with `git rebase --onto origin/main <previous commit>` between merges
+(both ways simulated; same final tree). Running the checks on a pristine v0.30.0
+checkout changed two parts of this plan:
+
+- **1.3 overstated the marker decay.** On a fresh install, `apply_kvarn`'s
+  `FAILED` grep catches a bad hunk in any of the 27. The silent case is a
+  *rerun over a partly applied tree*: `patch -N` skips a whole file when the
+  file's first hunk is present, and prints no `FAILED`. Then only the 3 marker
+  hunks are guarded.
+- **PR C's check was too weak.** `_check_applied.py` passed a tree with hunk 4
+  of kvarn-v2-runner's `attention.py` removed (the 80% per-file rule). So does
+  `verify.sh:120`, which uses it. Each KVarN patch reverses cleanly on its own
+  in a fully installed tree, so an exact `patch -R --dry-run --fuzz 0` works.
+  PR C uses it in `apply.sh --kvarn`: skip if every hunk is present, else apply
+  strictly, so a partly applied patch fails by name. `verify.sh` uses it for
+  all three patches. `--forward` as the idempotence mechanism for KVarN (2.1)
+  is dropped, because it is the same `-N` behaviour. The sections below are
+  corrected in place.
+
+Open upstream PR #233 (`sampler-warmup-cuda`) adds a 46th patch. It merges
+cleanly with #242 and conflicts with #243/#244 on one sentence,
+`PATCHES.md:12`; the counts below become 45/48 once both land.
+
 **Re-verified 2026-09-29 against upstream/main @ d5e2a01 (vLLM 0.30.0).**
 Seven commits landed since 2522ef9; three touch this card:
 
@@ -159,12 +187,17 @@ patch), and the heredoc counts 3 `port(kvarn-v2)` markers in 2 of
 the 3 patches** (`kvarn-v2-runner-0.30.0.patch`: 12 hunks, 7 files, 1 marker;
 `kvarn-recycled-pages-0.30.0.patch`: 2 hunks, 2 files, 2 markers;
 `kvarn-0.30.0.patch`: 13 hunks, 8 files, no markers) — it verifies 3 of 27
-hunks and prints "port complete" (`:70`). Meanwhile `verify.sh:120-126` (was
-`:101-107` at 2522ef9) already checks the
-v2-runner and recycled-pages patches properly, with
-`patches/_check_applied.py` — the content checker whose 80%-per-file heuristic
-was written after PR #43 taught that lesson. The strong checker exists; the
-weak one runs at install time.
+hunks and prints "port complete" (`:70`). *(Corrected 2026-09-30: this is a
+rerun problem, not a fresh-install one. On a fresh install the `FAILED` grep
+catches a bad hunk anywhere. On a rerun, `patch -N` skips a whole file when
+its first hunk is present, so a missing later hunk in that file passes both
+the grep and, unless it carries a marker, the heredoc.)* Meanwhile
+`verify.sh:120-126` (was `:101-107` at 2522ef9) checks the v2-runner and
+recycled-pages patches with `patches/_check_applied.py`, the content checker
+whose 80%-per-file heuristic was written after PR #43. *(Measured 2026-09-30:
+that heuristic is not strong enough for KVarN either. It passes a tree with
+hunk 4 of v2-runner's `attention.py` removed. The exact reverse dry-run
+catches it, and it works for all three KVarN patches.)*
 
 ### 1.4 Drift already on the ground
 
@@ -230,21 +263,27 @@ patches/apply.sh --list
     verify.sh and check_vllm_series.sh; moving it here gives it to every
     consumer, including the Docker build, for free.)
 
-patches/apply.sh [--forward] [--kvarn] DIR
+patches/apply.sh DIR
+patches/apply.sh --kvarn DIR
+    (As implemented in #242/#244; this was `[--forward] [--kvarn] DIR`.)
     Apply the whole series to DIR (the installed vllm package directory) with
-    `patch -p1 --fuzz 0 --no-backup-if-mismatch`, in series order. (Since
+    `patch -p1 --forward --fuzz 0 --no-backup-if-mismatch`, in series order. (Since
     #231 all five apply sites already pass --no-backup-if-mismatch; --fuzz 0
     is still missing from the two prose loops.) Stop at the
     first failure; the message names the patch. Per patch, print one line:
     `== <name>` (or `== <name> (N hunks at an offset)` — offsets are benign
     and reported, fuzz is refused; the policy text already written at
     check_vllm_series.sh:56-59 moves here with the code it describes).
-    --forward   pass --forward so a re-run over an applied tree is a no-op
-                (kvarn/install.sh's documented idempotence)
-    --kvarn     after the series, continue with kvarn/kvarn-0.30.0.patch,
-                kvarn/kvarn-v2-runner-0.30.0.patch and
-                kvarn/kvarn-recycled-pages-0.30.0.patch, in that order — they
-                are exported to apply at exactly this point (install.sh:13-24)
+    --forward is always on, so a second series run fails by name instead
+    of prompting; it is not the idempotence mechanism (see --kvarn).
+    --kvarn     apply kvarn/kvarn-0.30.0.patch, kvarn/kvarn-v2-runner-0.30.0.patch
+                and kvarn/kvarn-recycled-pages-0.30.0.patch, in that order, to a
+                tree that already has the series — they are exported to apply at
+                exactly this point (install.sh:13-24). Per patch: an exact reverse
+                dry-run first; all hunks present → "(already applied)", skipped;
+                else a strict forward apply, so a partial patch fails by name.
+                (Corrected 2026-09-30; it was "continue with ... after the
+                series", idempotent through --forward.)
 
 Exit codes: 0 success · 1 an apply failed (patch named) · 2 usage error or
 series/directory disagreement.
@@ -262,13 +301,14 @@ truth for *how the order is read and applied*.
 | `patches/check_vllm_series.sh` | own sed parse + SKIP + GNU-patch loop | names from `--list`; pass 1 delegates the apply loop to `apply.sh` (keeping its "the tree changed" guard at `:72-75` and the offset tally by counting `apply.sh` output lines); pass 2 (the five contractual DFlash patches under `git apply`, `:78-110`) is untouched |
 | `docs/install.md:113-120` | drifted prose loop | the single command: `bash patches/apply.sh "$SP"` (the page's variable is `SP`, `:113`; this row said `"$VP"`, python-314.md's name, at 2522ef9) — `--fuzz 0` now inherited by construction; the backup flag #231 added is kept |
 | `docs/python-314.md:67-71` (cited `:68-71`; the `VP=` line `:67` goes too) | drifted prose loop | the same single command (`"$VP"`), plus the owner note from 3.4 |
-| `kvarn/install.sh` | own `apply_kvarn` (`:16-24`) + marker heredoc (`:38-71`; cited `:44-71` at 2522ef9, which omitted its explanatory comment `:38-43`) | overlay copy (`:12`) and the registration probe (`:26-36`, which checks live behavior and stays) keep their identity; the three applies become `patches/apply.sh --forward --kvarn "$SP"`; the marker heredoc is replaced by `python patches/_check_applied.py <kvarn patch> "$SP"` run for both marker-carrying patches — the check `verify.sh:120-126` (was `:101-107`) already runs against both |
+| `kvarn/install.sh` | own `apply_kvarn` (`:16-24`) + marker heredoc (`:38-71`; cited `:44-71` at 2522ef9, which omitted its explanatory comment `:38-43`) | overlay copy (`:12`) and the registration probe (`:26-36`, which checks live behavior and stays) keep their identity; the three applies become `patches/apply.sh --kvarn "$SP"`; the marker heredoc is deleted, because `--kvarn`'s exact reverse check is the completeness check. `verify.sh:120-126` switches from `_check_applied.py` to the same exact check. (Was: `--forward --kvarn` plus `_check_applied.py`; corrected 2026-09-30.) |
 
-The kvarn row deserves the reasoning spelled out: the marker counter was
-verifying 3 of 27 hunks (1.3). `_check_applied.py` is the stronger,
-already-battle-tested mechanism (its per-file threshold exists because of the
-PR #43 failure mode), and switching install.sh to it deletes a second,
-weaker implementation rather than adding a new one.
+The kvarn row deserves the reasoning spelled out: the marker counter guards
+3 of 27 hunks on a rerun (1.3). The first version of this plan replaced it
+with `_check_applied.py`, but that check passes a tree with one v2-runner hunk
+missing. The exact reverse dry-run already guards `kvarn-0.30.0` in
+`verify.sh:117`, and it works for the other two patches as well, so PR C uses
+it everywhere. This still deletes the weaker implementation and adds none.
 
 ### 2.3 Deletions (step 3.2)
 
@@ -321,7 +361,9 @@ to it. The `dflash2-backport` skip logic moves *into* apply.sh temporarily
 result — the tree it produces is bit-identical to today's. (Status at
 d5e2a01: not started — no `patches/apply.sh` exists. #231 already converged
 the five apply sites on `--no-backup-if-mismatch`, so PR A's only
-apply-policy change to the prose loops is adding `--fuzz 0`.)
+apply-policy change to the prose loops is adding `--fuzz 0`.) **Opened
+2026-09-30 as #242**: old loop vs `apply.sh` trees byte-identical on v0.30.0;
+`verify.sh --install` PASS/WARN/FAIL lines identical to main's.
 
 Acceptance: `patch-integrity` job green; image build green (its
 `verify.sh --install` inside the build exercises the new list source);
@@ -333,7 +375,7 @@ Delete the backport patch and the two 0.27.1 KVarN files; remove the five
 special cases (including the temporary arm in apply.sh); move the PATCHES.md
 row into the retired prose; fix the README count, the series header, the
 check-script comment. After this PR: 44 patch files, 44 series lines, zero
-per-patch exceptions anywhere.
+per-patch exceptions anywhere. **Opened 2026-09-30 as #243 (stacked on #242).**
 
 Acceptance: both workflows green; `git grep -l dflash2-backport -- ':!docs/*-remediation.md' ':!docs/architecture-review-*.html'`
 finds only `PATCHES.md` (retired prose) and the historical notes in
@@ -349,8 +391,11 @@ captures carry verify.sh's old "retired" line — 38 files in this checkout.)
 sub-minute run (14–46 s wall, `gh run list`, 2026-09-28; this said "~2
 minutes") instead of leaving them to the image build (4–12 min in CI; the
 "~20-minute" figure here was the local build, `docker-image.yml:2`).
-`kvarn/install.sh` switches its applies to `apply.sh --forward --kvarn` and
-its completeness check to `_check_applied.py`; the marker heredoc is deleted.
+`kvarn/install.sh` switches its applies to `apply.sh --kvarn` (exact reverse
+check, then strict apply); the marker heredoc is deleted, and `verify.sh`'s
+two `_check_applied.py` KVarN rungs become exact reverse checks. **Opened
+2026-09-30 as #244 (stacked on #243)**; gate log: `3 KVarN patches applied
+after the series; 47 in total`.
 
 Acceptance: `patch-integrity` green with the KVarN trio in its log;
 a manual `bash kvarn/install.sh` re-run is a no-op and exits 0; a
@@ -380,10 +425,10 @@ hand-broken KVarN hunk fails both the fast gate and install.sh by name.
 | list parity | `bash patches/apply.sh --list` on main vs branch, `diff` | the rewired consumers read the same order |
 | pristine apply | the `patch-integrity` job itself | the series still applies `--fuzz 0` against the pinned tag |
 | negative control | in a scratch copy, break one context line of a mid-series patch | apply.sh fails, names the patch, exits 1 |
-| idempotence | `apply.sh --forward --kvarn` twice on one tree | second run is a no-op, exit 0 |
+| idempotence | `apply.sh --kvarn` twice on one tree | second run prints `(already applied)` three times, exit 0 |
 | agreement | drop a scratch `zzz.patch` into `patches/` | `--list` exits 2, names the file |
 | ladder parity | `verify.sh --install` in the built image, before vs after the PRs; diff the PASS lines | the check semantics are unchanged |
-| content-check swap | on a KVarN-installed tree, `_check_applied.py kvarn/kvarn-v2-runner-0.30.0.patch` passes; on a tree missing one hunk, it fails | the marker counter's replacement actually detects partial application (the 3-of-27 decay, 1.3) |
+| partial-apply detection | on a full tree, remove one hunk with `patch -R` (v2-runner `attention.py` hunks 3 and 4; kvarn-0.30.0 `kv_cache_interface.py` and `platforms/cuda.py` hunk 3); rerun `apply.sh --kvarn` and verify.sh's KVarN rungs | every case exits 1 by name and WARNs in verify.sh. Hunk 4 is the regression case: `_check_applied.py` and the marker heredoc both pass it |
 
 ## 5. Risks
 
@@ -413,7 +458,8 @@ hand-broken KVarN hunk fails both the fast gate and install.sh by name.
 4. The `patch-integrity` job log shows 47 patches applied (44 + 3 KVarN).
 5. README.md contains no hardcoded patch count.
 6. `kvarn/install.sh` contains no marker-count heredoc; its completeness
-   check is `_check_applied.py`.
+   check is `apply.sh --kvarn`'s exact reverse dry-run, and `verify.sh`
+   checks all three KVarN patches the same way.
 
 At that point "how the series is applied" has one answer, "what is applied"
 has one list, and the answer to "is it healthy?" is the fast CI gate plus
