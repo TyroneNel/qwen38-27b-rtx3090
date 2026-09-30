@@ -26,7 +26,6 @@
 # Output contract (patches/check_vllm_series.sh counts these lines), one line per patch:
 #   == <name>
 #   == <name> (<N> hunk(s) at an offset)
-#   == skip <name> (<reason>)
 # On a failure, the patch output goes to stderr, indented, after a FAILED: line.
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -60,9 +59,6 @@ apply() {
   [ -d "$dir" ] || { echo "ERROR: $dir is not a directory" >&2; usage; }
   names=$(list) || exit 2
   while IFS= read -r name; do
-    case "$name" in
-      dflash2-backport.patch) echo "== skip $name (DFlash2 is native since vLLM 0.28.0)"; continue ;;
-    esac
     if ! out=$(patch -p1 --forward --fuzz 0 --no-backup-if-mismatch -d "$dir" -i "$HERE/$name" 2>&1); then
       {
         echo "FAILED: $name does not apply to $dir with exact context. Possible causes:"
