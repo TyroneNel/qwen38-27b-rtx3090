@@ -119,7 +119,7 @@ transfers, since "supports N models" is easy to claim and expensive to be wrong
 about:
 
 **Portable already — nothing model- or card-specific in it.** The vLLM patch
-series (`patches/`, 38 files, one line each in [PATCHES.md](PATCHES.md)), the
+series (`patches/`, one line each in [PATCHES.md](PATCHES.md)), the
 KVarN long-context backend, int8 Marlin GEMM layer selection, the SSE keep-alive,
 the engine stall sentinel. These are vLLM fixes that happen to have been written
 here.
