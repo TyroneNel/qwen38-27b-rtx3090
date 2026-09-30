@@ -5,8 +5,8 @@ set -euo pipefail
 #
 # Two passes, because two tools are in play and they answer different questions:
 #
-#   1. Every patch, in the order of patches/series (which the Dockerfile and
-#      the README use), applied with GNU `patch` -- the tool that actually
+#   1. Every patch, in the order of patches/series, applied by patches/apply.sh
+#      (which the Dockerfile and docs/install.md call) with GNU `patch` -- the tool that actually
 #      installs this stack. This is the pass that says "a clone of this repo
 #      still builds". It was missing entirely until 2026-09-07; the job checked
 #      five of thirty files.
@@ -48,9 +48,7 @@ out=$(bash "$HERE/patches/apply.sh" "$VLLM_SOURCE" 2>&1) || {
 }
 printf '%s\n' "$out" | grep 'at an offset' | sed 's/^== /   /' || true
 count=$(printf '%s\n' "$out" | grep -c '^== ' || true)
-skipped=$(printf '%s\n' "$out" | grep -c '^== skip ' || true)
 offset=$(printf '%s\n' "$out" | grep -c 'at an offset' || true)
-count=$((count - skipped))
 if git -C "$GIT_ROOT" diff --quiet; then
   echo "ERROR: the series applied but changed nothing -- the paths did not resolve." >&2
   exit 1

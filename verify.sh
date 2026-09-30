@@ -95,10 +95,6 @@ superseded_by() {
 # can no longer be reversed individually once both are applied; then look for their content.
 for name in "${SERIES[@]}"; do
   p="patches/$name"
-  if [ "$name" = "dflash2-backport.patch" ]; then
-    ok "dflash2-backport.patch retired (DFlash2 is native since vLLM 0.28.0)"
-    continue
-  fi
   if patch -p1 -R --dry-run -s --fuzz 0 -d "$SP" < "$p" >/dev/null 2>&1; then ok "$name applied"
   elif $PY patches/_check_applied.py "$p" "$SP" 2>/dev/null; then ok "$name applied (content check; hunks overlap another patch)"
   elif s=$(superseded_by "$name"); then ok "$name applied (superseded by $s, which is applied)"
