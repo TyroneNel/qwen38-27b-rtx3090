@@ -5,11 +5,13 @@ set -euo pipefail
 #
 # Two passes, because two tools are in play and they answer different questions:
 #
-#   1. Every patch, in the order of patches/series, applied by patches/apply.sh
-#      (which the Dockerfile and docs/install.md call) with GNU `patch` -- the tool that actually
+#   1. Every patch, in the order of patches/series, then the three KVarN patches in
+#      kvarn/, applied by patches/apply.sh (which the Dockerfile, docs/install.md and
+#      kvarn/install.sh call) with GNU `patch` -- the tool that actually
 #      installs this stack. This is the pass that says "a clone of this repo
 #      still builds". It was missing entirely until 2026-09-07; the job checked
-#      five of thirty files.
+#      five of thirty files. The KVarN patches were checked only by the image
+#      build until 2026-09-30; they apply at exactly the point the series ends.
 #   2. The five DFlash patches whose order and hunk metadata are part of the
 #      0.28.0 contract, applied with `git apply`, which is strict about offsets
 #      and catches a hand-edited hunk header immediately.
@@ -38,7 +40,7 @@ if [ "$PREFIX" = "$VLLM_SOURCE" ]; then PREFIX=.; fi
 LIST=$(bash "$HERE/patches/apply.sh" --list)
 mapfile -t SERIES <<<"$LIST"
 
-echo "== pass 1: the whole series, GNU patch, patches/series order"
+echo "== pass 1: the whole series, GNU patch, patches/series order, then the KVarN patches"
 git -C "$GIT_ROOT" checkout -q -- . && git -C "$GIT_ROOT" clean -qfd
 # The apply policy (--fuzz 0: an offset is benign and reported, fuzz fails by name) is written
 # down in patches/apply.sh, next to the code it describes. The Dockerfile and the install pages
@@ -54,6 +56,18 @@ if git -C "$GIT_ROOT" diff --quiet; then
   exit 1
 fi
 echo "   $count patches applied with exact context, $offset of them at an offset, 0 with fuzz"
+# The KVarN patches are exported from the fork branch after the whole series, so they go on this tree.
+# On a pristine checkout every one must apply now; "already applied" here means the checkout is not pristine.
+kout=$(bash "$HERE/patches/apply.sh" --kvarn "$VLLM_SOURCE" 2>&1) || {
+  printf '%s\n' "$kout" | sed 's/^/   /'; exit 1
+}
+printf '%s\n' "$kout" | sed 's/^== /   kvarn: /'
+if printf '%s\n' "$kout" | grep -q 'already applied'; then
+  echo "ERROR: a KVarN patch reads as applied on a pristine checkout -- the checkout is not pristine." >&2
+  exit 1
+fi
+kcount=$(printf '%s\n' "$kout" | grep -c '^== ' || true)
+echo "   $kcount KVarN patches applied after the series; $((count + kcount)) in total"
 
 echo "== pass 2: the ordered DFlash patches, git apply --check"
 git -C "$GIT_ROOT" checkout -q -- . && git -C "$GIT_ROOT" clean -qfd
