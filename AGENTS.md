@@ -56,7 +56,7 @@ Both launchers prepend their own flags to `EXTRA_ARGS`, so a user flag later on 
 
 **Container path** (`docker/entrypoint.sh`, `set -e`): `docker/prepare.sh` (flock-serialized; `PREPARE=0` skips) → `select_model.sh` + `export MODEL` (single only) → `verify.sh --no-server` as a hard gate (`VERIFY=0` skips) → the launcher.
 
-**Build path** (`Dockerfile`): tag-pinned CUDA base (**(fork)** digest-pinned) → `pip -r docker/requirements.txt` → replay `patches/series` with `patch -p1 --fuzz 0`, skipping the retired `dflash2-backport.patch` → `kvarn/install.sh` (three 0.30.0 patches) → `verify.sh --install`. The build *is* the patch gate, and `docker-image.yml` runs it on every PR without pushing (**(fork)** publish triggers disabled, manual only).
+**Build path** (`Dockerfile`): tag-pinned CUDA base (**(fork)** digest-pinned) → `pip -r docker/requirements.txt` → `patches/apply.sh "$SP"` (the series at `--fuzz 0`) → `kvarn/install.sh` (overlay, then `patches/apply.sh --kvarn`) → `verify.sh --install`. The build *is* the patch gate, and `docker-image.yml` runs it on every PR without pushing (**(fork)** publish triggers disabled, manual only). `apply.sh` is upstream PRs #242–#244, merged here ahead of upstream.
 
 **Evidence path** (how a number becomes repo content): a run → `ROW` lines + raw logs in `bench/results/` → an issue (field-report template) → a row in `docs/reproductions/README.md` → a numbered entry in `docs/gotchas.md` if durable → a `PATCHES.md` row, and for a user-facing knob a line in the mode README's `## Knobs` table and in `.env.example`.
 
@@ -68,8 +68,8 @@ Env vars are the only interface between layers. Model dirs are produced offline 
 |---|---|
 | `single-user/` | Latency launcher (mostly measurement-record comments), `alternative.sh` (experimental third launcher), `select_model.sh`, `qwen-server.sh`, systemd unit |
 | `batch/` | Throughput launcher: 64 seats, `INT8_ACT=int8` by default, `KV=fp8` default (`KV=kvarn\|int4pth` → 262,144; WSL2 `KV=kvarn` → 131,072), no speculation |
-| `patches/` | Generated diffs + `series` (apply order) + `check_vllm_series.sh` + `_check_applied.py` |
-| `kvarn/` | Quantized-KV backend: file overlay + five patch files. `install.sh` applies the three 0.30.0 ones (`kvarn-0.30.0`, `kvarn-v2-runner-0.30.0`, `kvarn-recycled-pages-0.30.0`); `kvarn-0.27.1.patch`/`kvarn-v2-runner.patch` are history. Installed **after** the series, not part of it |
+| `patches/` | Generated diffs + `series` (apply order) + `apply.sh` (the only series parser and applier: `--list`, `DIR`, `--kvarn DIR`) + `check_vllm_series.sh` + `_check_applied.py` |
+| `kvarn/` | Quantized-KV backend: file overlay + three 0.30.0 patch files (`kvarn-0.30.0`, `kvarn-v2-runner-0.30.0`, `kvarn-recycled-pages-0.30.0`), applied by `patches/apply.sh --kvarn` from `install.sh`. Installed **after** the series, not part of it |
 | `prepare/` | In-place requantization (`quant_lm_head.py` → `quant_embed.py` → `quant_mtp.py` → `build_draft_vocab.py`), `quant_heads_stream.py` for single-shard/AWQ, `atomic_publish.py` (the shared write protocol, #195), the two chat-template writers (`harden_`/`translate_chat_template.py`), `fetch_*.py` downloads |
 | `drafter/` | How the `-fast` variant and the DFlash2 drafter were *built*; not needed to serve. Still writes in place, not through `atomic_publish.py` |
 | `bench/` | CPU tests (`test_model_verification.py`, `test_prepare_state.py` in CI; `test_prepare_crash.py`, `test_kvarn_recycled_pages.py`, `test_bench_sse_keepalive.py` by hand), GPU kernel oracles (other `test_*.py`), shell drivers (`run_benchmarks.sh`, `real_rep.sh`, `prefill_ab.sh`, `warmup.sh`), live-server probes |
@@ -119,7 +119,7 @@ bash scripts/export-patch.sh <vllm-fork checkout> <[qwen38] topic commit> [patch
 
 There is no linter, formatter, or package-manager step. The gate has three parts:
 - `bench/test_model_verification.py` + `bench/test_prepare_state.py`.
-- `patches/check_vllm_series.sh`: every patch except the retired `dflash2-backport.patch` at `--fuzz 0`, then `git apply --check` and a real `git apply` on the five contractual DFlash patches, then `git diff --check`.
+- `patches/check_vllm_series.sh`: every series patch through `apply.sh` at `--fuzz 0`, then the three KVarN patches (`apply.sh --kvarn`), then `git apply --check` and a real `git apply` on the five contractual DFlash patches, then `git diff --check`. **(fork)** It refuses this repo and any tree without the `.qwen-disposable-series-target` sentinel (or `ALLOW_TREE_RESET=1`).
 - The Docker build.
 
 ## Code Conventions & Common Patterns
@@ -157,7 +157,7 @@ There is no linter, formatter, or package-manager step. The gate has three parts
 - `verify.sh` asserts registrations against the live registry (`envs.environment_variables`, `AttentionBackendEnum.KVARN`) rather than grepping for them.
 - It checks patches with `patch -R --dry-run --fuzz 0`. For overlapping hunks it falls back to `patches/_check_applied.py`, and for rewritten ones to `Supersedes:`.
 - Only the patch-gated live rows (`graded()`) and the recycled-pages check grep the installed tree.
-- `kvarn/install.sh` applies at `--fuzz 0`, fails on `FAILED` in the patch output, and counts `port(kvarn-v2)` markers, because `patch -N` exits non-zero both when a patch is already applied and when it does not apply.
+- `patches/apply.sh --kvarn` checks each KVarN patch with an exact reverse dry-run before applying it: all hunks present → skipped, so an `install.sh` rerun is a no-op; a partly applied patch fails by name. `patch -N` is not an idempotence test: it skips a whole file when that file's first hunk is present. `verify.sh` checks all three KVarN patches with the same exact reverse dry-run, not `_check_applied.py`, whose 80%-per-file rule misses one missing hunk.
 
 **Comments are measurement records.** Most knobs carry the A/B table, issue number and hardware that justify the default. Preserve them; they are the primary documentation.
 
@@ -179,8 +179,8 @@ There is no linter, formatter, or package-manager step. The gate has three parts
 | `resolve_config.sh` | Refuses unknown `CTX`/`SPEC` (single) and `KV` (batch) via `_refuse` → `exit 1` from inside the sourced function. Warns on cross-mode knobs and `EXTRA_ARGS`-shadowed flags; prints a redacted `[effective-config]`. Runs standalone: `bash resolve_config.sh single`. |
 | `resolve_api_key.sh` | `resolve_vllm_key` (server: no placeholder, or the server demands a key nobody set; used by all three launchers) vs `resolve_client_key` (client: `OPENAI_API_KEY` → `VLLM_API_KEY` → `api_key.txt` → literal `EMPTY`, never a bare `Bearer `). |
 | `single-user/select_model.sh` | Single source of the fast-variant rule. Sourced by the single-user launcher, `docker/entrypoint.sh` (single only, after prepare) and `bench/warmup.sh`, so verify, serve and warmup agree on `MODEL`. |
-| `patches/series` | Apply order and source of truth; must be set-equal to `patches/*.patch` (enforced by `check_vllm_series.sh` and `verify.sh`). A later patch's `Supersedes: <basename>` header lets `verify.sh` count the earlier patch, whose lines it rewrote, as applied; both stay in the series. The one retired patch, `dflash2-backport`, is skipped by name. |
-| `PATCHES.md` | One row per patch: patch \| kind \| what \| upstream \| cut against \| retires when; kinds `backport`/`fix`/`feature`/`local`/`own` (`backport, RETIRED` for the kept `dflash2-backport`). One export branch, `cpuchip/vllm` `qwen38/0.30` (tag `qwen38/0.30-cut5`). |
+| `patches/series` | Apply order and source of truth; read only through `patches/apply.sh --list`, which exits 2 when it is not set-equal to `patches/*.patch`. A later patch's `Supersedes: <basename>` header lets `verify.sh` count the earlier patch, whose lines it rewrote, as applied; both stay in the series. |
+| `PATCHES.md` | One row per patch: patch \| kind \| what \| upstream \| cut against \| retires when; kinds `backport`/`fix`/`feature`/`local`/`own`. Retired patches leave the tree and move to the retired prose. One export branch, `cpuchip/vllm` `qwen38/0.30` (tag `qwen38/0.30-cut5`). |
 | `.env.example` | The compose `.env` template (`SPEC=dflash2`, `PREFIX_CACHE=1`, the WSL2 pin-memory flag, commented toggles). The full knob tables are the mode READMEs' `## Knobs`. **(fork)** `[managed]` marks launcher-computed values. |
 | `docs/gotchas.md` | Numbered failure archive, cited by number from shell, Python, patches and PRs. |
 | `docs/reproductions/README.md` | Harness rows `card \| power \| C1 decode \| notes \| source` (plus a C64 batch table), own-client bullets, and the index of full write-ups. |
