@@ -51,7 +51,6 @@ if [ "${ALLOW_TREE_RESET:-0}" != 1 ] && [ ! -f "$GIT_ROOT/.qwen-disposable-serie
   echo "Set ALLOW_TREE_RESET=1 to confirm destructive reset+clean of that tree." >&2
   exit 1
 fi
-
 # patches/apply.sh owns the series: it reads the apply order, checks that it and the
 # patches/ directory agree exactly (exit 2 and each offender named, if not), and applies it.
 LIST=$(bash "$HERE/patches/apply.sh" --list)
