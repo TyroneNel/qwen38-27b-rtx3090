@@ -454,12 +454,11 @@ def _kvarn_fused_decode_kernel(
         # pair). (Garbage but unused for pool blocks.)
         ku16 = (KV_cache_ptr + tile_base).to(tl.pointer_type(tl.uint16))
         s_col_K = tl.load(ku16 + (K_S_COL_OFFSET // 2) + d_offs).to(tl.float16, bitcast=True)
+        s_col_K = s_col_K.to(tl.float32) if not F16 else s_col_K
         zp_K = tl.load(ku16 + (K_ZP_OFFSET // 2) + d_offs).to(tl.float16, bitcast=True)
+        zp_K = zp_K.to(tl.float32) if not F16 else zp_K
         s_col_V = tl.load(ku16 + (V_S_COL_OFFSET // 2) + d_offs).to(tl.float16, bitcast=True)
-        if not F16:
-            s_col_K = s_col_K.to(tl.float32)
-            zp_K = zp_K.to(tl.float32)
-            s_col_V = s_col_V.to(tl.float32)
+        s_col_V = s_col_V.to(tl.float32) if not F16 else s_col_V
 
         for c0 in range(0, GROUP, BLOCK_N):
             cols = c0 + tl.arange(0, BLOCK_N)              # [BN] token indices in tile
@@ -471,10 +470,9 @@ def _kvarn_fused_decode_kernel(
                 # fp16 already-rotated tokens in the pool (sink / partial tail).
                 src = pool_base + cols[:, None] * stride_pool_t + d_offs[None, :]
                 Kc = tl.load(Tail_K_pool_ptr + src, mask=cmask[:, None], other=0.0)    # [BN, D]
+                Kc = Kc.to(tl.float32) if not F16 else Kc
                 Vc = tl.load(Tail_V_pool_ptr + src, mask=cmask[:, None], other=0.0)    # [BN, D]
-                if not F16:
-                    Kc = Kc.to(tl.float32)
-                    Vc = Vc.to(tl.float32)
+                Vc = Vc.to(tl.float32) if not F16 else Vc
                 K_dg = tl.trans(Kc)                                       # [D, BN]
             else:
                 # int4 dequant for this chunk of tokens (ONCE, shared by all q heads).
@@ -485,8 +483,7 @@ def _kvarn_fused_decode_kernel(
                 cb_k = cols // PACK_K
                 cs_k = (cols % PACK_K) * K_BITS
                 s_row_K = tl.load(ku16 + (K_S_ROW_OFFSET // 2) + cols).to(tl.float16, bitcast=True)  # [BN]
-                if not F16:
-                    s_row_K = s_row_K.to(tl.float32)
+                s_row_K = s_row_K.to(tl.float32) if not F16 else s_row_K
                 k_addrs = (tile_base + K_PACKED_OFFSET
                            + d_offs[:, None] * (GROUP // PACK_K) + cb_k[None, :])
                 k_bytes = tl.load(KV_cache_ptr + k_addrs).to(tl.int32)                  # [D, BN]
@@ -495,10 +492,9 @@ def _kvarn_fused_decode_kernel(
                 K_dg = (q_K * s_col_K[:, None] + zp_K[:, None]) * s_row_K[None, :]      # [D, BN]
 
                 s_row_V = tl.load(ku16 + (V_S_ROW_OFFSET // 2) + cols).to(tl.float16, bitcast=True)  # [BN]
+                s_row_V = s_row_V.to(tl.float32) if not F16 else s_row_V
                 zp_V = tl.load(ku16 + (V_ZP_OFFSET // 2) + cols).to(tl.float16, bitcast=True)     # [BN]
-                if not F16:
-                    s_row_V = s_row_V.to(tl.float32)
-                    zp_V = zp_V.to(tl.float32)
+                zp_V = zp_V.to(tl.float32) if not F16 else zp_V
                 v_addrs = (tile_base + V_PACKED_OFFSET
                            + cols[:, None] * (D // PACK_V) + d_byte_v[None, :])
                 v_bytes = tl.load(KV_cache_ptr + v_addrs).to(tl.int32)                  # [BN, D]
@@ -624,12 +620,11 @@ def _kvarn_fused_decode_stage1(
         # lo/hi byte pair); fp16 fields are at even byte offsets in the tile.
         ku16 = (KV_cache_ptr + tile_base).to(tl.pointer_type(tl.uint16))
         s_col_K = tl.load(ku16 + (K_S_COL_OFFSET // 2) + d_offs).to(tl.float16, bitcast=True)
+        s_col_K = s_col_K.to(tl.float32) if not F16 else s_col_K
         zp_K = tl.load(ku16 + (K_ZP_OFFSET // 2) + d_offs).to(tl.float16, bitcast=True)
+        zp_K = zp_K.to(tl.float32) if not F16 else zp_K
         s_col_V = tl.load(ku16 + (V_S_COL_OFFSET // 2) + d_offs).to(tl.float16, bitcast=True)
-        if not F16:
-            s_col_K = s_col_K.to(tl.float32)
-            zp_K = zp_K.to(tl.float32)
-            s_col_V = s_col_V.to(tl.float32)
+        s_col_V = s_col_V.to(tl.float32) if not F16 else s_col_V
 
         for c0 in range(0, GROUP, BLOCK_N):
             cols = c0 + tl.arange(0, BLOCK_N)
@@ -639,27 +634,24 @@ def _kvarn_fused_decode_stage1(
             if pool_slot >= 0:
                 src = pool_base + cols[:, None] * stride_pool_t + d_offs[None, :]
                 Kc = tl.load(Tail_K_pool_ptr + src, mask=cmask[:, None], other=0.0)
+                Kc = Kc.to(tl.float32) if not F16 else Kc
                 Vc = tl.load(Tail_V_pool_ptr + src, mask=cmask[:, None], other=0.0)
-                if not F16:
-                    Kc = Kc.to(tl.float32)
-                    Vc = Vc.to(tl.float32)
+                Vc = Vc.to(tl.float32) if not F16 else Vc
                 K_dg = tl.trans(Kc)
             else:
-                s_row_K = tl.load(ku16 + (K_S_ROW_OFFSET // 2) + cols).to(tl.float16, bitcast=True)
-                if not F16:
-                    s_row_K = s_row_K.to(tl.float32)
                 cb_k = cols // PACK_K
                 cs_k = (cols % PACK_K) * K_BITS
+                s_row_K = tl.load(ku16 + (K_S_ROW_OFFSET // 2) + cols).to(tl.float16, bitcast=True)
+                s_row_K = s_row_K.to(tl.float32) if not F16 else s_row_K
                 k_addrs = (tile_base + K_PACKED_OFFSET + d_offs[:, None] * (GROUP // PACK_K) + cb_k[None, :])
                 k_bytes = tl.load(KV_cache_ptr + k_addrs).to(tl.int32)
                 q_K = (k_bytes >> cs_k[None, :]) & MASK_K
                 q_K = q_K.to(tl.float16) if F16 else q_K.to(tl.float32)
                 K_dg = (q_K * s_col_K[:, None] + zp_K[:, None]) * s_row_K[None, :]
                 s_row_V = tl.load(ku16 + (V_S_ROW_OFFSET // 2) + cols).to(tl.float16, bitcast=True)
+                s_row_V = s_row_V.to(tl.float32) if not F16 else s_row_V
                 zp_V = tl.load(ku16 + (V_ZP_OFFSET // 2) + cols).to(tl.float16, bitcast=True)
-                if not F16:
-                    s_row_V = s_row_V.to(tl.float32)
-                    zp_V = zp_V.to(tl.float32)
+                zp_V = zp_V.to(tl.float32) if not F16 else zp_V
                 # FIX: V packed-row stride is D/PACK_V bytes (PACK_V = 8/V_BITS).
                 # Was hardcoded `D // 2` (correct only for 4-bit V); with the shipped
                 # k4v2 preset (V_BITS=2 -> PACK_V=4) it strode 2x too far -> read
@@ -1182,14 +1174,13 @@ def _kvarn_fused_verify_stage1(
         # Per-channel scales — direct fp16 loads (2-byte-aligned offsets).
         s_col_K = tl.load((KV_cache_ptr + tile_base + K_S_COL_OFFSET).to(
             tl.pointer_type(tl.float16)) + d_offs)
+        s_col_K = s_col_K.to(tl.float32) if not F16 else s_col_K
         zp_K = tl.load((KV_cache_ptr + tile_base + K_ZP_OFFSET).to(
             tl.pointer_type(tl.float16)) + d_offs)
+        zp_K = zp_K.to(tl.float32) if not F16 else zp_K
         s_col_V = tl.load((KV_cache_ptr + tile_base + V_S_COL_OFFSET).to(
             tl.pointer_type(tl.float16)) + d_offs)
-        if not F16:
-            s_col_K = s_col_K.to(tl.float32)
-            zp_K = zp_K.to(tl.float32)
-            s_col_V = s_col_V.to(tl.float32)
+        s_col_V = s_col_V.to(tl.float32) if not F16 else s_col_V
 
         for c0 in range(0, GROUP, BLOCK_N):
             cols = c0 + tl.arange(0, BLOCK_N)
@@ -1200,19 +1191,17 @@ def _kvarn_fused_verify_stage1(
                 src = pool_base + cols[:, None] * stride_pool_t + d_offs[None, :]
                 Kc = tl.load(Tail_K_pool_ptr + src, mask=cmask[:, None],
                              other=0.0)                          # [BN, D]
+                Kc = Kc.to(tl.float32) if not F16 else Kc
                 Vc = tl.load(Tail_V_pool_ptr + src, mask=cmask[:, None],
                              other=0.0)                          # [BN, D]
-                if not F16:
-                    Kc = Kc.to(tl.float32)
-                    Vc = Vc.to(tl.float32)
+                Vc = Vc.to(tl.float32) if not F16 else Vc
                 K_dg = tl.trans(Kc)                               # [D, BN]
             else:
-                s_row_K = tl.load((KV_cache_ptr + tile_base + K_S_ROW_OFFSET).to(
-                    tl.pointer_type(tl.float16)) + cols)
-                if not F16:
-                    s_row_K = s_row_K.to(tl.float32)
                 cb_k = cols // PACK_K
                 cs_k = (cols % PACK_K) * K_BITS
+                s_row_K = tl.load((KV_cache_ptr + tile_base + K_S_ROW_OFFSET).to(
+                    tl.pointer_type(tl.float16)) + cols)
+                s_row_K = s_row_K.to(tl.float32) if not F16 else s_row_K
                 k_addrs = (tile_base + K_PACKED_OFFSET
                            + d_offs[:, None] * (GROUP // PACK_K) + cb_k[None, :])
                 k_bytes = tl.load(KV_cache_ptr + k_addrs).to(tl.int32)
@@ -1221,11 +1210,10 @@ def _kvarn_fused_verify_stage1(
                 K_dg = (q_K * s_col_K[:, None] + zp_K[:, None]) * s_row_K[None, :]
                 s_row_V = tl.load((KV_cache_ptr + tile_base + V_S_ROW_OFFSET).to(
                     tl.pointer_type(tl.float16)) + cols)
+                s_row_V = s_row_V.to(tl.float32) if not F16 else s_row_V
                 zp_V = tl.load((KV_cache_ptr + tile_base + V_ZP_OFFSET).to(
                     tl.pointer_type(tl.float16)) + cols)
-                if not F16:
-                    s_row_V = s_row_V.to(tl.float32)
-                    zp_V = zp_V.to(tl.float32)
+                zp_V = zp_V.to(tl.float32) if not F16 else zp_V
                 v_addrs = (tile_base + V_PACKED_OFFSET
                            + cols[:, None] * (D // PACK_V) + d_byte_v[None, :])
                 v_bytes = tl.load(KV_cache_ptr + v_addrs).to(tl.int32)
