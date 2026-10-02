@@ -27,8 +27,6 @@ layer forwards in a step.
 
 from __future__ import annotations
 
-import os
-
 import torch
 
 import vllm.envs as envs
@@ -798,7 +796,7 @@ def kvarn_decode_attention(
         V_PACKED_OFFSET=cfg.v_packed_offset, V_S_COL_OFFSET=cfg.v_s_col_offset,
         V_S_ROW_OFFSET=cfg.v_s_row_offset, V_ZP_OFFSET=cfg.v_zp_offset,
         VQ_INDIRECT=False,
-        F16=(os.environ.get("KVARN_FP16_DEQUANT", "0") == "1"),
+        F16=envs.KVARN_FP16_DEQUANT,
     )
     # SPLIT-K (KVARN_SPLIT_K=1): two-stage flash-decoding — only a win in the
     # LOW-batch / long-context regime (few programs ⇒ the KV-split dim adds the
@@ -965,7 +963,7 @@ def kvarn_verify_attention(
         K_ZP_OFFSET=cfg.k_zp_offset, K_S_ROW_OFFSET=cfg.k_s_row_offset,
         V_PACKED_OFFSET=cfg.v_packed_offset, V_S_COL_OFFSET=cfg.v_s_col_offset,
         V_S_ROW_OFFSET=cfg.v_s_row_offset, V_ZP_OFFSET=cfg.v_zp_offset,
-        F16=(os.environ.get("KVARN_FP16_DEQUANT", "0") == "1"),
+        F16=envs.KVARN_FP16_DEQUANT,
     )
 
     out_rot = torch.empty(NQ, Hq, D, dtype=torch.float16, device=device)

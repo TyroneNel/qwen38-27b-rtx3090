@@ -5,7 +5,7 @@ set -euo pipefail
 #
 # Two passes, because two tools are in play and they answer different questions:
 #
-#   1. Every patch, in the order of patches/series, then the three KVarN patches in
+#   1. Every patch, in the order of patches/series, then the four KVarN patches in
 #      kvarn/, applied by patches/apply.sh (which the Dockerfile, docs/install.md and
 #      kvarn/install.sh call) with GNU `patch` -- the tool that actually
 #      installs this stack. This is the pass that says "a clone of this repo
