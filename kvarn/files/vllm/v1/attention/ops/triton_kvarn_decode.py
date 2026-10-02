@@ -57,6 +57,26 @@ _DECODE_AUTOTUNE_CONFIGS = [
 ]
 
 
+def _f16_no_spill_configs(configs, named_args, **kwargs):
+    """With KVARN_FP16_DEQUANT, autotune the split-K kernels only over configs that
+    do not spill registers.
+
+    In the fp16 path, num_warps=2, BLOCK_N=64 and the maxnreg caps spill at the
+    serving shape (RTX 3090, 100k context: up to 586 spilled registers), and every
+    spilling config is 2.5-19x slower there than the best one. The in-server
+    autotune runs on a small warmup shape where its timings are not stable, so it
+    could pick a spilling config: a maxnreg=96 verify pick took decode from ~52 to
+    ~16.5 tok/s. Under VRAM over-commit on WSL2 the spill memory also goes to
+    system RAM. BLOCK_N 16/32 x num_warps=4 spill at most 8 registers in every
+    measured shape, and include the fastest config or one within 8% of it. With
+    F16 off the list is unchanged, so the default path tunes exactly like main.
+    """
+    if not kwargs.get("F16", False):
+        return configs
+    return [c for c in configs
+            if c.num_warps == 4 and c.maxnreg is None and c.kwargs["BLOCK_N"] <= 32]
+
+
 def adaptive_num_kv_splits(max_blocks_per_req: int) -> int:
     """Context-adaptive split-K count (single source of truth for the decode
     driver AND the partial-buffer sizing, so they can never diverge).
@@ -542,6 +562,7 @@ def _kvarn_fused_decode_kernel(
 @triton.autotune(
     configs=_DECODE_AUTOTUNE_CONFIGS,
     key=["D", "GROUP", "Q_PER_KV", "K_BITS", "V_BITS", "F16"],
+    prune_configs_by={"early_config_prune": _f16_no_spill_configs},
 )
 @triton.jit
 def _kvarn_fused_decode_stage1(
@@ -1083,6 +1104,7 @@ def kvarn_verify_attention(
 @triton.autotune(
     configs=_DECODE_AUTOTUNE_CONFIGS,
     key=["D", "GROUP", "Q_PER_KV", "QLEN", "K_BITS", "V_BITS", "F16"],
+    prune_configs_by={"early_config_prune": _f16_no_spill_configs},
 )
 @triton.jit
 def _kvarn_fused_verify_stage1(

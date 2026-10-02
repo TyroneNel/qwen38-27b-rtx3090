@@ -88,7 +88,11 @@ Environment knobs (KVarN):
   without the knob. Registered in `vllm/envs.py` by
   `kvarn-fp16-dequant-0.30.0.patch` and read through `vllm.envs`, so it is part
   of vLLM's torch.compile cache key: the two settings never share a compile
-  directory (switching it costs one cold compile).
+  directory (switching it costs one cold compile). With the knob on, the split-K
+  stage1 and verify kernels autotune only over configs that do not spill
+  registers (BLOCK_N 16/32, num_warps=4, no maxnreg): in fp16 the other configs
+  spill at long context and are 2.5-19x slower there, and the warmup-shape
+  autotune could pick one of them. With the knob off the autotune list is unchanged.
 - `KVARN_SHARED_VERIFY=1` — the shared-dequant uniform verify kernel. Still off
   by default: serving with it corrupts the MTP drafter's proposals through a
   mechanism that is not isolated yet (see the comment at the driver's guard).
