@@ -30,8 +30,8 @@ physically meaningful gates are:
   * rel-L2 of R16 vs R32 < 1e-2  (the global energy statement)
   * 256-wide score dot: rel err of the two pipelines' dot < 5e-2
   * mini-attention (softmax over 128 keys, fp32 softmax in both pipelines):
-    output rel-L2 < 5e-2 — the number that maps onto the perplexity gate
-    in docs/kvarn-decode-speedup.md.
+    output rel-L2 < 5e-2 — the closest of these gates to an end-to-end
+    (perplexity-level) statement.
 
 Usage:  python kvarn/tests/test_kvarn_fp16_dequant_torch.py
 Exits 0 on pass, 1 on fail.
@@ -221,7 +221,7 @@ def main():
         print(f"RESULT: FAIL ({len(FAIL)}): {', '.join(FAIL)}")
         return 1
     print("RESULT: PASS — fp16 dequant is an order of magnitude inside the "
-          "quantization step (see docs/kvarn-decode-speedup.md P0-1 gates)")
+          "quantization step (gates: this file's docstring)")
     return 0
 
 
