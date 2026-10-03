@@ -45,9 +45,9 @@ KVARN_MAX_KV_SPLITS = 64  # cap of the context-adaptive schedule below
 # transaction rate, not DRAM bandwidth. So beyond BLOCK_N x num_warps we let the
 # autotuner trade pipelining for occupancy: num_stages=1 (no pipeline buffers,
 # fewer registers) and a couple of maxnreg caps (more resident blocks to hide
-# the L1 latency). The autotuner keeps whichever is fastest per shape, so this
-# is pure upside; online-softmax / split-K make the output reduction-order
-# invariant (fp noise only), independent of the config chosen.
+# the L1 latency). The autotuner keeps whichever is fastest per shape at the
+# warmup shape (with F16, see _f16_no_spill_configs); online-softmax / split-K
+# make the output reduction-order invariant (fp noise only), whatever the config.
 _DECODE_AUTOTUNE_CONFIGS = [
     triton.Config({"BLOCK_N": bn}, num_warps=nw, num_stages=ns)
     for bn in (16, 32, 64) for nw in (2, 4) for ns in (1, 2)
@@ -58,18 +58,18 @@ _DECODE_AUTOTUNE_CONFIGS = [
 
 
 def _f16_no_spill_configs(configs, named_args, **kwargs):
-    """With KVARN_FP16_DEQUANT, autotune the split-K kernels only over configs that
-    do not spill registers.
+    """With KVARN_FP16_DEQUANT, autotune the split-K kernels only over BLOCK_N 16/32,
+    num_warps=4 and no maxnreg. These spill 8 registers or fewer in every shape.
 
-    In the fp16 path, num_warps=2, BLOCK_N=64 and the maxnreg caps spill at the
-    serving shape (RTX 3090, 100k context: up to 586 spilled registers), and every
-    spilling config is 2.5-19x slower there than the best one. The in-server
-    autotune runs on a small warmup shape where its timings are not stable, so it
-    could pick a spilling config: a maxnreg=96 verify pick took decode from ~52 to
-    ~16.5 tok/s. Under VRAM over-commit on WSL2 the spill memory also goes to
-    system RAM. BLOCK_N 16/32 x num_warps=4 spill at most 8 registers in every
-    measured shape, and include the fastest config or one within 8% of it. With
-    F16 off the list is unchanged, so the default path tunes exactly like main.
+    Measured in fp16 on an RTX 3090 at 100k context: the maxnreg caps and most
+    num_warps=2 configs spill (up to 586 registers), and BLOCK_N=64 spills at verify
+    QLEN=8. The configs that spill 72 registers or more are 2.5-24x slower than the
+    best one. The in-server autotune runs on a small warmup shape where its timings
+    are not stable, so it could pick one: a maxnreg=96 verify pick took decode from
+    ~52 to ~16.5 tok/s. The kept list has the fastest config at verify QLEN 8 and 4;
+    at verify QLEN 2 and in stage1 it is 8.4% and 3% slower than BLOCK_N=64 w4,
+    which does not spill there, but one rule for every shape keeps QLEN=8 safe.
+    With F16 off the list is unchanged, so the default path tunes exactly like main.
     """
     if not kwargs.get("F16", False):
         return configs

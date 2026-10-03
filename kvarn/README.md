@@ -30,8 +30,9 @@ What's in it:
   torch.compile cache key (see "Environment knobs" below).
 - `install.sh` — copies the modules into the venv's `site-packages/vllm` (found by asking the venv's python, so any Python version)
   and applies the four patches at `--fuzz 0` (safe to re-run; a rejected hunk stops it).
-  All four are exported from their commits on the fork branch (`cpuchip/vllm`
-  `qwen38/0.30`), which sit after the whole `patches/` series, so they are never edited by hand.
+  The first three are exported from their commits on the fork branch (`cpuchip/vllm` `qwen38/0.30`);
+  `kvarn-fp16-dequant-0.30.0` is exported from `qwen38/0.30-kvarn-fp16`, export point tagged
+  `qwen38/0.30-kvarn-fp16-cut1`. All four sit after the whole `patches/` series, so they are never edited by hand.
 
 Port notes, for whoever bumps vLLM next:
 
@@ -89,10 +90,12 @@ Environment knobs (KVarN):
   `kvarn-fp16-dequant-0.30.0.patch` and read through `vllm.envs`, so it is part
   of vLLM's torch.compile cache key: the two settings never share a compile
   directory (switching it costs one cold compile). With the knob on, the split-K
-  stage1 and verify kernels autotune only over configs that do not spill
-  registers (BLOCK_N 16/32, num_warps=4, no maxnreg): in fp16 the other configs
-  spill at long context and are 2.5-19x slower there, and the warmup-shape
-  autotune could pick one of them. With the knob off the autotune list is unchanged.
+  stage1 and verify kernels autotune only over BLOCK_N 16/32, num_warps=4 and no
+  maxnreg, which spill 8 registers or fewer in every measured fp16 shape. The
+  configs that spill heavily (72 registers or more) are 2.5-24x slower at long
+  context, and the warmup-shape autotune could pick one of them. The rule also
+  drops BLOCK_N=64 w4, which spills only at verify QLEN=8: at verify QLEN 2 and in
+  stage1 the kept list is 8.4% and 3% slower than it. With the knob off the autotune list is unchanged.
 - `KVARN_SHARED_VERIFY=1` — the shared-dequant uniform verify kernel. Still off
   by default: serving with it corrupts the MTP drafter's proposals through a
   mechanism that is not isolated yet (see the comment at the driver's guard).
