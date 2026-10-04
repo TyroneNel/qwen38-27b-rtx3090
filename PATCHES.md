@@ -103,7 +103,8 @@ this line's readers already go through `vllm.envs`, so applying it duplicates th
 `speed-knobs-envs` rather than adding a second copy, before the pin-flip PR. Until then the 0.28
 and 0.29 shapes differ here by design.
 
-Two files have almost no preamble, because their fork commits have almost no body: `dflash2-z-adaptive-emitted` has
-none (only blank lines come before its `exported from` line), and `offload-wsl2-devptr` has one line. Their rows above
-describe them, and `docs/wsl2-4090.md` ("CPU offload tier under WSL2") explains the second. A preamble comes from the
-fork commit body and a re-export, not from an edit to the file.
+Six files have a preamble of one line or none, because their fork commit bodies are that short. `dflash2-prewarm` and
+`dflash2-z-adaptive-emitted` have none: only blank lines come before their `exported from` line.
+`dflash2-lookup-drafting`, `offload-wsl2-devptr`, `spec-decode-int4-kv-mq3d` and `vllm-pr50021-gdn-spec-bounds` have
+one line. Their rows above describe them, and `docs/wsl2-4090.md` ("CPU offload tier under WSL2") explains
+`offload-wsl2-devptr`. A preamble comes from the fork commit body and a re-export, not from an edit to the file.
