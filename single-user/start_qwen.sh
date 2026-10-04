@@ -818,10 +818,12 @@ export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-$ALLOC_DEFAULT}
 export VLLM_USE_FLASHINFER_SAMPLER=0
 
 source "$REPO/resolve_api_key.sh"
+source "$REPO/launcher_common.sh" \
+  || { echo "start_qwen: cannot source $REPO/launcher_common.sh - refusing to boot" >&2; exit 1; }
 resolve_vllm_key
 resolve_bind_host
 
-exec venv/bin/vllm serve "$MODEL" \
+qwen_exec venv/bin/vllm serve "$MODEL" \
   --served-model-name qwen3.8-27b \
   --host $BIND_HOST --port $PORT \
   --gpu-memory-utilization $GPU_UTIL \
