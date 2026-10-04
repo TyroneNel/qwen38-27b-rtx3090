@@ -82,6 +82,13 @@ has a `Kind:`, `Upstream:` or `Retires-when:` line (`grep -rln
   #58027) cite vllm-project/vllm PRs. All five are closed. On 2026-10-03 the
   user reopened them with the same titles and head branches as #59892,
   #59888, #59889, #59890 and #59891 (`gh pr view`).
+  - (Update 2026-10-04 20:45 UTC) #59889 (`serve-404-served-names`) merged
+    into vLLM main as `7867d6c52d`. It is not in v0.30.0 or in any release
+    yet (`gh api .../compare/v0.30.0...7867d6c52d` says `diverged`). The
+    upstream 404 says `Valid aliases: ...`, and the patch says
+    `Served models: ...`. So the patch stays in the series until the pin
+    carries #59889. When the pin moves, drop the patch and the
+    `"Served models:"` row in `verify.sh:452` together.
   - #59891 is closed. vLLM member DarkLight1337 said the `/v1` prefix is
     only for official OpenAI endpoints, and the user closed the PR. So
     `tokenize-v1-route` stays a local patch.
@@ -258,7 +265,9 @@ deleted by hand in its own commit; nothing checked any of them.)
   and `:55` cite vllm #58028, #58024, #58025, #58026 and #58027. All five are
   closed. The user reopened them on 2026-10-03 as #59892, #59888, #59889,
   #59890 and #59891, and #59891 is closed again: `/v1` is only for official
-  OpenAI endpoints, so `tokenize-v1-route` stays local. `:40`
+  OpenAI endpoints, so `tokenize-v1-route` stays local. #59889 merged into
+  vLLM main on 2026-10-04 (`7867d6c52d`, no release yet), so `:53`'s
+  retire-when becomes "the pin carries vllm #59889". `:40`
   (`pinned-kv-empty-cache`) says "none yet", but vllm #59893 is open. Six of 50
   cells are wrong, and no check reads them. The review on #59892 also found a
   `--root-path /` 401 on `/health` that `auth-deny-default.patch:118` shares
@@ -380,7 +389,8 @@ patch without its metadata stops being possible to do silently.
 
 (2026-10-04) The upstream column is already stale. Six of its 50 cells are
 wrong at e371b42: `PATCHES.md:20/:21/:53/:54/:55` cite closed vllm PRs (the
-live ones are vllm #59892, #59888, #59889 and #59890; vllm #59891 is closed
+live ones are vllm #59892, #59888 and #59890; vllm #59889 merged into vLLM
+main on 2026-10-04 as `7867d6c52d`, no release yet; vllm #59891 is closed
 again), and `:40` says "none yet" while vllm #59893 is open (1.1). With the header in the fork
 commit body, the PR number changes in the patch that the PR is about, at
 the next re-export. The example line above still cites #58028 for format
@@ -462,7 +472,9 @@ near-verbatim — that parity *is* the acceptance test (4.1).
 four KVarN rows (§2.1); the CI step is its own Python-only job (§2.2). The
 backfill sets `Upstream:` to the live PR numbers (vllm #59892,
 vllm #59888, vllm #59889, vllm #59890 and vllm #59893). `tokenize-v1-route`
-gets `none`, because vllm #59891 is closed. So the parity diff shows those
+gets `none`, because vllm #59891 is closed. `serve-404-served-names` keeps
+vllm #59889 and records it as merged (`7867d6c52d`), and its retire-when
+becomes "the pin carries vllm #59889". So the parity diff shows those
 six cells changing on purpose.
 
 Acceptance: CI green with the new step; `git diff` of the generated table
