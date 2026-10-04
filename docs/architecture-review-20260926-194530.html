@@ -110,25 +110,47 @@
       deliberately in #131; PATCHES.md had 9 touches in the window, not 8; <span class="font-mono">test_prepare_crash.py</span>
       is not stdlib-only. #219 also shifted <span class="font-mono">verify.sh</span> by +19/+34 lines; every card is
       re-cited.</p>
+    <p class="mt-3 text-sm text-violet-300/90 max-w-3xl"><b>Status, updated 2026-10-04:</b> all seven plans, the
+      decode-perf plan and this page re-verified against <span class="font-mono">upstream/main @ e371b42</span> — 13 upstream commits since
+      d5e2a01. <b>Candidate 1 is merged:</b> e1459c7 squashes #242/#243/#244 (2026-09-30), and all six of its
+      done-when checks pass. The three later patch PRs (#261, #262, #263) went through <span class="font-mono">patches/apply.sh</span>.
+      <b>Fixed upstream</b> — launcher drift item 4: #237 binds all three launchers through one shared
+      <span class="font-mono">resolve_bind_host</span> (candidate 2); the README's "38 files", the README references in
+      <span class="font-mono">patches/series</span> and <span class="font-mono">check_vllm_series.sh</span>, and the MR-DRAFT link (candidate 6, through candidate 1).
+      <b>New shared module</b> — #246 added <span class="font-mono">prepare/quant_schema.py</span>; candidates 4 and 7 now build on it.
+      <b>Newly surfaced</b> — <span class="font-mono">PATCHES.md:12</span> and <span class="font-mono">kvarn/README.md:33-35</span> name cpuchip/vllm for the
+      pinned-kv and kvarn-fp16 refs, but those refs exist only on TyroneNel/vllm (the heads of the open
+      cpuchip/vllm#3 and #4), and the <span class="font-mono">sampler-warmup-cuda</span> hash 92e7256fa is not on the <span class="font-mono">warmup-cut1</span> tag that
+      line names (only the untagged branch <span class="font-mono">qwen38/0.30-warmup-cut7</span> has it); the five vLLM PR links at <span class="font-mono">PATCHES.md:20,21,53-55</span> point at closed PRs
+      (#58024–#58028, reopened as #59888–#59892; #59891 was then closed by the maintainers);
+      <span class="font-mono">bench/test_no_key_bind.sh</span> is a security test that CI does not run; <span class="font-mono">quant_embed.py:85-86</span> writes its
+      shard before <span class="font-mono">:89</span> reads <span class="font-mono">group_1</span>, which <span class="font-mono">load_config</span> does not check; and
+      <span class="font-mono">auth-deny-default.patch:118</span> turns <span class="font-mono">/health</span> into 401 under <span class="font-mono">--root-path /</span>.
+      <b>Status per card:</b> 1 merged · 6 partly done · 2, 3, 4, 5, 7 not started. The sequence and progress for the
+      whole branch now live in the tracker at the top of
+      <a class="underline" href="decode-perf-150k-240k-plan.md">decode-perf-150k-240k-plan.md</a>.
+      The card bodies keep their d5e2a01 cites; each remediation plan carries the e371b42 re-cites.</p>
   </header>
 
   <!-- ============ HOT SPOTS ============ -->
   <section class="card p-6 md:p-8 mb-12">
     <h2 class="sec mb-1">Where the change pressure is</h2>
     <p class="text-sm text-slate-400 mb-5">File touches per area across the last 40 upstream commits, re-measured
-      2026-09-29 at d5e2a01 (<span class="font-mono">patches/</span> alone out-changes the next three areas combined — 105 vs 87;
-      it was 103 vs 79 at 2522ef9).</p>
+      2026-10-04 at e371b42. <span class="font-mono">patches/</span> is still first, but it no longer out-changes the next
+      three areas combined — 64 vs 89 (it was 105 vs 87 at d5e2a01, 103 vs 79 at 2522ef9). The 0.29 → 0.30 flip
+      (#189) left the window; <span class="font-mono">prepare/</span> rose from 14 to 20 (#246) and
+      <span class="font-mono">kvarn/</span> from 19 to 21 (#262).</p>
     <div>
-      <div class="bar-row"><div class="bar-label">patches/</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#f59e0b,#f43f5e)"></div></div><div class="font-mono text-xs text-slate-300 w-8">105</div></div>
-      <div class="bar-row"><div class="bar-label">docs/</div><div class="bar-track"><div class="bar-fill" style="width:45%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">47</div></div>
-      <div class="bar-row"><div class="bar-label">bench/</div><div class="bar-track"><div class="bar-fill" style="width:20%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">21</div></div>
-      <div class="bar-row"><div class="bar-label">kvarn/</div><div class="bar-track"><div class="bar-fill" style="width:18%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">19</div></div>
-      <div class="bar-row"><div class="bar-label">single-user/</div><div class="bar-track"><div class="bar-fill" style="width:15%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">16</div></div>
-      <div class="bar-row"><div class="bar-label">prepare/</div><div class="bar-track"><div class="bar-fill" style="width:13%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">14</div></div>
-      <div class="bar-row"><div class="bar-label">PATCHES.md</div><div class="bar-track"><div class="bar-fill" style="width:9%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">9</div></div>
-      <div class="bar-row"><div class="bar-label">batch/</div><div class="bar-track"><div class="bar-fill" style="width:8%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">8</div></div>
-      <div class="bar-row"><div class="bar-label">verify.sh</div><div class="bar-track"><div class="bar-fill" style="width:7%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">7</div></div>
-      <div class="bar-row"><div class="bar-label">docker/</div><div class="bar-track"><div class="bar-fill" style="width:6%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">6</div></div>
+      <div class="bar-row"><div class="bar-label">patches/</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,#f59e0b,#f43f5e)"></div></div><div class="font-mono text-xs text-slate-300 w-8">64</div></div>
+      <div class="bar-row"><div class="bar-label">docs/</div><div class="bar-track"><div class="bar-fill" style="width:75%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">48</div></div>
+      <div class="bar-row"><div class="bar-label">kvarn/</div><div class="bar-track"><div class="bar-fill" style="width:33%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">21</div></div>
+      <div class="bar-row"><div class="bar-label">prepare/</div><div class="bar-track"><div class="bar-fill" style="width:31%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">20</div></div>
+      <div class="bar-row"><div class="bar-label">bench/</div><div class="bar-track"><div class="bar-fill" style="width:27%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">17</div></div>
+      <div class="bar-row"><div class="bar-label">single-user/</div><div class="bar-track"><div class="bar-fill" style="width:17%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">11</div></div>
+      <div class="bar-row"><div class="bar-label">PATCHES.md</div><div class="bar-track"><div class="bar-fill" style="width:14%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">9</div></div>
+      <div class="bar-row"><div class="bar-label">verify.sh</div><div class="bar-track"><div class="bar-fill" style="width:9%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">6</div></div>
+      <div class="bar-row"><div class="bar-label">batch/</div><div class="bar-track"><div class="bar-fill" style="width:8%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">5</div></div>
+      <div class="bar-row"><div class="bar-label">docker/</div><div class="bar-track"><div class="bar-fill" style="width:6%;background:#3b5bdb"></div></div><div class="font-mono text-xs text-slate-300 w-8">4</div></div>
     </div>
     <p class="mt-4 text-sm text-slate-400">The seven candidates below are weighted toward these surfaces:
       the machinery <i>around</i> the patch series, the launchers, and the harness — because that is where future
@@ -167,6 +189,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">1</span>One door into the patch series</h3>
       <span class="badge badge-strong">Strong</span>
+      <span class="badge badge-strong">Status 2026-10-04: Merged · e1459c7 · 2026-09-30</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">patches/series</span><span class="chip">Dockerfile:28-39</span><span class="chip">verify.sh:71-127</span><span class="chip">patches/check_vllm_series.sh</span><span class="chip">docs/install.md:104-121</span><span class="chip">docs/python-314.md:62-71</span><span class="chip">kvarn/install.sh</span><span class="chip">patches/dflash2-backport.patch</span><span class="chip">README.md:122</span>
@@ -266,6 +289,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">2</span>Extract the shared launcher chassis</h3>
       <span class="badge badge-strong">Strong</span>
+      <span class="badge badge-spec">Status 2026-10-04: Not started · next after 5</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">single-user/start_qwen.sh (842 lines)</span><span class="chip">batch/start_qwen.sh (299 lines)</span><span class="chip">single-user/alternative.sh (160 lines)</span><span class="chip">resolve_config.sh</span><span class="chip">resolve_api_key.sh</span><span class="chip">single-user/select_model.sh</span>
@@ -420,6 +444,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">3</span>One client module for the harness</h3>
       <span class="badge badge-strong">Strong</span>
+      <span class="badge badge-spec">Status 2026-10-04: Not started</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">bench/ — 16 Python + 4 bash scripts</span><span class="chip">resolve_api_key.sh:32-42</span><span class="chip">bench/api_smoke.py:15</span><span class="chip">bench/needle_test.py:29</span><span class="chip">bench/conc_ladder.py:68</span><span class="chip">bench/labd_bench.py:28</span><span class="chip">bench/real_rep.sh:19</span><span class="chip">bench/run_benchmarks.sh:39</span>
@@ -519,6 +544,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">4</span>Deepen the preparation pipeline's shared core</h3>
       <span class="badge badge-explore">Worth exploring</span>
+      <span class="badge badge-spec">Status 2026-10-04: Not started · build on quant_schema.py</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">prepare/quant_lm_head.py</span><span class="chip">prepare/quant_embed.py</span><span class="chip">prepare/quant_mtp.py</span><span class="chip">prepare/quant_heads_stream.py:178</span><span class="chip">prepare/atomic_publish.py (#195)</span><span class="chip">drafter/gptq_utils.py:82</span><span class="chip">drafter/export_mtp.py</span><span class="chip">drafter/requant_mtp_gptq.py:20-22</span><span class="chip">docker/prepare.sh:26-71</span>
@@ -621,6 +647,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">5</span>Give the harness a verdict convention, and wire the CPU tests into CI</h3>
       <span class="badge badge-explore">Worth exploring</span>
+      <span class="badge badge-spec">Status 2026-10-04: Not started · next</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">bench/test_spec_decode_attn.py</span><span class="chip">bench/api_smoke.py</span><span class="chip">bench/mq3d_capacity_property.py</span><span class="chip">bench/verbatim.py</span><span class="chip">bench/test_model_verification.py:18-19</span><span class="chip">bench/prefix_alternation.py:304</span><span class="chip">.github/workflows/patch-integrity.yml:21</span>
@@ -702,6 +729,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">6</span>Generate the patch index from the patches</h3>
       <span class="badge badge-explore">Worth exploring</span>
+      <span class="badge badge-spec">Status 2026-10-04: Partly done (by 1)</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">PATCHES.md</span><span class="chip">scripts/export-patch.sh</span><span class="chip">patch preambles (Supersedes: convention)</span><span class="chip">verify.sh:376-454</span><span class="chip">README.md:122</span><span class="chip">patches/series header</span>
@@ -783,6 +811,7 @@ flowchart LR
     <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
       <h3 class="text-xl font-bold text-white"><span class="text-slate-500 font-mono mr-2">7</span>Let each preparation step report its own done-ness</h3>
       <span class="badge badge-explore">Worth exploring</span>
+      <span class="badge badge-spec">Status 2026-10-04: Not started · after #267</span>
     </div>
     <p class="text-xs font-mono text-slate-500 mb-4">
       <span class="chip">docker/prepare.sh:26-71, 123-124</span><span class="chip">the six prepare/ scripts</span><span class="chip">verify.sh:130-280</span><span class="chip">bench/test_model_verification.py:18-19</span><span class="chip">bench/test_prepare_state.py:37</span>
@@ -878,6 +907,13 @@ flowchart LR
     <p class="kicker mb-2" style="color:#fbbf24">Top recommendation</p>
     <h2 class="text-2xl font-extrabold text-white mb-3">Start with candidate 1 — one door into the patch series.</h2>
     <div class="text-sm text-slate-300 space-y-3 max-w-4xl">
+      <p class="text-violet-300/90"><b>Update 2026-10-04: done.</b> Candidate 1 merged upstream as e1459c7 (#242/#243/#244,
+      2026-09-30), and all six done-when checks pass at e371b42. The next sequence is: <b class="text-white">5</b>
+      (PR B first, with <span class="font-mono">test_no_key_bind.sh</span>) → <b class="text-white">2</b> →
+      <b class="text-white">6</b> PR B (the fork and upstream references) → <b class="text-white">3</b> →
+      <b class="text-white">4</b> → <b class="text-white">7</b> (after upstream PR #267 merges). The tracker in
+      <a class="underline" href="decode-perf-150k-240k-plan.md">decode-perf-150k-240k-plan.md</a> keeps this order and
+      its progress. The reasons below are the 2026-09-29 case for candidate 1, kept as history.</p>
       <p>Three reasons. <b class="text-white">It is where the change pressure is:</b>
       <span class="font-mono">patches/</span> took 105 file-touches in the last 40 upstream commits (re-measured
       2026-09-29 at d5e2a01; 103 at 2522ef9, 61 at the review) — more than the next

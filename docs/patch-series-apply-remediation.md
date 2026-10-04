@@ -5,6 +5,104 @@ other six candidates is [architecture-review-20260926-194530.html](architecture-
 this document is the deep dive on that card: the current state measured line by
 line, the design, and the rollout.
 
+**Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
+
+**Status:** Merged upstream as e1459c7 (squash of #242/#243/#244, 2026-09-30). Done-when: 6 of 6 pass at e371b42.
+
+Thirteen commits landed since d5e2a01 (`git log d5e2a01..e371b42`). e1459c7 is
+this plan. Four others touch the patch series: #233 (e7a5823), #261 (69036cb),
+#263 (210db97) and #262 (bd6c5e2). Section 1 now records the d5e2a01 tree,
+before the merge. Each of its subsections ends with what e371b42 has.
+
+- **Done when (section 6), item by item.** (1) `grep -rln "s/#.\*//"
+  --include='*.sh' --include='Dockerfile' .` prints only `./patches/apply.sh`.
+  `grep -rln "s/#\.\*//" --include='*.md' .` in the e371b42 tree finds no
+  file. (2) The `git grep -l
+  dflash2-backport` of 6.2 prints `PATCHES.md`, `docs/docker.md` and
+  `docs/optimizations.md`. (3) There are 46 `patches/*.patch` files and 46
+  series lines, and `bash patches/apply.sh --list` exits 0: the plan's 44, plus
+  #233's `sampler-warmup-cuda` and #263's `pinned-kv-empty-cache`. (4) The
+  `patch integrity` run on e371b42 (37189534383) logs "46 patches applied with
+  exact context, 3 of them at an offset, 0 with fuzz" and "4 KVarN patches
+  applied after the series; 50 in total". The run on e1459c7 (36754957337)
+  logged 45 + 3 = 48. (5) `README.md:121-122` reads "series (`patches/`, one
+  line each in PATCHES.md)". (6) `kvarn/install.sh:21` calls `apply.sh
+  --kvarn`. The only heredoc left (`:23-32`) is the registration probe, which
+  2.2 keeps. `verify.sh:110-127` checks all four KVarN patches with the exact
+  reverse dry-run.
+- **The merge matches the design (2.1-2.4).** `apply.sh --list` checks the
+  agreement (`patches/apply.sh:62-75`). The apply mode runs `patch -p1
+  --forward --fuzz 0 --no-backup-if-mismatch` (`:80`). `--kvarn` skips a patch
+  that reverses exactly, else applies it strictly (`:108-118`). The Dockerfile
+  (`:31-34`), `verify.sh:76-84`, `patches/check_vllm_series.sh:40-70`,
+  `docs/install.md:113-114` and `docs/python-314.md:74-75` call it. The
+  backport patch, its special cases and both 0.27.1 KVarN files are gone. The
+  backport row is retired prose at `PATCHES.md:73-76`, and `README.md`,
+  `patches/series:3-6`, `check_vllm_series.sh:8-10` and `PATCHES.md:89-90`
+  carry the 2.4 fixes. Two small deviations: `docs/python-314.md:74` keeps the
+  `VP=` line (2.2 said it goes; the command needs it), and
+  `check_vllm_series.sh:9-10` lists the Dockerfile, `docs/install.md` and
+  `kvarn/install.sh` as callers but not `docs/python-314.md`.
+- **The later patches used the door.** #233 and #263 each add a file, a
+  `patches/series` line (`:61`, `:62`) and a `PATCHES.md` row (`:44`, `:40`),
+  and CI counts them. #233 (e7a5823) merged before e1459c7, so the merge took
+  it in; #263 is the first new series patch that merged through `apply.sh`. #262 adds `kvarn/kvarn-fp16-dequant-0.30.0.patch` to the
+  one `KVARN` array (`apply.sh:50-51`), a FAIL rung (`verify.sh:123-127`), a row
+  (`PATCHES.md:69`), a rerun no-op check in the fast gate
+  (`check_vllm_series.sh:71-82`; the e371b42 run logs "a second apply.sh
+  --kvarn run: all 4 already applied") and a CPU torch job
+  (`patch-integrity.yml:25-37`). All 50 patch files carry an `exported from`
+  marker (`grep -L -- '--- exported from cpuchip/vllm' patches/*.patch
+  kvarn/*.patch` prints nothing). Open PR #260 adds `api-root-health` the same
+  way: series line, row and marker (`gh pr diff 260`).
+- **New gap: the KVarN list has no agreement check.** `--list` guards the
+  series. Nothing compares `KVARN` (`apply.sh:50-51`) with `kvarn/*.patch`, so
+  a KVarN patch left out of the array is never applied and never gated. The
+  count "four" is written in `apply.sh:10`, `check_vllm_series.sh:8` and
+  `kvarn/README.md:32`.
+- **Export provenance drifted. The apply path did not.** `PATCHES.md:12` names
+  one fork, `cpuchip/vllm`, and the export tag `qwen38/0.30-cut5`. `git
+  ls-remote https://github.com/cpuchip/vllm` shows tags up to
+  `qwen38/0.30-cut9`. `gh api repos/cpuchip/vllm/compare/<cut5>...<hash>` puts
+  12 of the 50 export hashes outside cut5:
+  - #263's `pinned-kv-empty-cache` (bbed74b28) and #262's
+    `kvarn-fp16-dequant-0.30.0` (7f8c3ef0a) are on TyroneNel/vllm (`git
+    ls-remote https://github.com/TyroneNel/vllm`): branch
+    `qwen38/0.30-pinned-kv-empty-cache` and tag `qwen38/0.30-pinned-kv-cut1`
+    (→ bbed74b28); branch `qwen38/0.30-kvarn-fp16` and tag
+    `qwen38/0.30-kvarn-fp16-cut1` (→ 8ad33d165, which contains 7f8c3ef0a).
+    They are the heads of open PRs cpuchip/vllm#4 and cpuchip/vllm#3.
+    `PATCHES.md:12` and `kvarn/README.md:33-35` name `cpuchip/vllm` for refs
+    that exist only on TyroneNel/vllm until cpuchip merges #3 and #4.
+  - #261 re-exported `dflash2-ngram-chains` (596a96779) and
+    `kvarn-v2-runner-0.30.0` (757257e13). Only cpuchip's untagged branch
+    `qwen38/0.30-chainfix` contains them, and no doc names that branch.
+    `kvarn/README.md:33` still says the first three KVarN patches come from
+    `qwen38/0.30`.
+  - #233's `sampler-warmup-cuda` (92e7256fa) is the head of cpuchip's branch
+    `qwen38/0.30-warmup-cut7`. The tag `PATCHES.md:12` cites,
+    `qwen38/0.30-warmup-cut1`, does not contain it.
+  - #234's four re-exports (`marlin-int8-asym-zp`, `marlin-repack-staged-sm80`,
+    `speed-knobs-envs`, `kvarn-0.30.0`) are in `qwen38/0.30` (cut9), and
+    `spec-attn-smem-fit` (ede631297e) is the cut6 commit.
+  - The GitHub API resolves neither of two older 7-character hashes on either
+    fork: `bench-sse-keepalive` (757723b, #226) and
+    `kvarn-recycled-pages-0.30.0` (40ab8e0, #222). [INFERENCE: not run:
+    whether the short hash is ambiguous or the commit is absent.]
+- **`scripts/export-patch.sh:4` still cites `docs/fork-workflow.md`.** The file
+  does not exist (`ls docs/fork-workflow.md`).
+- **3.4, both owner items.** `docs/python-314.md`: e1459c7 took the banner
+  option (`:8-13`). The banner still says nobody has re-run the page on
+  0.30.0. Under the banner,
+  `:20` ("applies unmodified"), `:49-55` ("fifteen") and `:71`
+  (`vllm==0.27.1`, then the 0.30.0 series at `:75`) still stand. The
+  `docs/MR-DRAFT.md` link is closed: `PATCHES.md:89-90` points at
+  `docs/gotchas.md` alone. The same sentence says two files "still carry raw
+  `diff -ruN` headers", but `grep -c '^diff -ruN'` finds 0 in both.
+- **Not run at this pass:** the negative controls of section 4 and
+  `verify.sh --install` in a built image [INFERENCE: not run]. The CI runs
+  above cover the pristine apply and the KVarN rerun.
+
 **Status 2026-09-30: implemented as three upstream PRs, still against
 upstream/main @ d5e2a01.** PR A is syv-ai/HyperQwen#242, PR B #243 and PR C
 #244, all ready for review as a stack (each branch contains the ones below
@@ -107,9 +205,13 @@ verdict conventions (candidate 5), generating the PATCHES.md table (candidate
 6), and any change to the verify.sh *checking ladder* — that ladder is state
 diagnosis, a deliberately independent second look, and it stays.
 
-## 1. Current state, precisely
+## 1. State before the merge (d5e2a01), precisely
 
-### 1.1 The ordered series is parsed in five places
+This section records the d5e2a01 tree, before e1459c7. Its line numbers are
+d5e2a01's unless a citation says "at e371b42". Each subsection ends with an
+**At e371b42** line that gives the current state.
+
+### 1.1 The ordered series was parsed in five places
 
 `patches/series` (45 entries, `series:15-59`; 45 `patches/*.patch`, and the two
 sets agree — recounted at d5e2a01) is the canonical order. The same sed parse
@@ -133,7 +235,12 @@ five files: one distinct string, five hits); only the file argument differs —
 sed -e 's/#.*//' -e 's/^[[:space:]]*//;s/[[:space:]]*$//' -e '/^$/d' patches/series
 ```
 
-### 1.2 One retired patch has seven touch points
+**At e371b42:** one place. The parse is `series()` in `patches/apply.sh:58-60`.
+The five consumers call `apply.sh` (`Dockerfile:32`, `verify.sh:78`,
+`check_vllm_series.sh:40`, `docs/install.md:114`, `docs/python-314.md:75`).
+The series has 46 entries at `series:17-62`.
+
+### 1.2 One retired patch had seven touch points
 
 `dflash2-backport.patch` is retired (DFlash2 is native since vLLM 0.28.0) but
 kept in the tree, so every consumer carries a special case:
@@ -159,6 +266,14 @@ git repository — the diff history is not at risk.
 This contradicts the repo's own remove-on-retire precedent
 (`PATCHES.md:71-73`: the 0.29.0 retirements were *removed from the tree* —
 as were the two 0.30.0 ones, `:69`).
+
+**At e371b42:** e1459c7 deleted `dflash2-backport.patch`, its five special
+cases, `kvarn/kvarn-0.27.1.patch` and `kvarn/kvarn-v2-runner.patch`. The
+backport and the two old ports are retired prose at `PATCHES.md:73-76`, next
+to the 0.30.0 (`:71`) and 0.29.0 (`:78-80`) retirements. `PATCHES.md:12` no
+longer mentions the backport. The historical notes stay at `docs/docker.md:18`
+and `docs/optimizations.md:214-215`. The fork-as-source sentence is still
+`PATCHES.md:12-16`.
 
 ### 1.3 Four different answers to "is the series healthy?"
 
@@ -199,7 +314,15 @@ that heuristic is not strong enough for KVarN either. It passes a tree with
 hunk 4 of v2-runner's `attention.py` removed. The exact reverse dry-run
 catches it, and it works for all three KVarN patches.)*
 
-### 1.4 Drift already on the ground
+**At e371b42:** two answers, as section 6 intends. The Dockerfile, the CI gate
+and `kvarn/install.sh` all apply through `apply.sh`. `verify.sh`'s ladder
+stays (`verify.sh:96-103`; `Supersedes:` lookup `:85-93`). The two-pass split
+is `check_vllm_series.sh:6-22`. The marker heredoc is gone: `kvarn/install.sh`
+calls `apply.sh --kvarn` (`:21`), which checks each KVarN patch with the exact
+reverse dry-run (`apply.sh:108-118`). `verify.sh:110-127` uses the same check
+for all four KVarN patches (#262 added the fourth).
+
+### 1.4 Drift on the ground at d5e2a01
 
 Every duplication above has produced at least one live inconsistency. All
 confirmed against the tree on 2026-09-26 (line numbers refreshed 2026-09-28,
@@ -216,9 +339,9 @@ re-checked 2026-09-29 at d5e2a01):
 2. **`docs/python-314.md` is stale as a whole.** The 0.27.1 pin there is
    deliberate (the abi3 wheel is why 3.14 works at all, `:9-11`), but
    "Every patch in `patches/` applies unmodified" (`:13`) and "all fifteen
-   land" (`:42-45`) were written against the 0.27.1-era series. Today the
-   series is 45 patches cut against 0.30.0; the doc's loop cannot produce a
-   working install. Its loop (`:67-71`) also lacks both `--fuzz 0` and the
+   land" (`:42-45`) were written against the 0.27.1-era series. At d5e2a01 the
+   series was 45 patches cut against 0.30.0; the doc's loop could not produce
+   a working install. Its loop (`:67-71`) also lacked both `--fuzz 0` and the
    backport skip; since #231 it does carry `--no-backup-if-mismatch` (`:70`).
 3. **`README.md:122` says "38 files".** There are 45. The README split (#129)
    moved the install loop to `docs/install.md`, so…
@@ -232,7 +355,15 @@ re-checked 2026-09-29 at d5e2a01):
    `PATCHES.md:83` was never updated. Its last version mentions
    `offload-wsl2-devptr` (`:17`) but not `dflash2-z-adaptive-emitted`.
 
-### 1.5 The fast CI gate never sees the KVarN patches
+**At e371b42:** e1459c7 fixed 1, 3, 4, 5 and 6, and bannered 2.
+(1) `docs/install.md:114` runs `bash patches/apply.sh "$SP"`, so `--fuzz 0`
+applies; the policy text is `patches/apply.sh:21-27`. (2)
+`docs/python-314.md:8-13` marks the page as a 0.27.1 record; `:20`, `:49-55`
+and `:71` are unchanged under it (3.4). (3) `README.md:121-122` has no count.
+(4) `patches/series:3-6` and (5) `check_vllm_series.sh:8-10` name `apply.sh`
+and its callers. (6) `PATCHES.md:89-90` points at `docs/gotchas.md` alone.
+
+### 1.5 The fast CI gate never saw the KVarN patches
 
 `patch-integrity.yml` runs `check_vllm_series.sh` (`:45-46`), which covers the
 44 non-retired series patches (45 minus the `SKIP` entry). The three KVarN
@@ -248,6 +379,13 @@ still says "both files" — a third apply was added in #222, commit 2522ef9),
 which is exactly the point pass 1 reaches: the fast gate can cover them with
 no new machinery.
 
+**At e371b42:** the fast gate covers them. `patch-integrity.yml:59-60` runs
+`check_vllm_series.sh`, whose pass 1 applies the KVarN patches after the
+series (`:61-70`) and checks that a rerun is a no-op (`:71-82`). The e371b42
+run (37189534383, 35 s created → updated) logs "4 KVarN patches applied after
+the series; 50 in total". `docker-image.yml:2` still carries the local
+"20-minute" figure.
+
 ## 2. The design
 
 One new executable, `patches/apply.sh`, owns the series parse and the apply
@@ -259,31 +397,37 @@ policy. Every consumer either calls it or shows its one command line.
 patches/apply.sh --list
     Print the ordered patch basenames, one per line. Before printing, enforce
     that the list and the patches/ directory agree exactly; on disagreement,
-    name the offenders on stderr and exit 2. (Today that check runs only in
-    verify.sh and check_vllm_series.sh; moving it here gives it to every
-    consumer, including the Docker build, for free.)
+    name the offenders on stderr and exit 2. (At d5e2a01 that check ran only
+    in verify.sh and check_vllm_series.sh; moving it here gives it to every
+    consumer, including the Docker build, for free. At e371b42 it is
+    apply.sh:62-75. It still prints the list on disagreement, so verify.sh can
+    FAIL by name and keep checking.)
 
 patches/apply.sh DIR
 patches/apply.sh --kvarn DIR
     (As implemented in #242/#244; this was `[--forward] [--kvarn] DIR`.)
     Apply the whole series to DIR (the installed vllm package directory) with
-    `patch -p1 --forward --fuzz 0 --no-backup-if-mismatch`, in series order. (Since
-    #231 all five apply sites already pass --no-backup-if-mismatch; --fuzz 0
-    is still missing from the two prose loops.) Stop at the
+    `patch -p1 --forward --fuzz 0 --no-backup-if-mismatch`, in series order. (At
+    d5e2a01 all five apply sites passed --no-backup-if-mismatch, since #231,
+    but the two prose loops lacked --fuzz 0. e1459c7 replaced both loops with
+    this command.) Stop at the
     first failure; the message names the patch. Per patch, print one line:
     `== <name>` (or `== <name> (N hunks at an offset)` — offsets are benign
-    and reported, fuzz is refused; the policy text already written at
-    check_vllm_series.sh:56-59 moves here with the code it describes).
+    and reported, fuzz is refused; the policy text written at
+    check_vllm_series.sh:56-59 at d5e2a01 moved here with the code it
+    describes, apply.sh:21-27 at e371b42).
     --forward is always on, so a second series run fails by name instead
     of prompting; it is not the idempotence mechanism (see --kvarn).
-    --kvarn     apply kvarn/kvarn-0.30.0.patch, kvarn/kvarn-v2-runner-0.30.0.patch
-                and kvarn/kvarn-recycled-pages-0.30.0.patch, in that order, to a
+    --kvarn     apply kvarn/kvarn-0.30.0.patch, kvarn/kvarn-v2-runner-0.30.0.patch,
+                kvarn/kvarn-recycled-pages-0.30.0.patch and (since #262)
+                kvarn/kvarn-fp16-dequant-0.30.0.patch, in that order, to a
                 tree that already has the series — they are exported to apply at
-                exactly this point (install.sh:13-24). Per patch: an exact reverse
-                dry-run first; all hunks present → "(already applied)", skipped;
-                else a strict forward apply, so a partial patch fails by name.
-                (Corrected 2026-09-30; it was "continue with ... after the
-                series", idempotent through --forward.)
+                exactly this point (install.sh:13-24 at d5e2a01; the order and
+                its reasons are apply.sh:46-51 at e371b42). Per patch: an exact
+                reverse dry-run first; all hunks present → "(already applied)",
+                skipped; else a strict forward apply, so a partial patch fails
+                by name. (Corrected 2026-09-30; it was "continue with ... after
+                the series", idempotent through --forward.)
 
 Exit codes: 0 success · 1 an apply failed (patch named) · 2 usage error or
 series/directory disagreement.
@@ -294,58 +438,77 @@ single source of truth for *order*; `apply.sh` becomes the single source of
 truth for *how the order is read and applied*.
 ### 2.2 What each consumer becomes
 
-| consumer | before | after |
+e1459c7 made every row below. The "before" column cites d5e2a01; the "after"
+column cites e371b42.
+
+| consumer | before (d5e2a01) | after (e371b42) |
 |---|---|---|
-| `Dockerfile:28-39` | sed loop + skip arm | `RUN bash patches/apply.sh "$SP" && bash kvarn/install.sh && bash verify.sh --install` |
-| `verify.sh:71-87` (was `:52-68` at 2522ef9) | own sed parse + agreement check | `SERIES` from `patches/apply.sh --list`; the four-rung ladder (`:99-110`) is untouched; the `:101-104` backport arm dies in step 3.2 |
-| `patches/check_vllm_series.sh` | own sed parse + SKIP + GNU-patch loop | names from `--list`; pass 1 delegates the apply loop to `apply.sh` (keeping its "the tree changed" guard at `:72-75` and the offset tally by counting `apply.sh` output lines); pass 2 (the five contractual DFlash patches under `git apply`, `:78-110`) is untouched |
-| `docs/install.md:113-120` | drifted prose loop | the single command: `bash patches/apply.sh "$SP"` (the page's variable is `SP`, `:113`; this row said `"$VP"`, python-314.md's name, at 2522ef9) — `--fuzz 0` now inherited by construction; the backup flag #231 added is kept |
-| `docs/python-314.md:67-71` (cited `:68-71`; the `VP=` line `:67` goes too) | drifted prose loop | the same single command (`"$VP"`), plus the owner note from 3.4 |
-| `kvarn/install.sh` | own `apply_kvarn` (`:16-24`) + marker heredoc (`:38-71`; cited `:44-71` at 2522ef9, which omitted its explanatory comment `:38-43`) | overlay copy (`:12`) and the registration probe (`:26-36`, which checks live behavior and stays) keep their identity; the three applies become `patches/apply.sh --kvarn "$SP"`; the marker heredoc is deleted, because `--kvarn`'s exact reverse check is the completeness check. `verify.sh:120-126` switches from `_check_applied.py` to the same exact check. (Was: `--forward --kvarn` plus `_check_applied.py`; corrected 2026-09-30.) |
+| `Dockerfile:28-39` (`:28-34` at e371b42) | sed loop + skip arm | `bash patches/apply.sh "$SP"; bash kvarn/install.sh; bash verify.sh --install` in one `RUN set -e` (`:31-34`; the plan wrote `&&`) |
+| `verify.sh:71-87` (was `:52-68` at 2522ef9) | own sed parse + agreement check | `SERIES` from `patches/apply.sh --list` (`:76-84`); the four-rung ladder (`:96-103`) is untouched; the backport arm (`:101-104` at d5e2a01) died in step 3.2 |
+| `patches/check_vllm_series.sh` | own sed parse + SKIP + GNU-patch loop | names from `--list` (`:40-41`); pass 1 delegates the apply loop to `apply.sh` (`:48`), keeping its "the tree changed" guard (`:54-57`) and the offset tally by counting `apply.sh` output lines (`:52-53`); pass 2 (the five contractual DFlash patches under `git apply`, `:84-113`) is untouched |
+| `docs/install.md:113-120` | drifted prose loop | the single command: `bash patches/apply.sh "$SP"` (`:114`; the page's variable is `SP`, `:113`; this row said `"$VP"`, python-314.md's name, at 2522ef9) — `--fuzz 0` now inherited by construction; the backup flag #231 added is kept |
+| `docs/python-314.md:67-71` (cited `:68-71`) | drifted prose loop | the same single command (`"$VP"`, `:75`), plus the owner note from 3.4 (the banner, `:8-13`). This row said the `VP=` line goes too; it stays (`:74`), because the command needs it |
+| `kvarn/install.sh` | own `apply_kvarn` (`:16-24`) + marker heredoc (`:38-71`; cited `:44-71` at 2522ef9, which omitted its explanatory comment `:38-43`) | overlay copy (`:12`) and the registration probe (`:23-32`, which checks live behavior and stays) keep their identity; the applies become `patches/apply.sh --kvarn "$SP"` (`:21`); the marker heredoc is deleted, because `--kvarn`'s exact reverse check is the completeness check. `verify.sh:113-127` uses the same exact check instead of `_check_applied.py`, for four patches since #262. (Was: `--forward --kvarn` plus `_check_applied.py`; corrected 2026-09-30.) |
 
 The kvarn row deserves the reasoning spelled out: the marker counter guards
 3 of 27 hunks on a rerun (1.3). The first version of this plan replaced it
 with `_check_applied.py`, but that check passes a tree with one v2-runner hunk
-missing. The exact reverse dry-run already guards `kvarn-0.30.0` in
-`verify.sh:117`, and it works for the other two patches as well, so PR C uses
-it everywhere. This still deletes the weaker implementation and adds none.
+missing. The exact reverse dry-run already guarded `kvarn-0.30.0` in
+`verify.sh:117` at d5e2a01 (`:110` at e371b42), and it works for the other
+patches as well, so PR C uses it everywhere. This still deletes the weaker
+implementation and adds none.
 
 ### 2.3 Deletions (step 3.2)
+
+All done in e1459c7. The citations are d5e2a01's.
 
 - `patches/dflash2-backport.patch` and its five special cases
   (`series:23`, `Dockerfile:34`, `check_vllm_series.sh:37`,
   `verify.sh:101-104` (was `:82-85` at 2522ef9), `docs/install.md:117`).
 - `kvarn/kvarn-0.27.1.patch` and `kvarn/kvarn-v2-runner.patch`.
-- `PATCHES.md:23`: the row moves into the "Retired" prose (`PATCHES.md:71-73`),
+- `PATCHES.md:23`: the row moves into the "Retired" prose (`PATCHES.md:71-73`;
+  it landed at `:73-76` at e371b42),
   following the precedent set there. The `:12` prose mention is reworded to
   drop "except the retired dflash2-backport" — after deletion every row is a
-  fork export again.
+  fork export again. (At e371b42 every row is a fork export, but `:12` names
+  only `cpuchip/vllm`, and the branches and tags of two exports exist only on
+  TyroneNel/vllm. See the top status block.)
 
 ### 2.4 Reference fixes (ride along with 3.2)
+
+All done in e1459c7. Each item gives the e371b42 line.
 
 - `README.md:122`: drop the hardcoded count — "The vLLM patch series
   (`patches/`, one line each in PATCHES.md)". A generated count belongs to
   candidate 6; a correct-by-construction sentence needs no maintenance.
+  (`README.md:121-122` at e371b42.)
 - `patches/series:3-4`: name the real consumers — "patches/apply.sh (which the
   Dockerfile, docs/install.md and docs/python-314.md call), verify.sh and
   patches/check_vllm_series.sh (both read it via apply.sh --list)".
-- `patches/check_vllm_series.sh:8-9`: same fix.
+  (`patches/series:3-6` at e371b42.)
+- `patches/check_vllm_series.sh:8-9`: same fix. (`:8-10` at e371b42; it
+  leaves out `docs/python-314.md`.)
 - `PATCHES.md:83`: `docs/MR-DRAFT.md` was deleted in #131 (1.4.6); point at
   `docs/gotchas.md` alone (this said "or recreate the file" before the
   deletion was traced) — the wording choice is flagged to the owner (3.4).
+  (`PATCHES.md:89-90` at e371b42 points at `docs/gotchas.md` alone.)
 
 ### 2.5 What deliberately does not change
 
-- **Pass 2's contractual DFlash list** (`check_vllm_series.sh:83-89`) — the
+- **Pass 2's contractual DFlash list** (`check_vllm_series.sh:89-95` at
+  e371b42; `:83-89` at d5e2a01) — the
   GNU-patch/git-apply split is documented in the file and load-bearing.
 - **verify.sh's ladder** — it answers "what state is this tree in?", a
   different question from "apply the series", and its independence is a
   feature: it is the skeptical second implementation.
 - **The fork branch as source of truth** — `apply.sh` changes how patches are
-  consumed, not how they are produced; `scripts/export-patch.sh` is untouched.
+  consumed, not how they are produced; `scripts/export-patch.sh` is untouched
+  (no commit in `d5e2a01..e371b42` touches it; its `:4` still cites the
+  missing `docs/fork-workflow.md`).
 - **The historical prose** in `docs/docker.md:18` (was `:9`) and
   `docs/optimizations.md:214-215` (cited `:213`)
-  mentioning the backport — it describes history and stays true.
+  mentioning the backport — it describes history and stays true. (Same lines
+  at e371b42.)
 ## 3. Rollout
 
 Three PRs, in order, each independently revertable. The ordering is chosen so
@@ -358,12 +521,13 @@ Add `patches/apply.sh`; switch the Dockerfile, `verify.sh`'s list source,
 `check_vllm_series.sh`'s list source and pass-1 loop, and the two docs pages
 to it. The `dflash2-backport` skip logic moves *into* apply.sh temporarily
 (one documented arm), so this PR deletes nothing and changes no applied
-result — the tree it produces is bit-identical to today's. (Status at
+result — the tree it produces is bit-identical to d5e2a01's. (Status at
 d5e2a01: not started — no `patches/apply.sh` exists. #231 already converged
 the five apply sites on `--no-backup-if-mismatch`, so PR A's only
 apply-policy change to the prose loops is adding `--fuzz 0`.) **Opened
 2026-09-30 as #242**: old loop vs `apply.sh` trees byte-identical on v0.30.0;
-`verify.sh --install` PASS/WARN/FAIL lines identical to main's.
+`verify.sh --install` PASS/WARN/FAIL lines identical to main's. **Merged
+2026-09-30 in e1459c7**, squashed with #243 and #244.
 
 Acceptance: `patch-integrity` job green; image build green (its
 `verify.sh --install` inside the build exercises the new list source);
@@ -375,7 +539,10 @@ Delete the backport patch and the two 0.27.1 KVarN files; remove the five
 special cases (including the temporary arm in apply.sh); move the PATCHES.md
 row into the retired prose; fix the README count, the series header, the
 check-script comment. After this PR: 44 patch files, 44 series lines, zero
-per-patch exceptions anywhere. **Opened 2026-09-30 as #243 (stacked on #242).**
+per-patch exceptions anywhere. **Opened 2026-09-30 as #243 (stacked on #242).
+Merged in e1459c7.** #233 landed first, so the merge had 45 patch files and 45
+series lines. #263 added one more: 46 = 46 at e371b42, with zero per-patch
+exceptions.
 
 Acceptance: both workflows green; `git grep -l dflash2-backport -- ':!docs/*-remediation.md' ':!docs/architecture-review-*.html'`
 finds only `PATCHES.md` (retired prose) and the historical notes in
@@ -395,11 +562,18 @@ minutes") instead of leaving them to the image build (4–12 min in CI; the
 check, then strict apply); the marker heredoc is deleted, and `verify.sh`'s
 two `_check_applied.py` KVarN rungs become exact reverse checks. **Opened
 2026-09-30 as #244 (stacked on #243)**; gate log: `3 KVarN patches applied
-after the series; 47 in total`.
+after the series; 47 in total`. **Merged in e1459c7.** The run on e1459c7
+(36754957337) logs `3 KVarN patches applied after the series; 48 in total`
+(45 series patches, with #233). The run on e371b42 (37189534383) logs `4 KVarN
+patches applied after the series; 50 in total`.
 
 Acceptance: `patch-integrity` green with the KVarN trio in its log;
 a manual `bash kvarn/install.sh` re-run is a no-op and exits 0; a
 hand-broken KVarN hunk fails both the fast gate and install.sh by name.
+(At e371b42 the gate is green with all four KVarN patches. Since #262 it also
+runs `apply.sh --kvarn` a second time and requires "already applied" for all
+four, `check_vllm_series.sh:71-82`. The manual `kvarn/install.sh` rerun and
+the hand-broken hunk were not re-run at this pass [INFERENCE: not run].)
 
 ### 3.4 Flagged to the owner (not decided here)
 
@@ -411,12 +585,20 @@ hand-broken KVarN hunk fails both the fast gate and install.sh by name.
   `<3.15,>=3.10` — the same abi3 shape the page relies on for 0.27.1. That is
   wheel metadata only; whether the 0.30.0 torch/FlashInfer set resolves and
   runs on 3.14 is not checked here. PR A swaps in the single command
-  either way; the page's *claims* need a human run.
+  either way; the page's *claims* need a human run. **Still open at
+  e371b42.** e1459c7 took the banner option (`docs/python-314.md:8-13`) and
+  swapped in the single command (`:75`). The banner still says nobody has
+  re-run the page on 0.30.0. Under it, `:20` ("applies unmodified"), `:49-55`
+  ("fifteen") and `:71` (`vllm==0.27.1`) stay.
 - **`PATCHES.md:83`'s dangling `docs/MR-DRAFT.md`.** Resolved as far as
   history goes: the file was deliberately deleted in #131 (1.4.6), so
   "recreate/commit it" is off the table unless the owner wants the PR-body
   source back; the remaining choice is pointing at `docs/gotchas.md` alone or
-  moving the two descriptions into the patch preambles.
+  moving the two descriptions into the patch preambles. **Closed at
+  e371b42:** e1459c7 points at `docs/gotchas.md` alone (`PATCHES.md:89-90`).
+  The same sentence says `dflash2-z-adaptive-emitted` and
+  `offload-wsl2-devptr` "still carry raw `diff -ruN` headers"; `grep -c
+  '^diff -ruN'` finds 0 in both, so that half is now false.
 
 ## 4. Test plan (no GPU required)
 
@@ -430,6 +612,10 @@ hand-broken KVarN hunk fails both the fast gate and install.sh by name.
 | ladder parity | `verify.sh --install` in the built image, before vs after the PRs; diff the PASS lines | the check semantics are unchanged |
 | partial-apply detection | on a full tree, remove one hunk with `patch -R` (v2-runner `attention.py` hunks 3 and 4; kvarn-0.30.0 `kv_cache_interface.py` and `platforms/cuda.py` hunk 3); rerun `apply.sh --kvarn` and verify.sh's KVarN rungs | every case exits 1 by name and WARNs in verify.sh. Hunk 4 is the regression case: `_check_applied.py` and the marker heredoc both pass it |
 
+At e371b42, CI runs two of these rows on every PR: pristine apply (pass 1)
+and idempotence (`check_vllm_series.sh:71-82`, now four "already applied"
+lines). The other rows were not re-run at this pass [INFERENCE: not run].
+
 ## 5. Risks
 
 | risk | likelihood | mitigation |
@@ -442,25 +628,37 @@ hand-broken KVarN hunk fails both the fast gate and install.sh by name.
 
 ## 6. Done when
 
+All six pass at e371b42 (checked 2026-10-04; the evidence is in the top
+status block).
+
 1. `grep -rln "s/#.\*//" --include='*.sh' --include='Dockerfile' .` finds the
-   series parse in exactly one file: `patches/apply.sh` (today, at d5e2a01, it
-   lists three: `Dockerfile`, `patches/check_vllm_series.sh`, `verify.sh`; the
+   series parse in exactly one file: `patches/apply.sh` (at d5e2a01 it
+   listed three: `Dockerfile`, `patches/check_vllm_series.sh`, `verify.sh`; the
    two prose copies are `.md` and are covered by the docs rewrite in PR A).
+   **PASS at e371b42:** only `./patches/apply.sh` (`:58-60`).
 2. `git grep -l dflash2-backport -- ':!docs/*-remediation.md' ':!docs/architecture-review-*.html'`
    lists only `PATCHES.md`, `docs/docker.md` and `docs/optimizations.md` (the
-   retired prose and the two historical notes). Today it lists nine files,
-   the six extra being `Dockerfile`, `docs/install.md`,
+   retired prose and the two historical notes). At d5e2a01 it listed nine
+   files, the six extra being `Dockerfile`, `docs/install.md`,
    `patches/check_vllm_series.sh`, `patches/dflash2-backport.patch`,
    `patches/series` and `verify.sh`. (Was "`grep -r dflash2-backport .`", which
    also matches the plan docs and untracked bench logs — see 3.2.)
+   **PASS at e371b42:** exactly those three files.
 3. `ls patches/*.patch | wc -l` = `wc -l < patches/series` (cleaned) = 44
-   once PR B's deletion lands (45 = 45 today), and `--list` agrees.
+   once PR B's deletion lands (45 = 45 at d5e2a01), and `--list` agrees.
+   **PASS at e371b42:** 46 = 46 (44 + #233 + #263), and `--list` exits 0.
 4. The `patch-integrity` job log shows 47 patches applied (44 + 3 KVarN).
-5. README.md contains no hardcoded patch count.
+   **PASS at e371b42:** 50 (46 + 4 KVarN; run 37189534383).
+5. README.md contains no hardcoded patch count. **PASS at e371b42**
+   (`README.md:121-122`).
 6. `kvarn/install.sh` contains no marker-count heredoc; its completeness
    check is `apply.sh --kvarn`'s exact reverse dry-run, and `verify.sh`
-   checks all three KVarN patches the same way.
+   checks all three KVarN patches the same way. **PASS at e371b42:**
+   `kvarn/install.sh:21`; `verify.sh:110-127` checks all four (#262 added the
+   fourth).
 
 At that point "how the series is applied" has one answer, "what is applied"
 has one list, and the answer to "is it healthy?" is the fast CI gate plus
-verify.sh's ladder — two implementations, where the repo today runs four.
+verify.sh's ladder — two implementations, where the repo at d5e2a01 ran four.
+At e371b42 that holds for the series. The KVarN list has no agreement check
+yet (top status block).

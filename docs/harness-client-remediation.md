@@ -6,12 +6,85 @@ this is the deep dive on that card. Every claim below was re-verified against
 the tree on 2026-09-26; where the review's numbers were wrong, they are
 corrected here and in the report.
 
+**Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
+
+**Status:** Not started. Strong; not urgent (bench/ clients unchanged for two passes). Ship PR B's two _created guards first.
+
+- **No harness client changed.** Thirteen commits landed since d5e2a01.
+  `git diff --stat d5e2a01 e371b42 -- bench/` lists two files only:
+  `test_no_key_bind.sh` (new, #237) and `test_prepare_crash.py` (#241's
+  `reject` step). Neither calls the API. `bench/harness.py` and
+  `bench/test_harness.py` do not exist. No PR for A, B or C is open.
+- **Census, old → new** (run in an e371b42 worktree):
+  - scripts: 20 → 20. `grep -lE "urllib|http\.client|curl
+    |127\.0\.0\.1|localhost" bench/*.py bench/*.sh` gives 23 files (was
+    22). The new hit is `test_no_key_bind.sh:25,29,37`. It names 127.0.0.1
+    as an expected `--host` value against a stub `vllm`, so it is a test,
+    not a client. The scope note below now lists it.
+  - `def _key(`: 11 → 11 (`grep -n "def _key(" bench/*.py | wc -l`).
+  - `def post(`: 5 → 5 (`grep -n "def post(" bench/*.py`), same lines.
+  - SSE parsers: 7 → 7 (`grep -l '\[DONE\]' bench/*.py`, less the
+    keep-alive fixture).
+  - `metrics()`: 7 + 3 → 7 + 3 (`grep -n "def metrics(" bench/*.py`; bash
+    `run_benchmarks.sh:38`, `real_rep.sh:18`, `prefill_ab.sh:56`).
+  - model literals: 15 → 15 (`grep -nF '"qwen3.8-27b"' bench/*.py` still
+    gives 20 matches in 16 files). `grep -n 'qwen3\.8-27b' bench/*.sh`
+    still hits the four bench commands.
+  - glue-grep lines: 164 → 164 (163 with `urllib\.request`).
+  - URL conventions: 6 → 6. Key flavors: 4 → 4 (`grep -nE
+    "api_key\.txt|VLLM_API_KEY|OPENAI_API_KEY" bench/*.py`). `grep -cE
+    'def _key\(|api_key\.txt' bench/*.py` is non-zero in 15 files, as
+    before. `grep -l OPENAI_API_KEY bench/*.py` is still empty.
+- **#237 (177ce26) keeps the client key chain.** `resolve_client_key` has
+  the same body. A longer header comment moved it from `:32-42` to
+  `resolve_api_key.sh:41-51`. The order is still OPENAI → VLLM →
+  `$REPO/api_key.txt` → `EMPTY`. #237 adds `resolve_bind_host`
+  (`:53-70`), a server-side function. An explicit `HOST` wins. Else a
+  server with a key binds 0.0.0.0, a container (`/.dockerenv`) keeps
+  0.0.0.0, and a server with no key binds 127.0.0.1. All three launchers
+  call it (`batch/start_qwen.sh:281`, `single-user/start_qwen.sh:822`,
+  `single-user/alternative.sh:42`). Section 2 does not change:
+  `base_url()` defaults to 127.0.0.1, where a keyless server still
+  listens, and `client_key()` must still return `EMPTY` for that server.
+  `verify.sh:331-339` now FAILs on no key only when `HOST` is set off
+  loopback. `verify.sh:370` (was `:360`) still reads its own key as
+  `${VLLM_API_KEY:-$(cat api_key.txt)}` and ignores `OPENAI_API_KEY`. That
+  is not new, and `verify.sh` stays out of scope.
+- **`HOST` has two meanings.** The launchers read it as the bind address
+  (`resolve_api_key.sh:54-55`). `run_benchmarks.sh:27` and `warmup.sh:32`
+  read it as the client's target. The split is not new: the launchers read
+  `${HOST:-0.0.0.0}` before #237 (d5e2a01
+  `single-user/start_qwen.sh:825`). #237 documents the server meaning and
+  tests it (`test_no_key_bind.sh:28-30`). Section 2 now says `base_url()`
+  ignores `HOST`.
+- **The open PRs add no client convention.** #260 ("Changes to allow
+  using model with codex") touches `PATCHES.md`, `patches/series` and a
+  new `patches/api-root-health.patch` only. The patch adds Ollama
+  discovery routes (`/`, `/api/status`,
+  `/api/experimental/model-recommendations`, `/api/show`) and puts them in
+  `UNGUARDED_PATHS`. It adds no harness client, key, URL or model-name
+  convention. `/v1/models` stays guarded, so `model()` does not change.
+  #267 touches `verify.sh` only (the power limit, #258).
+- **Done when (section 6):** none of the six items is met.
+  `run_benchmarks.sh:39` and `prefill_ab.sh:57` still lack the `_created`
+  filter. `real_rep.sh:19` has it, still with no why comment.
+  `patch-integrity.yml` runs `bench/test_model_verification.py` and
+  `bench/test_prepare_state.py` only; `test_no_key_bind.sh` is not in CI.
+- **Stale cites, fixed in place:** `resolve_api_key.sh:32-42` → `:41-51`
+  (1.1; annotated in the 2026-09-29 block). `single-user/alternative.sh`
+  `:39-41` → `:39-42` (annotated in the 2026-09-29 block) and `:56` →
+  `:57` (1.5.3). These cites re-check and hold: `batch/start_qwen.sh:276`,
+  `single-user/start_qwen.sh:142`, `scripts/hq-doctor.sh:29-31` and `:56`,
+  `patches/auth-deny-default.patch:72`, `warmup.sh:43-46`. `git grep -n
+  v1/models -- ':!docs'` still hits only `patches/` and `PATCHES.md`.
+
 **Re-verified 2026-09-29 against upstream/main @ d5e2a01 (vLLM 0.30.0).**
 Every census below was re-run; the command is named next to each count.
 
 - **Unchanged:** `bench/` is byte-identical to 2522ef9 (`git diff --stat
   2522ef9 upstream/main -- bench/` is empty), and so is
-  `resolve_api_key.sh` (`resolve_client_key` still `:32-42`, OPENAI →
+  `resolve_api_key.sh` (`resolve_client_key` still `:32-42`, `:41-51` at
+  e371b42, OPENAI →
   VLLM → `$REPO/api_key.txt` → `EMPTY`). All counts hold: 20 scripts, 11
   `def _key(`, 5 `def post(`, 7 SSE parsers, 7 + 3 `metrics()`, 15
   literals, 164 glue-grep lines. None of the seven upstream commits since
@@ -22,7 +95,8 @@ Every census below was re-run; the command is named next to each count.
   (`patches/auth-deny-default.patch:72`, `UNGUARDED_PATHS`), and send no
   key; hq-doctor reads `VLLM_API_KEY` from `.env` presence-only
   (`:29-31`). The census stays 20. The key change in #219 is server-side:
-  `single-user/alternative.sh:39-41` now sources `resolve_api_key.sh` and
+  `single-user/alternative.sh:39-41` (`:39-42` at e371b42, which adds
+  `resolve_bind_host` at `:42`) now sources `resolve_api_key.sh` and
   calls `resolve_vllm_key` (was `cat api_key.txt`), so the resolver is
   sourced by 7 files (3 launchers + the 4 bench bash scripts; `git grep -n
   resolve_api_key -- ':!docs'`). Worth knowing for `client_key()`: #219's
@@ -118,7 +192,9 @@ Every census below was re-run; the command is named next to each count.
 "urllib|http\.client|curl |127\.0\.0\.1|localhost" bench/*.py bench/*.sh`
 gives these 20 plus two tests that only name 127.0.0.1 for their own stub
 or a `torch.distributed` init address, `test_bench_sse_keepalive.py:22,26` and
-`test_marlin_int8_asym.py:31`) — and the five mechanisms they re-implement:
+`test_marlin_int8_asym.py:31`; since #237 (2026-10-04) also a third,
+`test_no_key_bind.sh:25,29,37`, which names 127.0.0.1 as an expected
+`--host` value against a stub `vllm`) — and the five mechanisms they re-implement:
 API-key resolution, server URL, model name, the request/stream helpers, and
 the `/metrics` scrape. **Not in scope:** verdict/exit-code conventions
 (candidate 5), the bench manifest (candidate 5), the offline tools
@@ -133,7 +209,8 @@ launcher-side logic (candidate 2's plan). `scripts/hq-doctor.sh` and the
 
 ### 1.1 The API key: four flavors, and the canonical one is the least used
 
-The canonical chain lives in `resolve_api_key.sh:32-42`
+The canonical chain lives in `resolve_api_key.sh:41-51` (was `:32-42`
+before #237's header comment, 2026-10-04)
 (`resolve_client_key`: OPENAI_API_KEY → VLLM_API_KEY → `$REPO/api_key.txt` →
 `"EMPTY"`), written for #113. It is used by exactly the **4 bash scripts**
 (`run_benchmarks.sh:25-26`, `real_rep.sh:12-13`, `prefill_ab.sh:24-25`,
@@ -288,7 +365,8 @@ copy-paste" — that was an overestimate; the honest numbers):
    1.3.1 bug shape, in a fourth file; at d5e2a01 the batch copy is
    `batch/start_qwen.sh:276`, `[ -n "$INT8_LAYERS" ] && export …`; the
    two single-user copies carry the two-condition guard,
-   `single-user/start_qwen.sh:142` and `single-user/alternative.sh:56`).
+   `single-user/start_qwen.sh:142` and `single-user/alternative.sh:57`, was
+   `:56` before #237 added `resolve_bind_host` at `:42`).
    Its own comment, `prefill_ab.sh:36-37`, says it copies batch because the
    "single-user script has no wiring yet" — stale: it boots
    `single-user/start_qwen.sh`, which has that wiring.
@@ -322,6 +400,8 @@ client_key()  -> str
 base_url()  -> str
     One convention: VLLM_API if set (full base), else
     http://127.0.0.1:${PORT:-18020}. No per-script env-var inventions.
+    Ignores HOST: the launchers read HOST as the bind address
+    (resolve_api_key.sh:54-55), not the client's target (2026-10-04).
 
 model()  -> str
     VLLM_MODEL if set, else the first id of GET {base}/v1/models (sends
@@ -450,7 +530,7 @@ full automation belongs to candidate 5's manifest, not this plan.
 | Half-migration leaves two conventions again | medium | the rollout is mechanism-per-PR (3.1-3.3), each with a grep-based acceptance gate; no partial-mechanism merges |
 | `import harness` breaks under an exotic invocation (`python -m`, symlinked script) | low | the documented invocations (`venv/bin/python bench/x.py` or `python bench/x.py`, section 2) put `bench/` on `sys.path`; the test file imports it the same way; a fallback two-liner is acceptable if a real caller breaks |
 | Flavor-B scripts silently change behavior for their one known user | medium | called out in PR A's message; the change is strictly "works where it used to crash" |
-| `model()` adds a `/v1/models` round-trip per invocation | low | cached per process; the endpoint is cheap. (This said it is "already hit by `verify.sh`'s server checks"; it is not — `verify.sh` hits `/health`, `/v1/chat/completions`, `/tokenize` and `/v1/tokenize` only (`grep -noE 'PORT/[a-zA-Z0-9/_.-]+' verify.sh`), and `git grep -n v1/models -- ':!docs'` hits only patches.) |
+| `model()` adds a `/v1/models` round-trip per invocation | low | cached per process; the endpoint is cheap. (This said it is "already hit by `verify.sh`'s server checks"; it is not — `verify.sh` hits `/health`, `/v1/chat/completions`, `/tokenize` and `/v1/tokenize` only (`grep -noE 'PORT/[a-zA-Z0-9/_.-]+' verify.sh`), and `git grep -n v1/models -- ':!docs'` hits only patches and the `PATCHES.md:54` row, re-run at e371b42; no client calls it.) |
 | The `_created` filter changes a published number | low | it is a no-op unless `_created` lines exist; if they do, the unfiltered number was already wrong (1.5.1) |
 | Scope creep into verdict conventions (candidate 5) | medium | exit-code policy is explicitly out of scope (section 2's "not in the module") |
 
