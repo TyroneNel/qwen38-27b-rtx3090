@@ -21,6 +21,14 @@ jobs:
         run: python bench/test_model_verification.py
       - name: Check state detection crash resilience without a GPU
         run: python bench/test_prepare_state.py
+      - name: Check the MQ-3D split-KV capacity property holds without a GPU
+        run: python bench/mq3d_capacity_property.py
+      - name: Check the capacity property test still catches a broken derivation
+        run: python bench/mq3d_capacity_property.py --mutate seq-rows
+      - name: Check verbatim answer classification without a GPU
+        run: python bench/verbatim.py
+      - name: Check a launcher with no API key binds 127.0.0.1
+        run: bash bench/test_no_key_bind.sh
 
   kvarn-torch-gate:
     runs-on: ubuntu-latest
