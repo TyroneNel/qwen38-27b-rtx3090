@@ -1,5 +1,6 @@
 #!/bin/bash
-# CPU test for #204: which --host each launcher passes to `vllm serve`, with and without a key.
+# CPU test for #204: which --host each launcher passes to `vllm serve`, with and without a key. Also which
+# INT8 variables each launcher exports (qwen_int8_exports): the include regex only with the input dtype.
 # Copies the checkout to a temp dir, so the api_key.txt rows never touch the real one, and runs the three
 # launchers with PRINT_ARGV=1 (launcher_common.sh), which prints the argv instead of starting vLLM. No GPU,
 # no model, no network. In a container (/.dockerenv) the default differs, so this is skipped there.
@@ -10,15 +11,21 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$(dirname "$HERE")"
 [ -f /.dockerenv ] && { echo "skip: /.dockerenv exists, the container default is 0.0.0.0 by design"; exit 0; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 (cd "$REPO" && tar --exclude=.git --exclude=docs/media --exclude=bench/demo --exclude=models -cf - .) | tar -xf - -C "$T"
-# A launcher that ignores PRINT_ARGV=1 reaches exec. This stub then fails the row, and no real vllm starts.
+# The stub vllm prints the two INT8 exports for int8_of, and no real vllm starts. A launcher that ignores
+# PRINT_ARGV=1 reaches it too, prints no --host line, and fails its host_of rows.
 mkdir -p "$T/venv/bin"
-printf '#!/bin/sh\necho "exec reached: PRINT_ARGV=1 did not stop the launcher" >&2; exit 99\n' > "$T/venv/bin/vllm"; chmod +x "$T/venv/bin/vllm"
+printf '#!/bin/sh\necho "${VLLM_MARLIN_INPUT_DTYPE-unset} ${VLLM_MARLIN_INT8_INCLUDE_RE-unset}"\n' > "$T/venv/bin/vllm"; chmod +x "$T/venv/bin/vllm"
 FAILS=0
 # host_of <launcher> [@keyfile] <env assignments...>: the argument after --host in the PRINT_ARGV=1 argv.
 # @keyfile puts the key only in api_key.txt.
 host_of() { local sc=$1; shift
   rm -f "$T/api_key.txt"; [ "${1:-}" = @keyfile ] && { echo filekey > "$T/api_key.txt"; shift; }
   (cd "$T" && env -u VLLM_API_KEY -u HOST PRINT_ARGV=1 "$@" bash "$sc" 2>/dev/null </dev/null) | sed -n '/^--host$/{n;p;}'; }
+# int8_of <launcher> <env assignments...>: "<VLLM_MARLIN_INPUT_DTYPE> <VLLM_MARLIN_INT8_INCLUDE_RE>" as the
+# stub vllm sees them, "unset" for one the launcher did not export.
+int8_of() { local sc=$1; shift
+  rm -f "$T/api_key.txt"
+  (cd "$T" && env -u VLLM_API_KEY -u HOST -u PRINT_ARGV -u VLLM_MARLIN_INPUT_DTYPE -u VLLM_MARLIN_INT8_INCLUDE_RE "$@" bash "$sc" 2>/dev/null </dev/null) | tail -n 1; }
 check() { local want=$1 got=$2 what=$3
   if [ "$got" = "$want" ]; then printf '  PASS  %s -> %s\n' "$what" "$got"; else printf '  FAIL  %s -> %s (want %s)\n' "$what" "${got:-<none>}" "$want"; FAILS=$((FAILS+1)); fi; }
 for sc in single-user/start_qwen.sh batch/start_qwen.sh single-user/alternative.sh; do
@@ -29,6 +36,9 @@ for sc in single-user/start_qwen.sh batch/start_qwen.sh single-user/alternative.
   check 0.0.0.0   "$(host_of $sc HOST=0.0.0.0)"                 "no key, HOST=0.0.0.0 (explicit)"
   check 127.0.0.1 "$(host_of $sc HOST=127.0.0.1 VLLM_API_KEY=k)" "key, HOST=127.0.0.1"
   check 10.1.2.3  "$(host_of $sc HOST=10.1.2.3 VLLM_API_KEY=k)"  "key, HOST=10.1.2.3"
+  check "int8 mlp"    "$(int8_of $sc INT8_ACT=int8 INT8_LAYERS=mlp)" "INT8_ACT=int8 INT8_LAYERS=mlp"
+  check "unset unset" "$(int8_of $sc INT8_ACT= INT8_LAYERS=mlp)"     "INT8_ACT= INT8_LAYERS=mlp: no regex without the dtype"
+  check "int8 unset"  "$(int8_of $sc INT8_ACT=int8 INT8_LAYERS=)"    "INT8_ACT=int8 INT8_LAYERS=: empty is unset (#20)"
 done
 echo "== verify.sh key check (the section only, as the launcher env would set it)"
 vk() { (cd "$T" && rm -f api_key.txt; env -u VLLM_API_KEY -u HOST "$@" bash -c '
@@ -38,4 +48,4 @@ vk() { (cd "$T" && rm -f api_key.txt; env -u VLLM_API_KEY -u HOST "$@" bash -c '
 [ "$(vk HOST=127.0.0.1)" = WARN ] && echo "  PASS  no key, HOST=127.0.0.1 -> WARN" || { echo "  FAIL  no key, HOST=127.0.0.1"; FAILS=$((FAILS+1)); }
 [ "$(vk HOST=0.0.0.0)" = FAIL ] && echo "  PASS  no key, HOST=0.0.0.0 -> FAIL" || { echo "  FAIL  no key, HOST=0.0.0.0"; FAILS=$((FAILS+1)); }
 [ "$(vk VLLM_API_KEY=k HOST=0.0.0.0)" = PASS ] && echo "  PASS  key, HOST=0.0.0.0 -> PASS" || { echo "  FAIL  key, HOST=0.0.0.0"; FAILS=$((FAILS+1)); }
-echo; [ $FAILS = 0 ] && echo "all bind checks passed" || { echo "$FAILS bind checks FAILED"; exit 1; }
+echo; [ $FAILS = 0 ] && echo "all checks passed" || { echo "$FAILS checks FAILED"; exit 1; }

@@ -56,8 +56,7 @@ export VLLM_INT4_MQ_3D=${INT4_MQ_3D:-1}
 # so it stays opt-in here too. INT8_LAYERS narrows it the same way.
 INT8_ACT=${INT8_ACT-}
 INT8_LAYERS=${INT8_LAYERS-mlp|linear_attn|self_attn}
-[ -n "$INT8_ACT" ] && export VLLM_MARLIN_INPUT_DTYPE=$INT8_ACT
-[ -n "$INT8_ACT" ] && [ -n "$INT8_LAYERS" ] && export VLLM_MARLIN_INT8_INCLUDE_RE=$INT8_LAYERS
+qwen_int8_exports "$INT8_ACT" "$INT8_LAYERS"
 
 # Ghost regions from a previous OOM-killed server hold host RAM hostage
 # (gotcha: 70 restarts of accumulation); same cleanup as start_qwen.sh.
