@@ -9,16 +9,33 @@ them in the order of `patches/series` onto the installed vLLM wheel; `verify.sh`
 - **local**: this hardware or environment (WSL2, sm80, a tuned build, env knobs). Stays.
 - **own**: a fix to a feature this repo introduced. Rides with that feature.
 
-Cut against: the pin the current hunks were generated on. Every file is exported from its commit on one fork branch, `cpuchip/vllm` **`qwen38/0.30`** (v0.30.0 + one commit per row, in series order, subject `[qwen38] <topic>`; export point tagged `qwen38/0.30-cut5`; this branch adds `sampler-warmup-cuda` on `qwen38/0.30-warmup`, tagged `qwen38/0.30-warmup-cut1`, and `pinned-kv-empty-cache` on `qwen38/0.30-pinned-kv-empty-cache`, tagged `qwen38/0.30-pinned-kv-cut1`, so a later rewrite of the branch never orphans a hash these files name), so the series applies to the 0.30.0 tree with exact context; `patches/apply.sh` (which the Dockerfile and the install pages call),
+Cut against: the pin the current hunks were generated on. Every file is exported from one commit on a vLLM 0.30.0 fork (subject `[qwen38] <topic>`; the file's `--- exported from` line names the commit, and the list below says which fork ref holds it), so the series applies to the 0.30.0 tree with exact context; `patches/apply.sh` (which the Dockerfile and the install pages call),
 `patches/check_vllm_series.sh`, `kvarn/install.sh` and `verify.sh` apply and check with `--fuzz 0`, and a hunk whose context has moved fails the
 build by name instead of landing by guess. Regenerate a file with `bash scripts/export-patch.sh <fork checkout>
 <commit> patches/<topic>.patch`; do not edit the files by hand. A patch that reads an env knob registers it in
 `envs.py` in its own hunk (so the knob is in the torch.compile cache key), and reads it through `vllm.envs`.
 
+Where the commits are. The `exported from` line always says `cpuchip/vllm`, because `scripts/export-patch.sh` writes
+it that way. The fork rewrites its branch `qwen38/0.30` when it cuts again (cut8 dropped most of cut7's commits), so
+a commit stays reachable only from a tag or from another branch. Checked 2026-10-04 with `git for-each-ref --contains`
+on both forks:
+
+- tag `qwen38/0.30-cut7` on `cpuchip/vllm`: every file that the next five items do not name.
+- tag `qwen38/0.30-cut9` on `cpuchip/vllm` (the head of `qwen38/0.30`): `bench-sse-keepalive`, `marlin-int8-asym-zp`,
+  `marlin-repack-staged-sm80`, `sampler-warmup-cuda`, `speed-knobs-envs` and `kvarn/kvarn-0.30.0`.
+- branch `qwen38/0.30-chainfix` on `cpuchip/vllm`, which has no tag: `dflash2-ngram-chains` and
+  `kvarn/kvarn-v2-runner-0.30.0`.
+- tag `qwen38/0.30-pinned-kv-cut1` on `TyroneNel/vllm`: `pinned-kv-empty-cache` (cpuchip/vllm#4 is open for it).
+- tag `qwen38/0.30-kvarn-fp16-cut1` on `TyroneNel/vllm`: `kvarn/kvarn-fp16-dequant-0.30.0` (cpuchip/vllm#3 is open
+  for it).
+- no ref on either fork: `kvarn/kvarn-recycled-pages-0.30.0` (`40ab8e0`). Its fork commits (on cut7, cut9 and
+  `qwen38/0.30-chainfix`) also carry the `kvarn_attn.py` half, which this repo keeps in `kvarn/files`, so none of
+  them exports to this file.
+
 | patch | kind | what | upstream | cut against | retires when |
 |---|---|---|---|---|---|
-| auth-deny-default | fix | --api-key guards every path except /health, /ping, /load and /version (deny by default). The old prefix list left /tokenize, /detokenize, /metrics and the docs open without the key. /metrics now needs the key: a scraper that cannot send it must use a separate listener, and the in-tree scrapes send it (bench-probe-errors). The allowlist ignores a trailing slash, so a probe on /health/ does not get a 401. Only a real CORS preflight (OPTIONS with Origin and Access-Control-Request-Method) skips the token; a bare OPTIONS needs it, because /metrics answers any method. The --api-key help text describes the allowlist | vllm #58028 | 0.30.0: cut against 0.29.0 and applies as cut (authenticate.py is unchanged; the cli_args.py help-text hunk lands at an offset) | upstream PR |
-| bench-probe-errors | fix | `vllm bench serve`'s /tokenize alignment probe sends the API key (Bearer from OPENAI_API_KEY, --header wins) and classifies its failure (404 route-or-name vs 401 vs unreachable vs timeout) instead of one "endpoint unavailable" line for every cause; the /metrics scrapes (`fetch_spec_decode_metrics`, `fetch_diffusion_metrics`) send the benchmark's headers too, so a keyed server no longer reports the spec-decode block as absent | vllm #58024 | 0.30.0 | upstream PR |
+| auth-deny-default | fix | --api-key guards every path except /health, /ping, /load and /version (deny by default). The old prefix list left /tokenize, /detokenize, /metrics and the docs open without the key. /metrics now needs the key: a scraper that cannot send it must use a separate listener, and the in-tree scrapes send it (bench-probe-errors). The allowlist ignores a trailing slash, so a probe on /health/ does not get a 401. Only a real CORS preflight (OPTIONS with Origin and Access-Control-Request-Method) skips the token; a bare OPTIONS needs it, because /metrics answers any method. The --api-key help text describes the allowlist | vllm #59892 | 0.30.0: cut against 0.29.0 and applies as cut (authenticate.py is unchanged; the cli_args.py help-text hunk lands at an offset) | upstream PR |
+| bench-probe-errors | fix | `vllm bench serve`'s /tokenize alignment probe sends the API key (Bearer from OPENAI_API_KEY, --header wins) and classifies its failure (404 route-or-name vs 401 vs unreachable vs timeout) instead of one "endpoint unavailable" line for every cause; the /metrics scrapes (`fetch_spec_decode_metrics`, `fetch_diffusion_metrics`) send the benchmark's headers too, so a keyed server no longer reports the spec-decode block as absent | vllm #59888 | 0.30.0 | upstream PR |
 | bench-sse-keepalive | fix | `vllm bench serve` no longer fails a request whose server sends an SSE keep-alive before the first token: the request functions stripped each network chunk, which deleted the blank line between SSE messages and glued the `: keep-alive` comment to every message after it. With the launchers' `--sse-keep-alive-interval 30`, that failed every prompt whose prefill took over 30 s (`run_benchmarks.sh --long` read zeros; #216 lost its 48k+ rows). The audio request function also skips SSE comments now | none yet | 0.30.0 | upstream PR |
 | dflash2-lookup-drafting | feature | lookup-augmented drafting for DFlash2 (n-gram search over the context) | none | 0.30.0 | upstreamed |
 | dflash2-ngram-chains | feature | quantized candidate chains for the drafter; `propose` override | none | 0.30.0 | upstreamed |
@@ -37,7 +54,7 @@ build by name instead of landing by guess. Regenerate a file with `bash scripts/
 | marlin-tune-table | local | wiring for a locally built tunable Marlin extension, off by default | none | 0.30.0, adapted to #54809 (activation ordering removed: g_idx, perm, is_k_full gone) | stays |
 | offload-dflash-eagle-groups | fix | OffloadingConnector under dflash flagged every KV group as draft attention (fork #33) | none yet | 0.30.0: re-cut from the main-track resolution | upstream PR |
 | offload-wsl2-devptr | local | CPU offload tier device pointers on WSL2 | none | 0.30.0 | stays |
-| pinned-kv-empty-cache | fix | with `kv_cache_memory_bytes` pinned (the launchers' `KV_MEM`), synchronize and empty the allocator cache after the profile run, so a cold compile cache's scratch (1.2 GiB on a 24 GiB card) does not stay under the KV cache and over-commit the card, which under WSL2's driver moves GPU memory to system RAM and slows the KVarN kernels; `memory-profile-after-warmup` does the same on the measured path only | none yet | 0.30.0 | upstream empties the cache on the pinned path |
+| pinned-kv-empty-cache | fix | with `kv_cache_memory_bytes` pinned (the launchers' `KV_MEM`), synchronize and empty the allocator cache after the profile run, so a cold compile cache's scratch (1.2 GiB on a 24 GiB card) does not stay under the KV cache and over-commit the card, which under WSL2's driver moves GPU memory to system RAM and slows the KVarN kernels; `memory-profile-after-warmup` does the same on the measured path only | vllm #59893 | 0.30.0 | upstream empties the cache on the pinned path |
 | qwen3_5-embed-quant | fix | pass `quant_config` to the token embedding (main model and MTP module) | none yet | 0.30.0 | upstream PR |
 | qwen3_5-mtp-draft-vocab | feature | vocab-truncated draft head for MTP | none | 0.30.0 | upstreamed |
 | sampler-small-topk-fast-softmax | feature | sort-free top-k/top-p for small k, multi-block row softmax | none | 0.30.0: re-cut from the main-track resolution | upstreamed or superseded |
@@ -50,9 +67,9 @@ build by name instead of landing by guess. Regenerate a file with `bash scripts/
 | memory-profile-after-warmup | fix | run `profile_run` once before the memory-profiling window, synchronize and empty the allocator cache, so a cold compile cache's scratch is not counted as transient peak and the KV cache the warm boot grants is not refused | none yet | 0.30.0 | upstream profiles after warmup |
 | cudagraph-memory-from-allocator | fix | measure captured CUDA-graph memory by the allocator's reserved bytes and log the driver's free-memory delta beside it; under WSL2's driver that delta reads zero once the KV cache fills the budget and collapses by 5.44 GiB during a cold compile, which the graph estimate subtracted from the KV budget and refused the CTX=huge first boot | none yet | 0.30.0, hand-resolved against #54646 (both readings inside the gc-freeze block) | upstream measures by the allocator |
 | compile-key-runtime-knobs | fix | keeps this repo's runtime-only env knobs (`VLLM_ENGINE_STALL_SENTINEL_S`, `VLLM_MAMBA_ALIGN_KEEP_CHECKPOINTS`, `VLLM_DFLASH2_CHAIN_LOG_SEC`, `VLLM_MARLIN_TUNE_DIR`) and the deprecated `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` out of `compile_factors()`, so changing one no longer forces a cold torch.compile (#183) | none | 0.30.0 | stays while the knobs exist |
-| serve-404-served-names | fix | the model-not-found 404 lists the served names (`Served models: ...`) so a misnamed model is a one-read response body | vllm #58025 | 0.30.0 | upstream PR |
-| serve-model-path-match | fix | a model name equal to a served model's root path or its basename is accepted (exact matches only): /v1/models publishes the root, and echoing it back used to 404 | vllm #58026 | 0.30.0 | upstream PR |
-| tokenize-v1-route | feature | /tokenize and /detokenize also served under /v1 for OpenAI-SDK base_urls; operation ids stay unique (name+path+method) | vllm #58027 | 0.30.0 | upstream PR |
+| serve-404-served-names | fix | the model-not-found 404 lists the served names (`Served models: ...`) so a misnamed model is a one-read response body | vllm #59889 (merged to main as `7867d6c52d`, not in a release yet; upstream says `Valid aliases: ...`) | 0.30.0 | the pin carries vllm #59889 |
+| serve-model-path-match | fix | a model name equal to a served model's root path or its basename is accepted (exact matches only): /v1/models publishes the root, and echoing it back used to 404 | vllm #59890 | 0.30.0 | upstream PR |
+| tokenize-v1-route | feature | /tokenize and /detokenize also served under /v1 for OpenAI-SDK base_urls; operation ids stay unique (name+path+method) | none (vllm #59891 was closed: upstream keeps `/v1` for the official OpenAI endpoints) | 0.30.0 | stays |
 | triton-spec-attn-fp8-kv | feature | split-KV verify attention on the per-tensor fp8 KV cache (TRITON_ATTN, sm89+); registers `VLLM_SPEC_ATTN_DEBUG` | none | 0.30.0 | upstreamed |
 | spec-decode-int4-kv-mq3d | feature | multi-query 3D int4 verify path | none | 0.30.0 | rides with int4-kv-per-token-head |
 | spec-decode-int8-kv | feature | split-KV verify attention over an int8 per-token-head cache | none | 0.30.0 | rides with spec-decode-attn |
@@ -86,5 +103,7 @@ this line's readers already go through `vllm.envs`, so applying it duplicates th
 `speed-knobs-envs` rather than adding a second copy, before the pin-flip PR. Until then the 0.28
 and 0.29 shapes differ here by design.
 
-Two files still carry raw `diff -ruN` headers with timestamps instead of a preamble (`dflash2-z-adaptive-emitted`,
-`offload-wsl2-devptr`); their descriptions live in `docs/gotchas.md` until they get one.
+Two files have almost no preamble, because their fork commits have almost no body: `dflash2-z-adaptive-emitted` has
+none (only blank lines come before its `exported from` line), and `offload-wsl2-devptr` has one line. Their rows above
+describe them, and `docs/wsl2-4090.md` ("CPU offload tier under WSL2") explains the second. A preamble comes from the
+fork commit body and a re-export, not from an edit to the file.

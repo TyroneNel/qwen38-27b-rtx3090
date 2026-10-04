@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Export one topic commit from the vLLM fork branch as a patch file in this repo's convention
 # (paths relative to the vllm package, applied with `patch -p1 -d site-packages/vllm`; prose above the first hunk).
-# The commit is the source of truth; the file is never edited by hand (docs/fork-workflow.md, rule 2).
+# The commit is the source of truth; the file is never edited by hand (PATCHES.md, the "Cut against" paragraph).
 #
 #   bash scripts/export-patch.sh <fork checkout> <commit> [patches/<name>.patch]
 set -eu
