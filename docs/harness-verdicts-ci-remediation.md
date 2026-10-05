@@ -6,8 +6,8 @@ this is the deep dive on that card, with every claim re-verified against the
 tree on 2026-09-26 (and one of the review's sub-claims softened where the
 evidence didn't support it — see 1.2).
 
-> **Updated 2026-10-05 on upstream/main @ 10bb488.** PR B is in review in three
-> parts. #271 adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** PR A is in review as #279,
+> and PR B is in review in three parts. #271 adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with
 > `--mutate seq-rows`) and `verbatim.py` to `model-verification`. #277
 > (`77b4695`) adds a `prepare-crash` job that runs `test_prepare_crash.py`.
 > #278 (`389e607`) runs `mq3d_scratch_pool_test.py` in the image build.
@@ -42,13 +42,59 @@ evidence didn't support it — see 1.2).
 > - The test's `NEGATIVE CONTROL` line prints and does not assert. The
 >   assertion at `:36` checks the same case.
 > - All of PR B is in review.
+> - PR A is #279 (`450e507`, CI green). It changes no CI, and no open PR
+>   touches a file it changes.
+> - Eleven scripts printed a failing verdict and exited 0 on main, not six.
+>   A check of each script in `bench/` found five more:
+>   `test_spec_decode_fp8.py` (a FAIL row), `bugb_sweep.py` (a broken
+>   length), `residue_sweep.py` (a broken residue), `replay_offload_serve.py`
+>   (NOT-SERVED) and `seat_ttft.py` (every request failed). #279 makes ten
+>   of them exit 1 on that verdict, and `seat_ttft.py` exit 2.
+> - `bench/README.md` has the exit table, four rules and 45 rows: the 44
+>   entries in `bench/` (`demo/` and the data files included) and the kvarn
+>   test.
+> - The two verdicts files are not a copy, so #279 keeps both. They have
+>   the same rows and verdicts, but they are two runs. The first is the 4090
+>   run (patch sha `c2b5a002…`). The second is the 3090 rerun, with the
+>   shipped patch's sha (`562f7e28…`). Their `int4_per_token_head.py` hashes
+>   differ, and so do three `ref_max_abs_2d` and two `ref_max_abs_3d`
+>   values. `docs/spec-decode-scratch-token-units.md` cites the first at
+>   `:145` and the second at `:191`. The README says which is which.
+> - The oracle still writes beside itself by default. `ORACLE_OUT` already
+>   sets another path (`mq3d_layer2_oracle.py:46-50`).
+>   `docs/spec-decode-scratch-token-units.md:157-161` says the default
+>   rewrites the verdict file beside the oracle, and that these lines are
+>   the only change from the 4090 author's script, apart from four wording
+>   edits. A move to `bench/results/` would make both statements false.
+> - The drivers get no "measurement, not a gate" docstring line. The
+>   README's kind column says it for each one. `tune_gdn.py`'s new
+>   docstring and `seat_ttft.py:19` also say it.
+> - The checks ran on a host with no GPU, on the branch and on main. A
+>   stdlib stub server ran 20 cases of the server scripts. The SSE test ran
+>   3 cases in `ghcr.io/syv-ai/hyperqwen:latest`. A CPU harness with a fake
+>   kernel ran 6 cases of the two spec-decode tests. It checks the exit
+>   wiring, not the kernels. Each fail case exits 0 on main and non-zero on
+>   the branch. Each pass case exits 0 on both, and INVALID-TIER-OVERFLOW
+>   exits 2 on both.
+> - No caller reads the exits that #279 changes. `verify.sh:405` and
+>   `single-user/start_qwen.sh:598` name `bugb_sweep.py` and
+>   `residue_sweep.py` in comments only.
+> - Known gaps, not fixed in #279. `prefix_alternation.py` exits 0 when it
+>   checked no turn (`--rounds 1`, or the budget runs out before round 2).
+>   With no server, `api_smoke.py` exits 1, not 2, because each check
+>   reports the connection error as a FAIL. `real_rep.sh:23` writes
+>   `/tmp/rr_$TAG_$i.log`. Bash reads `$TAG_`, which is not set, so every
+>   tag writes `/tmp/rr_<i>.log`. The tracker lists it as D3.
+> - Corrected below for PR A: the Status line, the `test_spec_decode_fp8.py`
+>   entry in 1.1, a new 1.2 note, the two 1.4 lines on the verdicts files
+>   and the oracle, 2.1, 2.4, 3.1, 4, and done-when items 1, 2 and 4.
 > - Corrected below: the Status line, the two 2026-10-04 notes in 2.2, the
 >   2.2 image-build note, the 3.2 revised scope and acceptance, and
 >   done-when items 3 and 5.
 
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
-**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271, #277 and #278; see the top block.)
+**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271, #277 and #278, and PR A as #279; see the top block.)
 
 Thirteen commits landed since d5e2a01. Four of them touch this doc's area
 (`git diff --stat d5e2a01 e371b42 -- .github bench kvarn/tests .gitignore
@@ -170,7 +216,7 @@ GPU tools' contents.
 |---|---|---|
 | gate-able CPU tests, **in CI** | `test_model_verification.py`, `test_prepare_state.py` (unittest, `unittest.main():66`; #195/#203); outside `bench/`: `kvarn/tests/test_kvarn_fp16_dequant_torch.py` (CPU torch, no vLLM; `patch-integrity.yml:37`; #262, 2026-10-04) | yes |
 | gate-able, **unwired** | `test_no_key_bind.sh` (2026-10-04, #237: bash + python3 + tar, stub `vllm`, no GPU, no torch; exit 1 on FAIL, `skip:` + exit 0 under `/.dockerenv` at `:10`; ran green here in 0.4 s), `mq3d_capacity_property.py` (pure stdlib: argparse/itertools/random/sys — verified imports), `verbatim.py` (no top-level imports, `import sys` only under `__main__`; `_selftest` at `:100`, `__main__` at `:141-143`), `mq3d_scratch_pool_test.py` (torch-CPU + `import vllm`; docstring: "Runs inside the image, no GPU"), `test_prepare_crash.py` (proper `sys.exit(1 if fails else 0)` at `:446`, was `:377`; **not** stdlib — said "pure stdlib … no torch" at 2522ef9, but `main()` imports torch, safetensors, tokenizers, huggingface_hub, compressed_tensors, transformers at `:421-423`, was `:356-358`; no vLLM import; docstring: "CPU and Linux only, minutes"), `test_kvarn_recycled_pages.py` (torch-CPU, loads `kvarn_attn.py` which imports vLLM; assert-based, prints `OK` at `:63`), `test_bench_sse_keepalive.py` (aiohttp + vLLM's `vllm.benchmarks.lib.endpoint_request_func` by default, `:34`; no GPU — said "aiohttp only" at 2522ef9) | yes, gating nothing |
-| kernel tests (GPU, script-style) | `test_lookup_kernels.py`, `test_marlin_int8_asym.py:85`, `test_prefill_attn_bigpool.py:56`, `test_spec_decode_bigpool.py:71`, `test_spec_decode_fp8.py` (designed skips `:10,14`), `mq3d_layer2_oracle.py:511` | proper 0/1 exits |
+| kernel tests (GPU, script-style) | `test_lookup_kernels.py`, `test_marlin_int8_asym.py:85`, `test_prefill_attn_bigpool.py:56`, `test_spec_decode_bigpool.py:71`, `test_spec_decode_fp8.py` (designed skips `:10,14`; 2026-10-05: not a proper exit, it printed FAIL rows and exited 0, fixed in #279), `mq3d_layer2_oracle.py:511` | proper 0/1 exits |
 | **broken as a test** | `test_spec_decode_attn.py` | prints `FAIL` (`:77`), **no `sys.exit` anywhere** |
 | benchmark drivers | `run_benchmarks.sh`, `real_rep.sh`, `prefill_ab.sh`, `conc_ladder.py`, `labd_bench.py`, `labd_accept.py`, `spec_attn_ctx_scan.py`, `tune_gdn.py`, `act_calib.py` | 0 by design (measurement) |
 | reproducers / issue oracles | `bugb_sweep.py`, `residue_sweep.py`, `seat_ttft.py`, `needle_test.py`, `needle_reuse.py`, `prefix_alternation.py`, `interleave_dose.py`, `replay_offload_serve.py`, `labd_soak.py`, `concurrent_collapse.py` (GPU + live server; #208) | mixed — see 1.2 |
@@ -207,6 +253,12 @@ GPU tools' contents.
   `COLLAPSED`/`DONE`, no `sys.exit` anywhere) and
   `test_bench_sse_keepalive.py` (prints `success=False` on a stock vLLM,
   exits 0 anyway — no assert, no exit).
+- (2026-10-05) The inventory missed five. `test_spec_decode_fp8.py`
+  prints a FAIL row and exits 0. `bugb_sweep.py` and `residue_sweep.py`
+  print a broken length or residue and exit 0. `replay_offload_serve.py`
+  exits 2 on INVALID-TIER-OVERFLOW, but 0 on NOT-SERVED. `seat_ttft.py`
+  exits 0 when every request failed. That makes eleven, and #279 fixes
+  all eleven (see the top block).
 - **Measurement scripts that return 0 unconditionally, correctly**:
   `interleave_dose.py:154-165` (both arms — a dose-response curve has no
   verdict), the drivers above.
@@ -251,8 +303,12 @@ GPU tools' contents.
 - `bench/mq3d_layer2_verdicts.jsonl` (11,438 B) and
   `bench/mq3d_layer2_verdicts-3090.jsonl` (11,439 B) — recorded oracle
   output, checked in twice, one byte apart (a card-specific duplicate).
+  (2026-10-05) Not a duplicate. They are the 4090 run and the 3090 rerun.
+  Their patch and helper hashes differ, and so do five reference values.
+  See the top block.
 - `bench/mq3d_layer2_oracle.py:50` writes its verdicts JSONL into `bench/`
-  by default — running the oracle dirties the checkout.
+  by default — running the oracle dirties the checkout. (2026-10-05) This
+  is by design, and #279 keeps it. See the top block.
 - `bench/prefill_ab.sh:19` writes to `bench/results-prefill-ab/`, which is
   **not** in `.gitignore` (`.gitignore:3-4,16` covers `bench/quality-data/`
   and `bench/results/`; said "`bench/results/` only" at 2522ef9 —
@@ -295,6 +351,10 @@ Per-script changes (small, no measurement logic touched):
   and `kvarn/tests/test_kvarn_fp16_dequant_torch.py` exit 0 on pass and 1
   on fail. `test_no_key_bind.sh`'s container skip exits 0, as
   `test_spec_decode_fp8.py:10,14` does. Neither uses exit 2 or exit 3.
+- (2026-10-05) #279 also fixes the five scripts that 1.2 now names. Ten
+  of the eleven exit 1 on the verdict. `seat_ttft.py` exits 2, because
+  every request failing is an invalid run. The drivers get no docstring
+  line. The manifest's kind column says it for each one.
 
 ### 2.2 CI wiring (seconds, no GPU)
 
@@ -368,9 +428,14 @@ the 80%.
 - Delete `mq3d_layer2_verdicts-3090.jsonl` (the duplicate), move the
   remaining verdicts file next to the oracle's documentation, or leave and
   mark in the manifest — owner pick; default: delete the dup, keep one.
+  (2026-10-05) Neither file is deleted. They are two runs (1.4). #279
+  keeps both, and the manifest says which run each one is.
 - `mq3d_layer2_oracle.py`'s default output goes to `bench/results/`
-  (gitignored) instead of the tree (`:50`).
+  (gitignored) instead of the tree (`:50`). (2026-10-05) Not done. #279
+  keeps the default. See the top block.
 - Add `bench/results-prefill-ab/` to `.gitignore`.
+- (2026-10-05) #279 has the `.gitignore` line, the `test_lookup_kernels.py`
+  name and the `tune_gdn.py` docstring.
 ## 3. Rollout
 
 Two PRs, both cheap and independently revertable.
@@ -393,6 +458,13 @@ when its correctness check FAILs; `python bench/api_smoke.py` exits 1 at
 <12/12 and 0 at 12/12; the manifest covers all 40 files (+ `demo/`; 39
 at d5e2a01) and names `kvarn/tests/test_kvarn_fp16_dequant_torch.py`
 (2026-10-04).
+
+(2026-10-05) In review as #279. It fixes eleven scripts, not six (1.2).
+The manifest has 45 rows: the 44 entries in `bench/` and the kvarn test.
+Against a stub server, `api_smoke.py` exits 1 at 11/12 and 0 at 12/12.
+With a fake kernel on CPU, `test_spec_decode_attn.py` exits 1 on a FAIL
+row and on a NaN row. A GPU run of the two spec-decode tests is not done.
+On a GPU, both should exit 0, with 13 and 19 OK rows.
 
 ### 3.2 PR B — wire the CPU tests into CI
 
@@ -432,6 +504,12 @@ The image build runs `mq3d_scratch_pool_test.py` green on #278.)
 | no measurement regressions | `labd_bench.py`, `conc_ladder.py`, `interleave_dose.py` still exit 0 after printing | drivers stay drivers |
 | manifest coverage | optional lint: every `bench/*.py`/`*.sh` named in `bench/README.md` | the table can't silently rot |
 
+(2026-10-05) #279 ran the convention self-check against a stub server,
+the published image and a CPU harness, not on a live box (top block). Its
+PR body gives the commands for a GPU box and a live server. The drivers
+did not change, so the no-regression row was not run. #279 has no lint. A
+one-time check found 44 rows for the 44 entries in `bench/`.
+
 ## 5. Risks
 
 | risk | likelihood | mitigation |
@@ -449,8 +527,10 @@ Status at e371b42 (2026-10-04): none of items 1-5 is met.
 1. `bench/README.md` lists every file in `bench/` with kind, needs, and
    exit semantics. (2026-10-04) It also lists
    `kvarn/tests/test_kvarn_fp16_dequant_torch.py`.
+   (2026-10-05: met when #279 merges, with 45 rows.)
 2. The six dishonest scripts' exits match their printed verdicts (the
-   review's four, plus #226's and #208's).
+   review's four, plus #226's and #208's). (2026-10-05: eleven scripts,
+   not six, see 1.2. Met when #279 merges.)
 3. `patch-integrity.yml` runs `test_model_verification.py` and
    `test_prepare_state.py` (both already gate, #203), plus
    `mq3d_capacity_property.py` (+ `--mutate seq-rows`) and `verbatim.py`;
@@ -460,7 +540,10 @@ Status at e371b42 (2026-10-04): none of items 1-5 is met.
    (2026-10-05: met when #271, #277 and #278 merge. #277 runs
    `test_prepare_crash.py` in a job of its own, `prepare-crash`.)
 4. `.gitignore` covers `bench/results-prefill-ab/`; the duplicate verdicts
-   file is gone; `test_lookup_kernels.py` names itself.
+   file is gone; `test_lookup_kernels.py` names itself. (2026-10-05: the
+   two verdicts files are two runs, not a duplicate. Both stay, and the
+   manifest says which run each one is. With that change, met when #279
+   merges.)
 5. (2026-10-04) `patch-integrity.yml` runs six tests where it runs three
    today (seven with `test_prepare_crash.py`), and the image build runs
    `mq3d_scratch_pool_test.py`. The capacity-property gate carries its
