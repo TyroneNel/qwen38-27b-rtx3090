@@ -5,6 +5,13 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** D1, the `group_1` gap in
+> §1 and §2.1, is in review as syv-ai/HyperQwen#276 (`f56f0d5`).
+> `quant_embed.py` clones `group_0`, so the embed step no longer needs the
+> lm_head step, and its probe has no precondition to report. Run before
+> lm_head, it completes and leaves a correct model
+> (`bench/test_prepare_crash.py order`).
+
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
 **Status:** Not started. Worth exploring; not urgent. Start PR A after upstream PR #267 merges (it shifts verify.sh again).
@@ -63,6 +70,7 @@ Thirteen commits since d5e2a01. Four touch this plan's surface: 177ce26
   lm_head first (`:83`, embed at `:84`), so the pipeline does not hit it.
   The embed step's real precondition is "lm_head done", which a probe can
   state (§2.1).
+  (2026-10-05: #276 removes this precondition; see the top block.)
 - **#237 adds a fourth split site:** `bench/test_no_key_bind.sh:35`
   extracts verify.sh's key check (`:331-339`) with `sed -n` and runs it
   with `eval`. It is a different block from the model check. No workflow
@@ -317,6 +325,7 @@ exits 1 (`:29`, `:43`, `:45`, `:49`). Both clash with the contract above:
 - The `quant_embed.py` probe can also report its real precondition:
   `:89` clones `config_groups.group_1`, which `quant_lm_head.py:109`
   creates, and `load_config` checks only `group_0` (`quant_schema.py:65`).
+  (2026-10-05: not needed after #276; see the top block.)
 
 ### 2.2 The verify block becomes a file
 
