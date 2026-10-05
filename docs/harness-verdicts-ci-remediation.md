@@ -6,10 +6,11 @@ this is the deep dive on that card, with every claim re-verified against the
 tree on 2026-09-26 (and one of the review's sub-claims softened where the
 evidence didn't support it — see 1.2).
 
-> **Updated 2026-10-05 on upstream/main @ 10bb488.** PR B is in review in two
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** PR B is in review in three
 > parts. #271 adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with
 > `--mutate seq-rows`) and `verbatim.py` to `model-verification`. #277
 > (`77b4695`) adds a `prepare-crash` job that runs `test_prepare_crash.py`.
+> #278 (`389e607`) runs `mq3d_scratch_pool_test.py` in the image build.
 > - The 2.2 pip set was incomplete. #277 installs CPU torch, then
 >   transformers, tokenizers, compressed-tensors and huggingface_hub at the
 >   pins in `docker/requirements.txt`, then `safetensors` and `psutil`.
@@ -25,13 +26,29 @@ evidence didn't support it — see 1.2).
 >   #271 and #275.
 > - A scratch copy whose `write_json` writes in place fails the `mtp` step
 >   (exit 1, 2 failures). The unchanged `mtp` step passes 24 cases.
-> - Still open in PR B: `mq3d_scratch_pool_test.py` in the image build.
-> - Corrected below: the Status line, the two 2026-10-04 notes in 2.2, and the
->   3.2 revised scope and acceptance.
+> - #278 adds `venv/bin/python bench/mq3d_scratch_pool_test.py` at the end of
+>   the Dockerfile `RUN` that runs `verify.sh --install` (`Dockerfile:38`).
+>   Under `set -e` a failed assertion stops the build. Of the two places in
+>   2.2, #278 takes the Dockerfile line: it runs in local builds too. With
+>   #278, `verify.sh --install` moves `Dockerfile:34`→`:37`.
+> - On the #278 runner, build-push took 5m21s, CI green. The test printed
+>   `POOL UNIT TEST OK: 9 assertions` about 8 s after `verify: OK (0
+>   failures)`.
+> - A scratch copy of the patch without the exclusive guard in
+>   `mq3d_scratch_acquire` (`if fits:`) fails the #278 build at the test's
+>   exclusive assertion (exit 1). Main's Dockerfile builds the same tree,
+>   and `verify.sh` reports 0 failures. Both builds ran on a host with no
+>   GPU, with build-push's registry cache.
+> - The test's `NEGATIVE CONTROL` line prints and does not assert. The
+>   assertion at `:36` checks the same case.
+> - All of PR B is in review.
+> - Corrected below: the Status line, the two 2026-10-04 notes in 2.2, the
+>   2.2 image-build note, the 3.2 revised scope and acceptance, and
+>   done-when items 3 and 5.
 
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
-**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271 and #277; see the top block.)
+**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271, #277 and #278; see the top block.)
 
 Thirteen commits landed since d5e2a01. Four of them touch this doc's area
 (`git diff --stat d5e2a01 e371b42 -- .github bench kvarn/tests .gitignore
@@ -322,7 +339,8 @@ Per-script changes (small, no measurement logic touched):
   it runs in the image build (either a `RUN` line after `verify.sh
   --install` in the Dockerfile, or a post-build step in
   `docker-image.yml`; choice flagged to the owner — the Dockerfile line is
-  the same gate, the workflow step is easier to skip).
+  the same gate, the workflow step is easier to skip). (2026-10-05: #278
+  takes the Dockerfile line, at `Dockerfile:38`; see the top block.)
 - Hardening the heredoc-split tests is **not** in this plan: the
   string-split (now four call sites (2026-10-04) — `test_model_verification.py:18-19`,
   `test_prepare_state.py:37`, `test_prepare_crash.py:431-432`,
@@ -388,7 +406,7 @@ upstream) — and each gates with its negative control intact.
 the CPU-torch job with its pip deps (2.2; [INFERENCE: not run]; 2026-10-05:
 #277 puts it in a sibling job, `prepare-crash`, see the top block), not into
 the image gate. `mq3d_scratch_pool_test.py` still goes into the image
-gate. Counts: `patch-integrity.yml` runs three tests today (two bench
+gate (2026-10-05: #278). Counts: `patch-integrity.yml` runs three tests today (two bench
 tests and the kvarn gate). After PR B it runs six
 (`mq3d_capacity_property.py`, `verbatim.py`, `test_no_key_bind.sh`
 added), or seven with `test_prepare_crash.py`. The image build adds
@@ -401,7 +419,8 @@ a scratch PR that breaks the capacity property (edit the formula in
 `mq3d_capacity_property.py:25-27`) fails the job — the negative control
 proves the gate bites. (2026-10-04) The log also shows
 `test_no_key_bind.sh` green, and `test_prepare_crash.py` green in the
-CPU-torch job if PR B takes it. (2026-10-05: both green, on #271 and #277.)
+CPU-torch job if PR B takes it. (2026-10-05: both green, on #271 and #277.
+The image build runs `mq3d_scratch_pool_test.py` green on #278.)
 
 ## 4. Test plan
 
@@ -438,6 +457,8 @@ Status at e371b42 (2026-10-04): none of items 1-5 is met.
    the image build runs `mq3d_scratch_pool_test.py`. (2026-10-04) It also
    runs `test_no_key_bind.sh` in the stdlib job. The `kvarn-torch-gate`
    job keeps its kvarn test and may add `test_prepare_crash.py`.
+   (2026-10-05: met when #271, #277 and #278 merge. #277 runs
+   `test_prepare_crash.py` in a job of its own, `prepare-crash`.)
 4. `.gitignore` covers `bench/results-prefill-ab/`; the duplicate verdicts
    file is gone; `test_lookup_kernels.py` names itself.
 5. (2026-10-04) `patch-integrity.yml` runs six tests where it runs three
@@ -446,4 +467,6 @@ Status at e371b42 (2026-10-04): none of items 1-5 is met.
    negative control. (Through d5e2a01 this item read "five bench tests
    where two did, every gate with its negative control". The kvarn gate
    (#262) made today's count three, and `test_no_key_bind.sh` and the kvarn
-   gate have no negative control.)
+   gate have no negative control.) (2026-10-05: met when #271, #277 and #278
+   merge: seven tests in `patch-integrity.yml`, and the image build runs
+   `mq3d_scratch_pool_test.py`.)
