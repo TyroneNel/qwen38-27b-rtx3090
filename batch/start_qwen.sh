@@ -272,7 +272,8 @@ export VLLM_USE_FLASHINFER_SAMPLER=0
 qwen_int8_exports "$INT8_ACT" "$INT8_LAYERS"
 
 # API key: put it in api_key.txt in the repo root, or export VLLM_API_KEY.
-source "$REPO/resolve_api_key.sh"
+source "$REPO/resolve_api_key.sh" \
+  || { echo "start_qwen: cannot source $REPO/resolve_api_key.sh - refusing to boot with an unknown key" >&2; exit 1; }
 resolve_vllm_key
 resolve_bind_host
 
