@@ -6,9 +6,37 @@ this is the deep dive on that card. Every claim below was re-verified against
 the tree on 2026-09-26; where the review's numbers were wrong, they are
 corrected here and in the report.
 
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** The `_created` defect in
+> 1.5.1 does not exist, so the two bash guards are dropped from PR B.
+> - vLLM 0.30 names the counters `vllm:spec_decode_num_drafts` and
+>   `vllm:spec_decode_num_accepted_tokens`
+>   (`vllm/v1/spec_decode/metrics.py:229-231`). prometheus_client writes a
+>   counter as `<name>_total` and `<name>_created`, and 0.18.0 and 0.26.0
+>   write no `_total_created` (measured below). The bash pattern
+>   `^vllm:spec_decode_num_(drafts|accepted_tokens)_total` needs `_total`
+>   right after the name, so it cannot match a `_created` line.
+> - Measured on CPU with prometheus_client 0.18.0 (the oldest vLLM 0.30.0
+>   allows) and 0.26.0, each in single-process and multiprocess mode. A stub
+>   server registered the counters with vLLM's names and labels. The
+>   `metrics()` and `spec()` lines of `run_benchmarks.sh:38-39` returned the
+>   two counter values and nothing else in all four runs. Single-process mode
+>   writes `_created` lines. Multiprocess mode, which `--api-server-count`
+>   above 1 turns on, writes none.
+> - So `real_rep.sh:19`'s `grep -v created` filters nothing.
+>   `labd_accept.py:135` is about exact-name parsing, not this pattern.
+>   `replay_offload_serve.py:45` does need its `_created` check, because its
+>   `startswith` prefixes have no `_total`.
+> - The positional parse is still fragile. With two engines, each counter
+>   writes one line per `engine` label, and `tokstep`
+>   (`run_benchmarks.sh:47-51`) gave 2.00 on the stub instead of 3.50. No
+>   launcher here starts more than one engine. `spec_delta` by name (section
+>   2) removes this.
+> - Corrected below: the Status line, the 2026-10-04 done-when note, 1.5.1,
+>   the bash note in section 2, 3.2, the 4.1 stub row and done-when item 4.
+
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
-**Status:** Not started. Strong; not urgent (bench/ clients unchanged for two passes). Ship PR B's two _created guards first.
+**Status:** Not started. Strong; not urgent (bench/ clients unchanged for two passes). Ship PR B's two _created guards first. (2026-10-05: not needed; see the top block.)
 
 - **No harness client changed.** Thirteen commits landed since d5e2a01.
   `git diff --stat d5e2a01 e371b42 -- bench/` lists two files only:
@@ -67,7 +95,8 @@ corrected here and in the report.
   #267 touches `verify.sh` only (the power limit, #258).
 - **Done when (section 6):** none of the six items is met.
   `run_benchmarks.sh:39` and `prefill_ab.sh:57` still lack the `_created`
-  filter. `real_rep.sh:19` has it, still with no why comment.
+  filter. `real_rep.sh:19` has it, still with no why comment. (2026-10-05:
+  no script needs it; see the top block.)
   `patch-integrity.yml` runs `bench/test_model_verification.py` and
   `bench/test_prepare_state.py` only; `test_no_key_bind.sh` is not in CI.
 - **Stale cites, fixed in place:** `resolve_api_key.sh:32-42` → `:41-51`
@@ -352,6 +381,8 @@ copy-paste" — that was an overestimate; the honest numbers):
    of the three scrapers lack it. (The Python scrapers are safe by accident:
    `conc_ladder.py:119` requires `{` right after the metric name;
    `labd_bench.py:47` requires `" "` or `"{"` — `_created` matches neither.)
+   **2026-10-05:** wrong. The line is `<name>_created`, not
+   `<name>_total_created`, and the bash pattern cannot match it (top block).
 2. **The array lesson, learned in one file only.** `warmup.sh:43-46` carries
    the comment "Build the command as an array, not a string: an unquoted "$B"
    re-splits and re-globs" (verbatim at d5e2a01, `$B` in quotes; earlier
@@ -431,7 +462,8 @@ spec_delta(m0, m1) -> (steps, tok_per_step)
 
 Bash side: the three `spec()`/`metrics()` helper pairs keep `curl` (two
 one-line functions per script, e.g. `run_benchmarks.sh:38-39`; this said
-"five lines") but gain the `_created` filter — or, tidier, call
+"five lines") but gain the `_created` filter (2026-10-05: not needed, top
+block) — or, tidier, call
 `venv/bin/python bench/harness.py --metrics name1 name2` (the module is
 executable). The `B=` strings become arrays, propagating `warmup.sh:43-46`'s
 comment with the change. The model-default drift (1.3) defers to
@@ -471,7 +503,8 @@ against a live server byte-identical to pre-migration (modulo timings).
 Add `stream_chat`, `metrics`, `spec_delta`. Migrate the 7 SSE parsers and 7
 Python scrapers. Bash: add the `_created` filter to `run_benchmarks.sh:39`
 and `prefill_ab.sh:57` (matching `real_rep.sh:19` — one line each, zero risk
-to measurement), and convert the three `B=` strings to arrays with
+to measurement; 2026-10-05: dropped, the filter has nothing to remove, see
+the top block), and convert the three `B=` strings to arrays with
 `warmup.sh:43-46`'s comment attached. `real_rep.sh:17` is one of those
 lines; while there, take the port from `PORT` like `run_benchmarks.sh:27`
 instead of the hardcoded 18020 at `:17-18` (1.2).
@@ -481,7 +514,8 @@ test_harness.py and `test_bench_sse_keepalive.py`'s fixture transcript (its
 `:18`; this gate forgot it, section 6 did not); the two bash `spec()`
 functions carry the filter;
 `tok/step` on a live dflash2 server unchanged (the filter is a no-op when
-no `_created` lines exist).
+no `_created` lines exist). (2026-10-05: the filter is out of PR B, so the
+`spec()` clause no longer applies.)
 
 ### 3.3 PR C — the model name + docs
 
@@ -510,7 +544,7 @@ In `test_model_verification.py`'s existing unittest style, against a stub
 | test | proves |
 |---|---|
 | `client_key` precedence table (only OPENAI set / only VLLM set / only file / none → `"EMPTY"`) run **twice**: once in Python, once by sourcing `resolve_api_key.sh` in a subprocess — the results must match | the port cannot drift from the canonical chain (the #113 failure mode) |
-| stub `/metrics` containing `…_total` and `…_total_created` lines | `metrics()` excludes `_created`; `spec_delta` computes by name |
+| stub `/metrics` containing `…_total` and `…_created` lines (2026-10-05: was `…_total_created`, a name prometheus_client does not write) | `metrics()` excludes `_created`; `spec_delta` computes by name |
 | stub SSE transcript (chunks, `[DONE]`, a `usage` frame) | `stream_chat` parses ttft/ntok/usage correctly, including the no-first-token edge |
 | `model()` with `VLLM_MODEL` set, and against a stub `/v1/models` (key header asserted on the stub side) | override + server-as-source-of-truth both work |
 | `base_url()` matrix: `VLLM_API` set / `PORT` set / neither | one URL convention |
@@ -544,6 +578,7 @@ full automation belongs to candidate 5's manifest, not this plan.
    (`test_bench_sse_keepalive.py`'s fixture transcript aside).
 4. `run_benchmarks.sh:39` and `prefill_ab.sh:57` carry the `_created`
    filter; `real_rep.sh:19` has it but no why comment — add one while there.
+   **2026-10-05:** dropped. No script needs the filter (top block).
 5. `grep -c '"qwen3.8-27b"' bench/*.py` → 0 outside tests, and `grep -n
    'qwen3\.8-27b' bench/*.sh` → 0 (the four bash bench commands, 1.3).
 6. `bench/test_harness.py` runs in `patch-integrity.yml` in seconds, green.
