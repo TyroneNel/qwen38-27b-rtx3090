@@ -311,6 +311,7 @@ The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep 
 | 2026-10-05 | `10bb488` | D1 opened as #276. `quant_embed.py` clones `group_0`, not `group_1`, so the C4 plan's `requires=` check is not needed. The C4 and C7 docs record it. CI green. |
 | 2026-10-05 | `10bb488` | A6's `_created` guards dropped, with no PR. The defect in C3 1.5.1 does not exist. The C3 doc records the measurement. |
 | 2026-10-05 | `10bb488` | C5 PR B part 2 opened as #277. compressed-tensors 0.17.0 needs `psutil` and does not declare it. The job takes 1m35s on the runner, 47 s of it the test. CI green. |
+| 2026-10-05 | `10bb488` | C5 PR B part 3 opened as #278. `mq3d_scratch_pool_test.py` runs in the image build, after `verify.sh --install`. A patch without the exclusive guard fails the #278 build, and main's Dockerfile builds it green. CI green. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
