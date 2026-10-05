@@ -29,7 +29,7 @@ from `VLLM_API_KEY` or `api_key.txt`. **model** is the checkpoint under `models/
 | file | kind | needs | exit | what it does |
 |---|---|---|---|---|
 | `act_calib.py` | measurement | GPU, model | 0 | Error that int8 activations add to each linear layer. Picks `INT8_LAYERS`. |
-| `api_smoke.py` | smoke test, run by hand | server | 0 if all 12 features pass, else 1 | Request-level API features: logprobs, n, stop, seeds, structured output, penalties, streaming, thinking. |
+| `api_smoke.py` | smoke test, run by hand | server | 0 if all 12 features pass, 2 if no request reaches a server, else 1 | Request-level API features: logprobs, n, stop, seeds, structured output, penalties, streaming, thinking. |
 | `bugb_sweep.py` | reproducer | server, model | 0, or 1 if a length is broken | The prompt lengths you give, against the broken-length defect (gotcha 37). |
 | `conc_ladder.py` | measurement | server | 0 | Decode tok/s per stream at N=1..8, with passes, preemptions and KV occupancy. |
 | `concurrent_collapse.py` | reproducer | server | 0, or 1 if a trial collapsed or a request errored | The "!!!!" collapse from #208. |
@@ -48,7 +48,7 @@ from `VLLM_API_KEY` or `api_key.txt`. **model** is the checkpoint under `models/
 | `needle_reuse.py` | test | server | 0 or 1 | The answer lives inside the reused prefix. |
 | `needle_test.py` | probe | server | 0 if RETRIEVED, 1 if MISSED | A passcode at a depth in a long cold prompt. |
 | `prefill_ab.sh` | measurement | GPU, model | 0, or 1 if it cannot start its server | Boots a server with an env set and measures the prefill rows. |
-| `prefix_alternation.py` | reproducer | server | 0, or 1 if the arm reproduces the defect | Prefix reuse under two alternating conversations. |
+| `prefix_alternation.py` | reproducer | server | 0, 1 if the arm reproduces the defect, or 2 if it checked no turn | Prefix reuse under two alternating conversations. |
 | `prompts_real.jsonl` | data | | | The realistic prompts that `run_benchmarks.sh`, `real_rep.sh`, `prefill_ab.sh` and `act_calib.py` read. |
 | `quality_battery.py` | quality measurement | server, `bench/quality-data/` | 0 | Perplexity on three corpora and GSM8K accuracy. |
 | `real_rep.sh` | measurement | server, model | the last repeat's exit | The C1 row of `run_benchmarks.sh`, repeated. |
