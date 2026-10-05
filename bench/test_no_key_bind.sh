@@ -1,5 +1,6 @@
 #!/bin/bash
-# CPU test for #204: which --host each launcher passes to `vllm serve`, with and without a key.
+# CPU test for #204: which --host each launcher passes to `vllm serve`, with and without a key, and that
+# each launcher refuses to boot when it cannot source resolve_api_key.sh.
 # Copies the checkout to a temp dir, so the api_key.txt rows never touch the real one, and runs the three
 # launchers with PRINT_ARGV=1 (launcher_common.sh), which prints the argv instead of starting vLLM. No GPU,
 # no model, no network. In a container (/.dockerenv) the default differs, so this is skipped there.
@@ -19,6 +20,14 @@ FAILS=0
 host_of() { local sc=$1; shift
   rm -f "$T/api_key.txt"; [ "${1:-}" = @keyfile ] && { echo filekey > "$T/api_key.txt"; shift; }
   (cd "$T" && env -u VLLM_API_KEY -u HOST PRINT_ARGV=1 "$@" bash "$sc" 2>/dev/null </dev/null) | sed -n '/^--host$/{n;p;}'; }
+# refused <launcher>: resolve_api_key.sh missing, the key only in api_key.txt. Prints "exit 1, no --host" when
+# the launcher stops before it prints an argv.
+refused() { local out rc
+  mv "$T/resolve_api_key.sh" "$T/resolve_api_key.sh.off"; echo filekey > "$T/api_key.txt"
+  out=$(cd "$T" && env -u VLLM_API_KEY -u HOST PRINT_ARGV=1 bash "$1" 2>/dev/null </dev/null); rc=$?
+  mv "$T/resolve_api_key.sh.off" "$T/resolve_api_key.sh"
+  out=$(printf '%s\n' "$out" | sed -n '/^--host$/{n;p;}')
+  [ $rc = 1 ] && [ -z "$out" ] && echo "exit 1, no --host" || echo "exit $rc, --host ${out:-<none>}"; }
 check() { local want=$1 got=$2 what=$3
   if [ "$got" = "$want" ]; then printf '  PASS  %s -> %s\n' "$what" "$got"; else printf '  FAIL  %s -> %s (want %s)\n' "$what" "${got:-<none>}" "$want"; FAILS=$((FAILS+1)); fi; }
 for sc in single-user/start_qwen.sh batch/start_qwen.sh single-user/alternative.sh; do
@@ -29,6 +38,7 @@ for sc in single-user/start_qwen.sh batch/start_qwen.sh single-user/alternative.
   check 0.0.0.0   "$(host_of $sc HOST=0.0.0.0)"                 "no key, HOST=0.0.0.0 (explicit)"
   check 127.0.0.1 "$(host_of $sc HOST=127.0.0.1 VLLM_API_KEY=k)" "key, HOST=127.0.0.1"
   check 10.1.2.3  "$(host_of $sc HOST=10.1.2.3 VLLM_API_KEY=k)"  "key, HOST=10.1.2.3"
+  check "exit 1, no --host" "$(refused $sc)"                    "resolve_api_key.sh missing, key only in api_key.txt"
 done
 echo "== verify.sh key check (the section only, as the launcher env would set it)"
 vk() { (cd "$T" && rm -f api_key.txt; env -u VLLM_API_KEY -u HOST "$@" bash -c '
