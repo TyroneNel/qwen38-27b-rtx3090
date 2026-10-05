@@ -238,7 +238,7 @@ caveat are in the top block]. D still has no measured point past 112k.
 
 ## 0. Branch tracker: sequence and progress
 
-**Updated 2026-10-04 against upstream/main @ `e371b42`.** The C1, A3, A4, A5, A6 and A7 rows and D1 were updated
+**Updated 2026-10-04 against upstream/main @ `e371b42`.** The C1, A1, A3, A4, A5, A6 and A7 rows and D1 were updated
 on 2026-10-05, at `10bb488`. This section tracks the whole
 `docs/decode-perf-150k-240k-plan` branch. It covers two tracks:
 
@@ -254,6 +254,7 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 - (2026-10-05, `10bb488`) Track A: five PRs are in review. They are C5 PR B (#271), C2 PR A and
   PR B (#272, #273), and C6 PR B and PR A (#274, #275). All of C6's planned PRs are open.
 - (2026-10-05, `10bb488`) Defect D1 is in review as #276.
+- (2026-10-05, `10bb488`) C5 PR B's second part is in review as #277. It runs `test_prepare_crash.py` in CI.
 - (2026-10-05, `10bb488`) C3's `_created` guards are dropped. The bash pattern cannot match a `_created` line.
 - Track B: T1 is measured but is not the default yet. No T-item ships by default.
 
@@ -262,7 +263,7 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 | Order | Item | Status @ `e371b42` | Next action | Depends on | Doc |
 |---|---|---|---|---|---|
 | done | **C1** One door into the patch series | **Merged** as e1459c7 (#242/#243/#244, 2026-09-30). Done-when 6 of 6 pass. | Only one item remains: an `apply.sh` check that the `KVARN` array agrees with `kvarn/*.patch`. It ships with A4. (2026-10-05) It is in #274 (A4), in review. | — | [patch-series-apply-remediation.md](patch-series-apply-remediation.md) |
-| A1 | **C5** PR B: wire the CPU tests into CI | **In review**: syv-ai/HyperQwen#271 (opened 2026-10-04 on `10bb488`). It adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with `--mutate seq-rows`) and `verbatim.py` to the `model-verification` job. CI on #271 runs all four green; the bind test does not skip on the runner. | Two follow-up PRs: `test_prepare_crash.py` in a CPU-torch job (test the pip set first), and `mq3d_scratch_pool_test.py` in the image build. | C1 (done) | [harness-verdicts-ci-remediation.md](harness-verdicts-ci-remediation.md) |
+| A1 | **C5** PR B: wire the CPU tests into CI | **In review**: syv-ai/HyperQwen#271 (opened 2026-10-04 on `10bb488`). It adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with `--mutate seq-rows`) and `verbatim.py` to the `model-verification` job. CI on #271 runs all four green; the bind test does not skip on the runner. #277 (`77b4695`, opened 2026-10-05 on `10bb488`, CI green) adds a `prepare-crash` job: CPU torch, the image's pins for the four prepare libraries, `safetensors` and `psutil`, then `test_prepare_crash.py`. The job takes 1m35s on the runner, 47 s of it the test. | One follow-up PR: `mq3d_scratch_pool_test.py` in the image build. | C1 (done) | [harness-verdicts-ci-remediation.md](harness-verdicts-ci-remediation.md) |
 | A2 | **C5** PR A: the exit-code convention | Not started | Write the convention, fix the six false exits, and add the manifest. | A1 | same |
 | A3 | **C2** Launcher chassis | **In review** (opened 2026-10-04 on `10bb488`, CI green). PR A is syv-ai/HyperQwen#272: `launcher_common.sh` with `resolve_bind_host` (moved from `resolve_api_key.sh`) and `qwen_exec`, the `PRINT_ARGV=1` dry run. A normal boot keeps the same argv and environment. PR B is #273, stacked on #272: one INT8 export guard (drift item 1). It changes batch and `bench/prefill_ab.sh` only when `INT8_ACT` is empty and `INT8_LAYERS` is not: `VLLM_MARLIN_INT8_INCLUDE_RE` is then no longer exported, so that boot probably compiles cold once (not measured). | Add the refuse-on-failed-source guard for `resolve_api_key.sh` to both `start_qwen.sh` (found 2026-10-05: on #272 a failed source boots keyless; C2 doc, top block). Merge #272, then #273. Then move the blocks that both `start_qwen.sh` copy, one at a time (#272 left them in place). Then the plan's §3.2 (`alternative.sh` joins the chassis) and §3.3 (`bench/test_launcher_argv.py` in CI). | A1: the `test_no_key_bind.sh` rows become the `PRINT_ARGV` matrix | [launcher-chassis-remediation.md](launcher-chassis-remediation.md) |
 | A4 | **C6** PR B: fork and upstream references | **In review**: syv-ai/HyperQwen#274 (`c485c94`, opened 2026-10-04 on `10bb488`, CI green). `PATCHES.md` names the fork ref behind every exported commit: 12 of the 50 marker hashes were not on cut5, the tag `:12` named. It re-exports `sampler-warmup-cuda` (`92e7256fa` → `ba3b5d8e6`) and `bench-sse-keepalive` (`757723b` → `bebdd65c5`) from cut9, in place of new cpuchip tags (no push access). The upstream cells cite #59892, #59888, #59890, #59893 and #59889 (merged as `7867d6c52d`; retires when the pin carries it). `tokenize-v1-route` stays `feature`, not `local`, because `local` means hardware or environment. Its upstream cell is "none" and its retires-when is "stays". It fixes the end note (six files have a preamble of one line or none) and `export-patch.sh:4`. `apply.sh --kvarn` exits 2 when `KVARN` and `kvarn/*.patch` disagree. | Merge #274. A tag for cpuchip `qwen38/0.30-chainfix` needs cpuchip push access, and #275 makes it unnecessary. | — (any time) | [patch-index-generation-remediation.md](patch-index-generation-remediation.md) |
@@ -307,6 +308,7 @@ The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep 
 | 2026-10-05 | `10bb488` | A5 opened as #275, stacked on #274. All 50 patch files are re-exported from TyroneNel/vllm tag `qwen38/0.30-index-cut1` (`7c013fc0e`). CI green, with the new `patch-index` job. |
 | 2026-10-05 | `10bb488` | D1 opened as #276. `quant_embed.py` clones `group_0`, not `group_1`, so the C4 plan's `requires=` check is not needed. The C4 and C7 docs record it. CI green. |
 | 2026-10-05 | `10bb488` | A6's `_created` guards dropped, with no PR. The defect in C3 1.5.1 does not exist. The C3 doc records the measurement. |
+| 2026-10-05 | `10bb488` | C5 PR B part 2 opened as #277. compressed-tensors 0.17.0 needs `psutil` and does not declare it. The job takes 1m35s on the runner, 47 s of it the test. CI green. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
