@@ -6,9 +6,32 @@ this is the deep dive on that card, with every claim re-verified against the
 tree on 2026-09-26 (and one of the review's sub-claims softened where the
 evidence didn't support it — see 1.2).
 
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** PR B is in review in two
+> parts. #271 adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with
+> `--mutate seq-rows`) and `verbatim.py` to `model-verification`. #277
+> (`77b4695`) adds a `prepare-crash` job that runs `test_prepare_crash.py`.
+> - The 2.2 pip set was incomplete. #277 installs CPU torch, then
+>   transformers, tokenizers, compressed-tensors and huggingface_hub at the
+>   pins in `docker/requirements.txt`, then `safetensors` and `psutil`.
+>   compressed-tensors 0.17.0 imports `psutil` at load time
+>   (`compressed_tensors/offload/load.py:11`) but does not declare it. The
+>   image gets it from vLLM. Without it the test exits 1 in 7 s.
+> - pip keeps the CPU wheel: torch 2.14.1+cpu, no nvidia packages. In a fresh
+>   Python 3.12.13 venv the install took 46 s, and the test exited 0 with 168
+>   cases and 0 failures in 481 s on 6 cores. The job took 1m35s on the #277
+>   runner, 47 s of it in the test step, CI green.
+> - `prepare-crash` is a job of its own, not a step in `kvarn-torch-gate`, so
+>   a prepare failure does not stop the kvarn test. It merges cleanly with
+>   #271 and #275.
+> - A scratch copy whose `write_json` writes in place fails the `mtp` step
+>   (exit 1, 2 failures). The unchanged `mtp` step passes 24 cases.
+> - Still open in PR B: `mq3d_scratch_pool_test.py` in the image build.
+> - Corrected below: the Status line, the two 2026-10-04 notes in 2.2, and the
+>   3.2 revised scope and acceptance.
+
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
-**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh.
+**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271 and #277; see the top block.)
 
 Thirteen commits landed since d5e2a01. Four of them touch this doc's area
 (`git diff --stat d5e2a01 e371b42 -- .github bench kvarn/tests .gitignore
@@ -271,6 +294,7 @@ Per-script changes (small, no measurement logic touched):
   needs bash, python3 and tar, and no GPU, torch or vLLM. It ran green
   here in 0.4 s (22 PASS lines). A GitHub runner has no `/.dockerenv`, so
   the test runs there and does not skip [INFERENCE: not run on a runner].
+  (2026-10-05: on the #271 runner it ran and did not skip.)
   It is the fourth parse-another-script site (1.3); note the coupling to
   `verify.sh:331` in the manifest.
 - (2026-10-04) `test_prepare_crash.py` moves out of the image gate and
@@ -284,6 +308,9 @@ Per-script changes (small, no measurement logic touched):
   transformers`, then `python bench/test_prepare_crash.py`
   [INFERENCE: not run — the pip set, that pip keeps the CPU torch wheel,
   and the runtime on a runner are unchecked; the docstring says "minutes"].
+  (2026-10-05: checked in #277. The set also needs `psutil`, and pins come
+  from `docker/requirements.txt`. pip keeps the CPU wheel. The job takes
+  1m35s on the runner. See the top block.)
   It also string-splits `prepare.sh` (`:431-432`, was `:366-367`) exactly
   the way `test_prepare_state.py:37` does, so wiring it doubles down on the
   heredoc-split; note the coupling in the manifest.
@@ -358,7 +385,8 @@ upstream) — and each gates with its negative control intact.
 
 (2026-10-04) Revised scope. The stdlib job also runs
 `bash bench/test_no_key_bind.sh` (2.2). `test_prepare_crash.py` goes into
-the CPU-torch job with its pip deps (2.2; [INFERENCE: not run]), not into
+the CPU-torch job with its pip deps (2.2; [INFERENCE: not run]; 2026-10-05:
+#277 puts it in a sibling job, `prepare-crash`, see the top block), not into
 the image gate. `mq3d_scratch_pool_test.py` still goes into the image
 gate. Counts: `patch-integrity.yml` runs three tests today (two bench
 tests and the kvarn gate). After PR B it runs six
@@ -373,7 +401,7 @@ a scratch PR that breaks the capacity property (edit the formula in
 `mq3d_capacity_property.py:25-27`) fails the job — the negative control
 proves the gate bites. (2026-10-04) The log also shows
 `test_no_key_bind.sh` green, and `test_prepare_crash.py` green in the
-CPU-torch job if PR B takes it.
+CPU-torch job if PR B takes it. (2026-10-05: both green, on #271 and #277.)
 
 ## 4. Test plan
 
