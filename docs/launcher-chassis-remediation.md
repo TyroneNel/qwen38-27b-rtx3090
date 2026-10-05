@@ -7,8 +7,8 @@ tree on 2026-09-26 (method noted where it matters); nothing is carried over
 from the review on trust.
 
 > **Partly implemented 2026-10-04 on upstream/main @ 10bb488 (vLLM 0.30.0); checked 2026-10-05.**
-> **Status:** In review. PR A is syv-ai/HyperQwen#272 (`9fa248e`). PR B is
-> #273 (`6a9922f`), stacked on #272, so #272 merges first. CI is green on
+> **Status:** In review. PR A is syv-ai/HyperQwen#272 (`75d285e`). PR B is
+> #273 (`7227b0b`), stacked on #272, so #272 merges first. CI is green on
 > both (4 of 4). upstream/main has no launcher diff since e371b42 (`git diff
 > --stat e371b42 10bb488 -- single-user batch resolve_config.sh
 > resolve_api_key.sh` is empty), so the e371b42 line cites below still hold
@@ -62,17 +62,29 @@ from the review on trust.
 >   `no API key` warning. With `HOST=0.0.0.0` it is `0.0.0.0`, after
 >   `WARNING: no API key and HOST=0.0.0.0`. The fix is the
 >   refuse-on-failed-source guard that `alternative.sh:39-40` has, in both
->   `start_qwen.sh` (2.1's key row). Neither PR has it yet.
+>   `start_qwen.sh` (2.1's key row). (Later on 2026-10-05.) #272's second
+>   commit, `75d285e`, adds it. #273 merges it in at `7227b0b`. Both
+>   `start_qwen.sh` exit 1 with `refusing to boot with an unknown key`.
+>   `bench/test_no_key_bind.sh` gains one row per launcher. Each row moves
+>   `resolve_api_key.sh` aside, puts the key only in `api_key.txt`, and
+>   expects exit 1 and no argv. The test gives 25 PASS on #272 and 34 on
+>   #273. In a copy of #272 with the two guards removed, both
+>   `start_qwen.sh` rows fail (exit 0, `--host 127.0.0.1`), the
+>   `alternative.sh` row passes, and the test exits 1. CI is green on both
+>   heads.
 > - **Census at #273** (Python sets, 1.1's definitions; the same script gives
->   e371b42's 78/43 and 250/107/95). `wc -l` is 844/296/163 (843/300/161 on
->   main). single∩batch is 80 (78 on main; +2 for the two `source
->   launcher_common.sh` lines). single∩`alternative.sh` is 42 (43 on main).
+>   e371b42's 78/43 and 250/107/95). At `7227b0b`, `wc -l` is 845/297/163
+>   (843/300/161 on main). single∩batch is 81 (78 on main; +2 for the two
+>   `source launcher_common.sh` lines, and +1 for the guard, which makes the
+>   shared `source resolve_api_key.sh` line two shared lines).
+>   single∩`alternative.sh` is 42 (43 on main). Before the merge, at
+>   `6a9922f`, it was 844/296/163 and 80.
 > - **Done when (6) at #273.** Items 1, 2, 4 and 6 are unchanged: 9 and 9, 3
 >   and 1, the 11-flag list at `resolve_config.sh:68`, and the model print.
->   Item 5 rose from 78 to 80. Item 3 is half done: `PRINT_ARGV=1` prints the
+>   Item 5 rose from 78 to 81. Item 3 is half done: `PRINT_ARGV=1` prints the
 >   full argv from all three launchers, and #271 runs `test_no_key_bind.sh`
 >   in CI. `bench/test_launcher_argv.py` does not exist.
-> - **Still to do.** The guard above. The shared blocks move into the chassis
+> - **Still to do.** The shared blocks move into the chassis
 >   one at a time (3.1's moves). Then 3.2 (`alternative.sh` joins the
 >   chassis, with the listed fixes) and 3.3 (the validation layer and
 >   `bench/test_launcher_argv.py` in CI).
@@ -742,7 +754,8 @@ untouched) and `bash -n` over every touched file in CI.
    on unique substantive lines drops from 76 (78 at e371b42, +2 from #237) to near zero — what remains is
    the profile data that genuinely differs. Measure it with GNU coreutils or a
    Python set intersection; uutils `sort`/`comm` gave unstable results (see the
-   2026-10-04 note). (2026-10-05: 80 at #273. The two `source
-   launcher_common.sh` lines are shared.)
+   2026-10-04 note). (2026-10-05: 81 at #273. The two `source
+   launcher_common.sh` lines are shared, and the `resolve_api_key.sh` guard
+   turns one shared line into two.)
 6. A native `PRINT_ARGV=1` single-mode run prints the `-fast` model when it
    exists (1.4's bug is gone). (2026-10-05: unchanged at #273.)
