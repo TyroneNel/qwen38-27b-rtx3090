@@ -415,8 +415,8 @@ def reject(ctx):
 
 
 def order(ctx):
-    """quant_embed.py needs nothing quant_lm_head.py writes: run first, it completes, and
-    either order leaves the same model."""
+    """quant_embed.py needs nothing quant_lm_head.py writes: run first, it still completes,
+    and either order leaves the same model."""
     scripts, got = ("quant_lm_head.py", "quant_embed.py"), []
     for seq in (scripts, scripts[::-1]):
         root = f"{ctx.work}/order-{seq[0].removesuffix('.py')}"
@@ -434,9 +434,14 @@ def order(ctx):
         got.append({p: json.load(open(f"{root}/{p}")) if p.endswith(".json") else h
                     for p, h in snapshot(root).items() if not p.endswith(".bak-quant")})
     diff = sorted(k for k in got[0].keys() | got[1].keys() if got[0].get(k) != got[1].get(k))
-    print(f"FAIL  order: embed first leaves different files: {diff}" if diff
+    bad = [f"embed first leaves different files: {diff}"] if diff else []
+    # Both int8 groups describe tensors the same math wrote, so only their targets differ.
+    groups = got[0]["config.json"]["quantization_config"]["config_groups"]
+    if {**groups["group_2"], "targets": None} != {**groups["group_1"], "targets": None}:
+        bad.append("group_2 (embed) is not group_1 (lm_head) with other targets")
+    print(f"FAIL  order: {'; '.join(bad)}" if bad
           else "OK    order: embed first, then lm_head, leaves the same model")
-    return int(bool(diff)), 1
+    return int(bool(bad)), 1
 
 
 def main():

@@ -1,5 +1,5 @@
 """Requantize the token embedding table to int8 (group-128, symmetric),
-in place. Companion to quant_lm_head.py; the two run in either order.
+in place. Companion to quant_lm_head.py — run that one first.
 
 Qwen3.8-27B has untied embeddings, so embed_tokens is a second 2.5 GB bf16
 matrix on top of lm_head. vLLM ships a dequant-on-gather path for int-quantized
@@ -86,8 +86,8 @@ else:
     save_tensors(tensors, d + shard, meta or {"format": "pt"})
     del tensors
 
-# group_0, not quant_lm_head.py's group_1: that one may not exist yet, and the shard
-# is already replaced at this point. Every field the two differ in is set below.
+# group_0, as the other scripts clone: quant_lm_head.py's group_1 may not exist yet,
+# and the shard is already replaced at this point.
 g2 = copy.deepcopy(qc["config_groups"]["group_0"])
 g2["targets"] = ["re:.*embed_tokens$"]
 g2["weights"]["num_bits"] = BITS
