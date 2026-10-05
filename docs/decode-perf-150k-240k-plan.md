@@ -239,7 +239,7 @@ caveat are in the top block]. D still has no measured point past 112k.
 ## 0. Branch tracker: sequence and progress
 
 **Updated 2026-10-04 against upstream/main @ `e371b42`.** The C1, A1, A2, A3, A4, A5, A6 and A7 rows and D1 were updated
-on 2026-10-05, at `10bb488`, and D3 was added. This section tracks the whole
+on 2026-10-05, at `10bb488`, and D3 was added and opened. This section tracks the whole
 `docs/decode-perf-150k-240k-plan` branch. It covers two tracks:
 
 - **Track A** is the seven architecture candidates in
@@ -281,7 +281,7 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 |---|---|---|---|---|
 | D1 | `prepare/quant_embed.py:85-86` writes the shard, then `:89` reads `group_1`. `load_config` checks only `group_0` (`quant_schema.py:65`). | **In review**: syv-ai/HyperQwen#276 (`f56f0d5`, opened 2026-10-05 on `10bb488`, CI green). | `quant_embed.py` clones `group_0`, as `quant_mtp.py` and `quant_heads_stream.py` do. The planned `group_1` check was not needed: `group_1` is `group_0` with four fields set, and `quant_embed.py` sets the same four. Run first, `quant_embed.py` now completes, and the prepared fixture is byte-identical (34 files). `test_prepare_crash.py` gains an `order` step, which also requires `group_2` to equal `group_1` except for `targets`: 169 cases, 0 failures. | [pipeline-core-remediation.md](pipeline-core-remediation.md) |
 | D2 | `patches/auth-deny-default.patch:118` uses `removeprefix(root_path)`. With `--root-path /`, `/health` gets 401. A reviewer found the same defect in vllm-project/vllm#59892. | Open | Use `get_route_path`. | [patch-index-generation-remediation.md](patch-index-generation-remediation.md) |
-| D3 | `bench/real_rep.sh:23` writes `/tmp/rr_$TAG_$i.log`. Bash reads `$TAG_`, a variable that is not set, so every tag writes `/tmp/rr_<i>.log`. A later run overwrites the logs of an earlier run. | Open (found 2026-10-05, during A2) | Write `${TAG}_$i`. | [harness-verdicts-ci-remediation.md](harness-verdicts-ci-remediation.md) |
+| D3 | `bench/real_rep.sh:23` writes `/tmp/rr_$TAG_$i.log`. Bash reads `$TAG_`, a variable that is not set, so every tag writes `/tmp/rr_<i>.log`. A later run overwrites the logs of an earlier run. | **In review**: syv-ai/HyperQwen#280 (`ccd14bb`, opened 2026-10-05 on `10bb488`, CI green). Found during A2. | `${TAG}_$i` in the five places (`:23`, `:25`). With a stub `vllm` and two tags, main leaves `rr_1.log` and `rr_2.log`, both with the second tag's output. The branch leaves four logs, one for each tag and repeat. The REP lines are the same on both. No other `*.sh` file on main reads past a name this way (a scan of the 20 files). | [harness-verdicts-ci-remediation.md](harness-verdicts-ci-remediation.md) |
 
 ### 0.2 Track B: decode performance (GPU)
 
@@ -316,6 +316,7 @@ The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep 
 | 2026-10-05 | `10bb488` | C5 PR B part 3 opened as #278. `mq3d_scratch_pool_test.py` runs in the image build, after `verify.sh --install`. A patch without the exclusive guard fails the #278 build, and main's Dockerfile builds it green. CI green. |
 | 2026-10-05 | `10bb488` | A2 opened as #279. Eleven `bench/` scripts printed a failing verdict and exited 0, not six. The two verdicts files are two runs, not a copy, so both stay. D3 (`real_rep.sh` log names) was found on the way. CI green. |
 | 2026-10-05 | `10bb488` | A3: #272's `75d285e` makes both `start_qwen.sh` refuse to boot when `resolve_api_key.sh` cannot be sourced, and #273 merges it in at `7227b0b`. The A3 row and the C2 doc had it as still to do. CI green. |
+| 2026-10-05 | `10bb488` | D3 opened as #280. `real_rep.sh` writes `/tmp/rr_${TAG}_$i.log`, so each tag keeps its own logs. CI green. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.

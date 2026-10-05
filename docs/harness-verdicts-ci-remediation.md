@@ -84,7 +84,8 @@ evidence didn't support it — see 1.2).
 >   With no server, `api_smoke.py` exits 1, not 2, because each check
 >   reports the connection error as a FAIL. `real_rep.sh:23` writes
 >   `/tmp/rr_$TAG_$i.log`. Bash reads `$TAG_`, which is not set, so every
->   tag writes `/tmp/rr_<i>.log`. The tracker lists it as D3.
+>   tag writes `/tmp/rr_<i>.log`. The tracker lists it as D3, in review as
+>   #280.
 > - Corrected below for PR A: the Status line, the `test_spec_decode_fp8.py`
 >   entry in 1.1, a new 1.2 note, the two 1.4 lines on the verdicts files
 >   and the oracle, 2.1, 2.4, 3.1, 4, and done-when items 1, 2 and 4.
