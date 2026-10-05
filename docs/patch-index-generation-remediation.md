@@ -5,9 +5,72 @@ report is [architecture-review-20260926-194530.html](architecture-review-2026092
 this is the deep dive on that card, every claim re-verified against the tree
 on 2026-09-26.
 
+**Implemented 2026-10-04 and 2026-10-05 on upstream/main @ 10bb488 (vLLM 0.30.0).**
+
+**Status:** In review. PR B is syv-ai/HyperQwen#274 (`c485c94`). PR A is
+#275 (`17b1551`), stacked on #274, so #274 merges first. CI is green on
+both, and #275 also runs the new `patch-index` job.
+
+- **12 of 50 hashes were off cut5.** The 2026-10-04 pass below checked only
+  the five new or changed hashes. #274 checked all 50 with `git merge-base
+  --is-ancestor` against the fetched fork refs. 12 marker hashes were not
+  on cut5, the tag that `PATCHES.md:12` named for all of them. By ref: 39
+  on cut7, 6 on cut9 only, 2 on `qwen38/0.30-chainfix` only, and 1 on each
+  of the two `TyroneNel/vllm` tags. `kvarn-recycled-pages`' `40ab8e0` was
+  on no fork ref. No fork commit exports to that file: its commits on cut7,
+  cut9 and chainfix also carry the `kvarn_attn.py` half, which this repo
+  keeps in `kvarn/files`.
+- **PR B (#274).** `PATCHES.md` names the fork ref behind every exported
+  commit ("Where the commits are"). Two files are re-exported so that a tag
+  holds their hash: `sampler-warmup-cuda` (`92e7256fa` → `ba3b5d8e6`, cut9)
+  and `bench-sse-keepalive` (`757723b` → `bebdd65c5`, cut9). The upstream
+  cells cite vllm #59892, #59888, #59890, #59893 and #59889 (merged as
+  `7867d6c52d`, no release yet). `tokenize-v1-route` stays `feature`, not
+  `local` as the tracker said, because `local` means hardware or
+  environment. Its upstream cell is "none" and its retires-when is "stays".
+  The end note names the six files with a preamble of one line or none, not
+  two. `export-patch.sh:4` points at the `PATCHES.md` export rules.
+  `apply.sh --kvarn` exits 2 and names each offender when `KVARN` and
+  `kvarn/*.patch` disagree. That closes candidate 1's last item.
+- **PR A (#275).** Each patch file ends its preamble with five headers:
+  `Kind`, `What`, `Upstream`, `Cut-against` and `Retires-when`.
+  `scripts/patches_md.py` (stdlib only) writes the table between markers in
+  `PATCHES.md`, in apply order, from `apply.sh --list` and the new
+  `apply.sh --list --kvarn`. The `patch-index` job in `patch-integrity.yml`
+  runs it, then `git diff --exit-code PATCHES.md`. `git merge-tree` finds
+  no conflict with #271.
+- **Two changes from §3.1.** First, five headers, not three. The "what"
+  cell matched the preamble's first prose paragraph in only 4 of 50 files,
+  and `cut against` had no source. Second, a new cut, not new bodies on the
+  old topic branches. Those branches are on `cpuchip/vllm`, where this work
+  has no push access. The cut is tag `qwen38/0.30-index-cut1` on
+  `TyroneNel/vllm` (branch `qwen38/0.30-index`, `7c013fc0e`): v0.30.0 plus
+  one `[qwen38] <topic>` commit per file, in apply order. Each body is the
+  old preamble, the headers, and a `Source:` line that `export-patch.sh`
+  drops. The marker still says `cpuchip/vllm`, because `export-patch.sh` is
+  unchanged.
+- **Measured on #275 (2026-10-05).** All 50 hunk bodies are unchanged
+  (compared after the marker, without index lines and @@ numbers). Index
+  lines changed in 11 files. The @@ numbers changed in the 6 files whose 7
+  hunks applied at an offset, and the series check now reports 0 offsets.
+  The `vllm/` tree after the series and the KVarN patches is byte-identical
+  to upstream/main's. The generated rows equal #274's 50 rows as a set; only
+  the order changed. The 50 marker hashes, in apply order, equal `git
+  rev-list --reverse v0.30.0..qwen38/0.30-index-cut1`. Each bad-header case
+  exits 1 and names the file. A file missing from `patches/series` exits 2.
+- **Not done.** The `auth-deny-default` Cut-against cell says a hunk "lands
+  at an offset", but it applies at none on upstream/main and on #275. The
+  fix is a fork commit body change and a re-export. `verify.sh:108-127`
+  still names the four KVarN patches. The `Verify:` header (§2.3) is still
+  a follow-up. The generator does not check that the marker hashes are on
+  the tag (§5); #275 checked it once, by hand. `dflash2-z-adaptive-emitted`
+  and `dflash2-prewarm` still have no prose above their headers (§3.2 item
+  3), but their `What:` header now gives each one a description.
+  cpuchip/vllm can take the cut with a PR from `qwen38/0.30-index`.
+
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
-**Status:** Partly done. Candidate 1 (e1459c7) closed most of PR B's reference items. PR A (headers, generator, CI freshness) not started.
+**Status at e371b42:** Partly done. Candidate 1 (e1459c7) closed most of PR B's reference items. PR A (headers, generator, CI freshness) not started.
 
 Thirteen commits since d5e2a01. Five touch what this plan cites: e7a5823
 (#233, new `sampler-warmup-cuda`), e1459c7 (#242/#243/#244: `patches/apply.sh`,
@@ -345,10 +408,10 @@ deleted by hand in its own commit; nothing checked any of them.)
 
 | fact | home(s) | checked? |
 |---|---|---|
-| order | `patches/series`, read only by `patches/apply.sh --list` (2026-10-04, e1459c7; was +5 re-parsers). KVarN order: the hard-coded `KVARN` array at `apply.sh:50-51` | dir↔series agreement (`apply.sh --list` exits 2 and names each offender). KVarN list: nothing |
-| kind / upstream / retires-when | `PATCHES.md` table only | **nothing** (2026-10-04: 6 of 50 upstream cells stale — 5 cite closed vllm PRs, `:40` misses #59893; 1.1) |
-| description ("what") | `PATCHES.md` table + preamble prose (duplicated, drift-prone) | nothing |
-| provenance (commit, branch) | the export marker in every file + the export refs at `PATCHES.md:12` | nothing (2026-10-04: `:12` names cpuchip for refs that exist only on `TyroneNel/vllm`, omits the kvarn-fp16 tag, and 3 hashes are on untagged branches; was: 7 of 47 hashes off cut5) |
+| order | `patches/series`, read only by `patches/apply.sh --list` (2026-10-04, e1459c7; was +5 re-parsers). KVarN order: the hard-coded `KVARN` array at `apply.sh:50-51` | dir↔series agreement (`apply.sh --list` exits 2 and names each offender). KVarN list: nothing (2026-10-05, #274: `apply.sh --kvarn` and `--list --kvarn` check it) |
+| kind / upstream / retires-when | `PATCHES.md` table only | **nothing** (2026-10-04: 6 of 50 upstream cells stale — 5 cite closed vllm PRs, `:40` misses #59893; 1.1). (2026-10-05: #274 fixed the six cells. #275 moves them into headers in each patch file, and the `patch-index` job checks the table) |
+| description ("what") | `PATCHES.md` table + preamble prose (duplicated, drift-prone) | nothing (2026-10-05, #275: the `What:` header, checked as above) |
+| provenance (commit, branch) | the export marker in every file + the export refs at `PATCHES.md:12` | nothing (2026-10-04: `:12` names cpuchip for refs that exist only on `TyroneNel/vllm`, omits the kvarn-fp16 tag, and 3 hashes are on untagged branches; was: 7 of 47 hashes off cut5). (2026-10-05: 12 of 50 were off cut5 (#274). #275 puts all 50 on `TyroneNel/vllm` tag `qwen38/0.30-index-cut1`) |
 | supersedes | preamble header (1 file) | `verify.sh:88` (was `:91`) |
 | verify marker (file+string) | `verify.sh` triples (3 patches) | `verify.sh` itself |
 | file count | none (2026-10-04: e1459c7 removed it from `README.md:122`) | not needed |
@@ -480,6 +543,11 @@ six cells changing on purpose.
 Acceptance: CI green with the new step; `git diff` of the generated table
 vs the pre-existing one contains only the deliberate fixes (2.2).
 
+(2026-10-05) Implemented as #275, with the two changes in the block at the
+top: five headers, and a new cut on `TyroneNel/vllm`. The six cell fixes
+landed in #274, before the headers. So #275's parity check is exact: the
+same 50 rows, in apply order.
+
 ### 3.2 PR B — the reference fixes + the preamble gap
 
 (2026-10-04) PR B is smaller now. e1459c7 already removed the README
@@ -493,6 +561,11 @@ lists, and dropped `docs/MR-DRAFT.md` from `PATCHES.md`. Four items remain:
 4. fix `PATCHES.md:12`: name each ref with its repo, add the kvarn-fp16 tag,
    and tag or re-export the three untagged hashes (§2.2). It needs no
    generator, so it can ship alone, ahead of PR A.
+
+(2026-10-05) Implemented as #274: items 1, 2 and 4. For item 4 it re-exports
+two files from cut9 and lists the ref behind each hash, in place of new
+cpuchip tags (no push access). #275 then put all 50 on one tag. Item 3 is
+not done (see the block at the top).
 
 The original text follows as history.
 
@@ -527,30 +600,33 @@ patch count.
 
 | risk | likelihood | mitigation |
 |---|---|---|
-| Backfilling fork commit bodies rewrites topic-branch history the patch files' export markers point at (each names a short-hash; `PATCHES.md:12` itself no longer names hashes — since #189 it names the branch plus the `qwen38/0.30-cut5` export tag, meant to keep a rewrite from orphaning those hashes). **Status 2026-09-29:** the fork has already been rewritten through `qwen38/0.30-cut8` and #234 re-exported four files from it without moving `:12`'s tag, so 7 of 47 hashes are off cut5 and 2 are on no tag (1.1) — the tag defuses the risk only if every re-export moves it. **Status 2026-10-04:** the fork is at cut9; five new or changed hashes are on none of cut5/cut8/cut9; `:12` names two `TyroneNel/vllm` refs as `cpuchip/vllm`, and three hashes sit on untagged branches (1.1, §2.2) | low (backfill) / already happened (tag drift) | do the backfill on the *next* natural re-export and cut a new export tag in the same PR — the cadence #189 set: re-export, tag, update `:12`; have the generator check that every marker hash is an ancestor of the tag `:12` names (needs network or a fork checkout, so a warn-only local step, not the CI freshness gate) |
+| Backfilling fork commit bodies rewrites topic-branch history the patch files' export markers point at (each names a short-hash; `PATCHES.md:12` itself no longer names hashes — since #189 it names the branch plus the `qwen38/0.30-cut5` export tag, meant to keep a rewrite from orphaning those hashes). **Status 2026-09-29:** the fork has already been rewritten through `qwen38/0.30-cut8` and #234 re-exported four files from it without moving `:12`'s tag, so 7 of 47 hashes are off cut5 and 2 are on no tag (1.1) — the tag defuses the risk only if every re-export moves it. **Status 2026-10-04:** the fork is at cut9; five new or changed hashes are on none of cut5/cut8/cut9; `:12` names two `TyroneNel/vllm` refs as `cpuchip/vllm`, and three hashes sit on untagged branches (1.1, §2.2). **Status 2026-10-05:** #275 re-exports all 50 files from one new tag, `qwen38/0.30-index-cut1` on `TyroneNel/vllm`, and `PATCHES.md` names it. The ancestor check below is not built | low (backfill) / already happened (tag drift) | do the backfill on the *next* natural re-export and cut a new export tag in the same PR — the cadence #189 set: re-export, tag, update `:12`; have the generator check that every marker hash is an ancestor of the tag `:12` names (needs network or a fork checkout, so a warn-only local step, not the CI freshness gate) |
 | The generator becomes a second place the description is edited | low | the preamble is the only source; the generated block is marker-fenced with "do not edit" in the fence comment |
 | Free-form `Upstream:`/`Retires-when:` values drift in style | low | the taxonomy line for `Kind:` is validated; the other two are prose by design (as the table is today) |
 | The `Verify:` migration tempts bundling | medium | explicitly sequenced as a follow-up (2.3); this plan closes without touching verify.sh |
-| A patch that deliberately has no preamble (`dflash2-z-adaptive-emitted` today) blocks the generator | low | the generator emits the row with an empty description cell and warns — blocking only on missing `Kind:`, never on missing prose |
+| A patch that deliberately has no preamble (`dflash2-z-adaptive-emitted` today) blocks the generator | low | the generator emits the row with an empty description cell and warns — blocking only on missing `Kind:`, never on missing prose. (2026-10-05: #275 requires all five headers. Every file has a `What:`, so no row has an empty cell) |
 
 ## 6. Done when
 
-Status at e371b42 (2026-10-04) is in brackets.
+Status at e371b42 (2026-10-04) is in brackets. A second bracket gives the status on 2026-10-05.
 
 1. `python scripts/patches_md.py && git diff --exit-code PATCHES.md` is a
    green step in `patch-integrity.yml`, in its own Python-only job
    (2026-10-04). [Not done: no generator, zero `PATCHES` matches in
-   `.github/`.]
+   `.github/`.] [2026-10-05: done in #275, in review.]
 2. Every patch's kind/upstream/retires-when/description is readable in its
    own preamble; deleting `PATCHES.md`'s table loses no information. The
    generator reads the order from `patches/apply.sh --list` and
    `--list --kvarn` (2026-10-04). [Not done: no patch has a `Kind:` line;
-   `--list --kvarn` does not exist.]
+   `--list --kvarn` does not exist.] [2026-10-05: done in #275, in review.]
 3. `README.md` contains no patch count; `patches/series`'s header names
    the consumers that exist; `git grep -n 'MR-DRAFT'` outside the review
    and remediation docs finds nothing; `PATCHES.md:12`'s tag carries every
    marker hash, and `:12` names the repo each ref is on (2026-10-04).
    [Partly done: e1459c7 did the first three. `:12` is not done (1.1).]
+   [2026-10-05: done. #274 names the ref behind each hash, and #275 puts
+   all 50 on one tag. Both are in review.]
 4. `PATCHES.md`'s hand-written remainder is prose that is genuinely prose
    (retired history, port notes) — the most-touched file becomes one
    of the least-touched. [Not done: 9 touches in the last 40 commits.]
+   [2026-10-05: not measurable until #275 merges.]
