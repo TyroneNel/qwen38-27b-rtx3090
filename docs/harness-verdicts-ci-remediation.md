@@ -42,7 +42,7 @@ evidence didn't support it — see 1.2).
 > - The test's `NEGATIVE CONTROL` line prints and does not assert. The
 >   assertion at `:36` checks the same case.
 > - All of PR B is in review.
-> - PR A is #279 (`450e507`, CI green). It changes no CI, and no open PR
+> - PR A is #279 (`7216e19`, CI green). It changes no CI, and no open PR
 >   touches a file it changes.
 > - Eleven scripts printed a failing verdict and exited 0 on main, not six.
 >   A check of each script in `bench/` found five more:
@@ -79,10 +79,13 @@ evidence didn't support it — see 1.2).
 > - No caller reads the exits that #279 changes. `verify.sh:405` and
 >   `single-user/start_qwen.sh:598` name `bugb_sweep.py` and
 >   `residue_sweep.py` in comments only.
-> - Known gaps, not fixed in #279. `prefix_alternation.py` exits 0 when it
+> - `7216e19` fixes the two gaps that #279 first left open. With no
+>   server, `api_smoke.py` exits 2, not 1. A server that answers with an
+>   HTTP error still gives exit 1. `prefix_alternation.py` exits 2 when it
 >   checked no turn (`--rounds 1`, or the budget runs out before round 2).
->   With no server, `api_smoke.py` exits 1, not 2, because each check
->   reports the connection error as a FAIL. `real_rep.sh:23` writes
+>   Before, it exited 0. A stub ran 10 cases on main and the branch, and
+>   the 20 earlier cases give the same exits.
+> - Not fixed in #279. `real_rep.sh:23` writes
 >   `/tmp/rr_$TAG_$i.log`. Bash reads `$TAG_`, which is not set, so every
 >   tag writes `/tmp/rr_<i>.log`. The tracker lists it as D3, in review as
 >   #280.
@@ -464,7 +467,8 @@ at d5e2a01) and names `kvarn/tests/test_kvarn_fp16_dequant_torch.py`
 The manifest has 45 rows: the 44 entries in `bench/` and the kvarn test.
 Against a stub server, `api_smoke.py` exits 1 at 11/12 and 0 at 12/12.
 With a fake kernel on CPU, `test_spec_decode_attn.py` exits 1 on a FAIL
-row and on a NaN row. A GPU run of the two spec-decode tests is not done.
+row and on a NaN row. `7216e19` adds two exit-2 cases: `api_smoke.py`
+with no server, and `prefix_alternation.py` when it checked no turn. A GPU run of the two spec-decode tests is not done.
 On a GPU, both should exit 0, with 13 and 19 OK rows.
 
 ### 3.2 PR B — wire the CPU tests into CI
