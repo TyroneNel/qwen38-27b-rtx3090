@@ -1,6 +1,7 @@
 """API feature smoke test against the running server: the request-level features a different
 model runner could break (logprobs, n, stop, seeds, structured outputs, penalties, streaming,
-thinking, prompt_logprobs, a 20k-token prompt). Prints PASS/FAIL per feature.
+thinking, prompt_logprobs, a 20k-token prompt). Prints PASS/FAIL per feature, and exits 1
+unless all of them pass.
 
   venv/bin/python bench/api_smoke.py          # key from api_key.txt or VLLM_API_KEY, PORT=18020
 """
@@ -104,3 +105,4 @@ for name, fn in [("greedy determinism", t_greedy_det), ("seeded sampling determi
                  ("thinking_token_budget -> 400", t_thinking_budget_rejected)]:
     check(name, fn)
 print("SUMMARY", sum(1 for _, ok, _ in results if ok), "/", len(results), "passed")
+sys.exit(0 if all(ok for _, ok, _ in results) else 1)
