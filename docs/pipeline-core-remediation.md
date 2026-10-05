@@ -5,6 +5,30 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** The group_1 gap (D1 in the
+> tracker) is in review as syv-ai/HyperQwen#276 (`f56f0d5`). The fix is not the
+> `requires=` check that the 2026-10-04 block, §2 and §3.1 name.
+> - `quant_embed.py:91` clones `group_0`, as `quant_mtp.py` and
+>   `quant_heads_stream.py` do. `quant_lm_head.py:102-109` builds `group_1` as
+>   `group_0` with `targets`, `num_bits`, `symmetric` and `zp_dtype` set, and
+>   `quant_embed.py` sets the same four fields on its copy. So `group_2` does
+>   not change. Run first, `quant_embed.py` now completes. The recommended
+>   order stays. Only in that order does `quant_lm_head.py`'s `.bak-quant`
+>   hold the pristine `config.json` and index.
+> - Measured on CPU, on the `test_prepare_crash.py` fixture. The
+>   `docker/prepare.sh` sequence leaves the same 34 files, byte for byte, on
+>   main and on #276. On main, `quant_embed.py` alone exits 1 with
+>   `KeyError: 'group_1'` after it replaced the shard and wrote `.bak_embed`.
+> - The test is a new `order` step, not a `BAD_CONFIGS` case. Both orders
+>   must exit 0 and leave the same files. It fails with main's
+>   `quant_embed.py`. `group_2` must also equal `group_1` except for
+>   `targets`, as on main. All steps: 169 cases, 0 failures.
+> - For this plan, `load_config(d, requires=...)` is not needed, and PR A does
+>   not start with it. Every `prepare/` script now clones `group_0`, which
+>   `load_config` already checks. The one clone of another group is
+>   `drafter/export_mtp.py:136`, from the `group_3` that the same script
+>   writes at `:101`.
+
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
 **Status:** Not started. Worth exploring; not urgent. Build on prepare/quant_schema.py (#246), not a new module.
@@ -52,7 +76,8 @@ this is the deep dive on that card, every claim re-verified against the tree on
   key. `docker/prepare.sh:62-63,83-84` runs the scripts in order, so only a
   manual run hits it. The three `BAD_CONFIGS` cover the method, `group_0`
   and `ignore`, not `group_1`. The fix is `load_config(d,
-  requires=("group_1",))` in `quant_embed.py` (§2, §3.1).
+  requires=("group_1",))` in `quant_embed.py` (§2, §3.1). (2026-10-05:
+  replaced. #276 clones `group_0` instead; see the top block.)
 - Recounts, d5e2a01 → e371b42: RTN copies 5 → 5; MTP list 6 sites /
   4 spellings → 6 / 4; killed-run resume check 5 → 5; write-tail sites 9 in
   8 files → 9 in 8 files; inline config reads in the quant scripts 4 → 1;
@@ -204,7 +229,7 @@ assembly:
 | site | pack/scale/shape | weight_map | config group | ignore edit |
 |---|---|---|---|---|
 | `prepare/quant_lm_head.py` | `:77-80` | `:114-116` | clone `group_0`→`group_1`, `:102-109` | drop `lm_head`, `:87` (+ MTP list, 1.4) |
-| `prepare/quant_embed.py` | `:77-80` | `:100-102` | clone `group_1`→`group_2`, `:89-96` | — |
+| `prepare/quant_embed.py` | `:77-80` | `:100-102` | clone `group_1`→`group_2`, `:89-96` (`group_0` after #276) | — |
 | `prepare/quant_mtp.py` | `:88-90` | `:112-115` | clone `group_0`→`group_3`, `:100-107` | `:99` |
 | `prepare/quant_heads_stream.py` | `:213-216` (heads), `:257-259` (MTP) | `:226-230`, `:270-273` | `group()` factory `:280-292` → `group_1..3`, `:296-300` | `:295` |
 | `drafter/export_mtp.py` (GPTQ MTP) | `:84-86` | `:87-89` | `group_3`, `:98-101` | `:97` |
@@ -221,7 +246,8 @@ nine writers above plus
 shards. Three details the table hides: the group ordinals are hardcoded per
 script and chained (`quant_embed.py:89` clones the `group_1` that
 `quant_lm_head.py` wrote — an ordering dependency that #246's `load_config`
-does not check, see the 2026-10-04 block); `drafter/` writes are
+does not check, see the 2026-10-04 block; #276 removes it, see the 2026-10-05
+block); `drafter/` writes are
 still non-atomic (`save_file`/`json.dump` straight to the final path:
 `export_mtp.py:54,91-93,102,125,129,139` — `:54` and `:139` were missing from
 this list at 2522ef9 — `requant_mtp_gptq.py:57,63`, `gptq_lm_head.py:105-109`,
@@ -378,6 +404,8 @@ module.** #246 landed a second shared module in `prepare/`. Its
   clones. `quant_embed.py` passes `("group_1",)`. This closes the group_1
   gap: today a manual run out of order replaces the shard and then raises
   KeyError (`quant_schema.py:65`; `quant_embed.py:85-86`, then `:89`).
+  **2026-10-05:** not needed. #276 makes `quant_embed.py` clone
+  `group_0`, the group `load_config` already checks (top block).
 - `atomic_publish.py` stays the I/O layer. The core imports it and does
   not re-implement it.
 
@@ -473,6 +501,8 @@ precedent: 71 lines, four importers, its own `reject` step in
 requires=...)` first, as its own small PR: `quant_embed.py` passes
 `("group_1",)`, and `BAD_CONFIGS` gains a case with `group_0` but no
 `group_1` for `quant_embed.py`. The rest of PR A follows on top of it.
+**2026-10-05:** #276 closes the gap with no `requires=` and no new
+`BAD_CONFIGS` case (top block), so PR A starts with the core itself.
 **Bit-identical acceptance:** run each migrated script on a copy of a small
 prepared fixture model, before and after, and `diff` the resulting
 shard/index/config bytes — the eps-per-caller rule (§2) exists to make this

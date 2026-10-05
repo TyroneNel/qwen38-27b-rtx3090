@@ -238,7 +238,7 @@ caveat are in the top block]. D still has no measured point past 112k.
 
 ## 0. Branch tracker: sequence and progress
 
-**Updated 2026-10-04 against upstream/main @ `e371b42`.** The C1, A3, A4 and A5 rows were updated
+**Updated 2026-10-04 against upstream/main @ `e371b42`.** The C1, A3, A4, A5 and A7 rows and D1 were updated
 on 2026-10-05, at `10bb488`. This section tracks the whole
 `docs/decode-perf-150k-240k-plan` branch. It covers two tracks:
 
@@ -253,6 +253,7 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 - Track A: 1 of 7 candidates is merged (C1). C6 is partly done.
 - (2026-10-05, `10bb488`) Track A: five PRs are in review. They are C5 PR B (#271), C2 PR A and
   PR B (#272, #273), and C6 PR B and PR A (#274, #275). All of C6's planned PRs are open.
+- (2026-10-05, `10bb488`) Defect D1 is in review as #276.
 - Track B: T1 is measured but is not the default yet. No T-item ships by default.
 
 ### 0.1 Track A: architecture candidates (no GPU)
@@ -266,14 +267,14 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 | A4 | **C6** PR B: fork and upstream references | **In review**: syv-ai/HyperQwen#274 (`c485c94`, opened 2026-10-04 on `10bb488`, CI green). `PATCHES.md` names the fork ref behind every exported commit: 12 of the 50 marker hashes were not on cut5, the tag `:12` named. It re-exports `sampler-warmup-cuda` (`92e7256fa` → `ba3b5d8e6`) and `bench-sse-keepalive` (`757723b` → `bebdd65c5`) from cut9, in place of new cpuchip tags (no push access). The upstream cells cite #59892, #59888, #59890, #59893 and #59889 (merged as `7867d6c52d`; retires when the pin carries it). `tokenize-v1-route` stays `feature`, not `local`, because `local` means hardware or environment. Its upstream cell is "none" and its retires-when is "stays". It fixes the end note (six files have a preamble of one line or none) and `export-patch.sh:4`. `apply.sh --kvarn` exits 2 when `KVARN` and `kvarn/*.patch` disagree. | Merge #274. A tag for cpuchip `qwen38/0.30-chainfix` needs cpuchip push access, and #275 makes it unnecessary. | — (any time) | [patch-index-generation-remediation.md](patch-index-generation-remediation.md) |
 | A5 | **C6** PR A: the index generator | **In review**: syv-ai/HyperQwen#275 (`17b1551`, stacked on #274, opened 2026-10-05, CI green with the new `patch-index` job). Each patch file ends its preamble with five headers: `Kind`, `What`, `Upstream`, `Cut-against` and `Retires-when`. The plan had three, but only 4 of 50 first paragraphs matched the "what" cell. `scripts/patches_md.py` writes the table in apply order, and the `patch-index` job fails when it is not current. `apply.sh --list --kvarn` is new. All 50 files are re-exported from tag `qwen38/0.30-index-cut1` on TyroneNel/vllm (`7c013fc0e`). The hunk bodies are unchanged, the installed tree is byte-identical, and the 7 hunks that applied at an offset now apply exactly. | Merge after #274. Then fix the stale `auth-deny-default` Cut-against cell (fork commit body and re-export). Make `verify.sh:108-127` read `apply.sh --list --kvarn`. Then the `Verify:` header (C6 §2.3). cpuchip/vllm can take the cut with a PR from `qwen38/0.30-index`. | A4 | same |
 | A6 | **C3** Harness client | Not started | Ship PR B's two `_created` guards first (`run_benchmarks.sh:39`, `prefill_ab.sh:57`). Then do PR A and PR C. | — | [harness-client-remediation.md](harness-client-remediation.md) |
-| A7 | **C4** Pipeline core | Not started | Build on `prepare/quant_schema.py` (#246), not on a new module. Add `load_config(d, requires=...)`. | — | [pipeline-core-remediation.md](pipeline-core-remediation.md) |
+| A7 | **C4** Pipeline core | Not started | Build on `prepare/quant_schema.py` (#246), not on a new module. Do not add `load_config(d, requires=...)`. After D1 (#276), every `prepare/` script clones `group_0`, and `load_config` already checks it. | — | [pipeline-core-remediation.md](pipeline-core-remediation.md) |
 | A8 | **C7** `prepare --status` | Not started | PR A: move the model checks to `scripts/verify_model.py`. Give `--status` exit codes 0, 1 and 2, and run it before `load_config`. | Upstream PR #267 (it moves `verify.sh` again). A7 for the shared names. | [prepare-status-remediation.md](prepare-status-remediation.md) |
 
 **Small defects that this review found.** Fix each one in its own PR, at any time.
 
 | ID | Defect | Status | Fix | Doc |
 |---|---|---|---|---|
-| D1 | `prepare/quant_embed.py:85-86` writes the shard, then `:89` reads `group_1`. `load_config` checks only `group_0` (`quant_schema.py:65`). | Open | Check for `group_1` before the write. | [pipeline-core-remediation.md](pipeline-core-remediation.md) |
+| D1 | `prepare/quant_embed.py:85-86` writes the shard, then `:89` reads `group_1`. `load_config` checks only `group_0` (`quant_schema.py:65`). | **In review**: syv-ai/HyperQwen#276 (`f56f0d5`, opened 2026-10-05 on `10bb488`, CI green). | `quant_embed.py` clones `group_0`, as `quant_mtp.py` and `quant_heads_stream.py` do. The planned `group_1` check was not needed: `group_1` is `group_0` with four fields set, and `quant_embed.py` sets the same four. Run first, `quant_embed.py` now completes, and the prepared fixture is byte-identical (34 files). `test_prepare_crash.py` gains an `order` step, which also requires `group_2` to equal `group_1` except for `targets`: 169 cases, 0 failures. | [pipeline-core-remediation.md](pipeline-core-remediation.md) |
 | D2 | `patches/auth-deny-default.patch:118` uses `removeprefix(root_path)`. With `--root-path /`, `/health` gets 401. A reviewer found the same defect in vllm-project/vllm#59892. | Open | Use `get_route_path`. | [patch-index-generation-remediation.md](patch-index-generation-remediation.md) |
 
 ### 0.2 Track B: decode performance (GPU)
@@ -303,6 +304,7 @@ The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep 
 | 2026-10-04 | `10bb488` | A3 opened: C2 PR A as #272, and PR B as #273, stacked on #272. CI green. |
 | 2026-10-04 | `10bb488` | A4 opened as #274. 12 of the 50 marker hashes were not on cut5. CI green. |
 | 2026-10-05 | `10bb488` | A5 opened as #275, stacked on #274. All 50 patch files are re-exported from TyroneNel/vllm tag `qwen38/0.30-index-cut1` (`7c013fc0e`). CI green, with the new `patch-index` job. |
+| 2026-10-05 | `10bb488` | D1 opened as #276. `quant_embed.py` clones `group_0`, not `group_1`, so the C4 plan's `requires=` check is not needed. The C4 and C7 docs record it. CI green. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
