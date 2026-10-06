@@ -1,6 +1,7 @@
 """API feature smoke test against the running server: the request-level features a different
 model runner could break (logprobs, n, stop, seeds, structured outputs, penalties, streaming,
-thinking, prompt_logprobs, a 20k-token prompt). Prints PASS/FAIL per feature.
+thinking, prompt_logprobs, a 20k-token prompt). Prints PASS/WARN/FAIL per feature, and exits 1
+if any hard check fails. It exits 2 when no request reaches a server.
 
   venv/bin/python bench/api_smoke.py          # key from api_key.txt or VLLM_API_KEY, PORT=18020
 
@@ -39,12 +40,14 @@ def chat(msg, **kw):
     return post(URL, p)
 
 
-results = []
+results, unreached = [], []
 def check(name, fn, soft=False):
     try:
         ok, info = fn()
     except Exception as e:  # noqa
         ok, info = False, f"{type(e).__name__}: {str(e)[:200]}"
+        if type(e) is urllib.error.URLError:  # its subclass HTTPError means a server answered
+            unreached.append(name)
     results.append((name, ok, info, soft))
     tag = "PASS " if ok else ("WARN " if soft else "FAIL ")
     print(tag + name + " — " + str(info)[:200], flush=True)
@@ -119,6 +122,9 @@ n_pass = sum(1 for _, ok, _, _ in results if ok)
 n_warn = sum(1 for _, ok, _, soft in results if not ok and soft)
 n_fail = sum(1 for _, ok, _, soft in results if not ok and not soft)
 print("SUMMARY", n_pass, "/", len(results), "passed", f"({n_warn} warn, {n_fail} fail)")
+if len(unreached) == len(results):
+    print(f"INVALID: no server answered on port {PORT}, so there is no verdict.")
+    sys.exit(2)
 # Fail-closed: a printed hard failure must also fail the process for CI.
 if n_fail:
     print(f"RESULT FAIL ({n_fail} of {len(results)} failed)")

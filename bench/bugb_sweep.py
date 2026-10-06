@@ -17,7 +17,8 @@ this reads as a threshold, which is how it was first (mis)diagnosed.
 To sweep every residue rather than lengths you picked, use bench/residue_sweep.py --
 five hand-picked lengths miss a 1-in-128 break 96% of the time.
 
-Fail-closed (F02): any broken length exits 1 with RESULT FAIL.
+Fail-closed (F02): any broken length exits 1 with RESULT FAIL, judged against the
+neighbourhood when the sweep has five or more lengths, by the per-row flags when it has fewer.
 """
 import json, os, sys, urllib.request
 
@@ -91,7 +92,7 @@ for ctx in [int(a) for a in sys.argv[1:]]:
     n, rep = prefix_match(ans, doc), repeats(ans)
     ref = median([r["cov"] for r in rows]) if len(rows) >= 5 else None
     flag, cov, why = classify(ans, doc, ref=ref)
-    rows.append(dict(ctx=ctx, ptok=ptok, tps=tps, ans=ans, doc=doc, cov=cov))
+    rows.append(dict(ctx=ctx, ptok=ptok, tps=tps, ans=ans, doc=doc, cov=cov, flag=flag))
     print(f"{ctx:>7} {ptok:>11} {ptok % 128:>7} {tps:>9.2f} "
           f"{str(n) + '/' + str(len(ans)):>12} {cov:>5.2f} {rep:>8}  {flag}"
           + (f"  ({why})" if why else ""))
@@ -106,8 +107,10 @@ if len(rows) >= 5:
     print(f"\nneighbourhood coverage (median of {len(rows)}): {ref:.2f}")
     print(f"{len(bad)} broken of {len(rows)} lengths"
           + ("" if not bad else "  -> " + ", ".join(f"residue {r} ({w})" for r, w in bad)))
+else:
+    bad = [r for r in rows if r["flag"] != "ok"]
 # Fail-closed: broken lengths must fail the process for CI.
-if len(rows) >= 5 and bad:
+if bad:
     print("RESULT FAIL")
     sys.exit(1)
 print("RESULT PASS")

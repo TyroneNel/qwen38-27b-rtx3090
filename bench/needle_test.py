@@ -3,7 +3,7 @@
 
 Builds a ~TARGET_TOKENS filler context, hides a secret passcode at a given
 fractional depth, asks the model for it, and reports whether the answer
-contains the passcode. Complements quality_battery.py's GSM8K lane for the
+contains the passcode (exit 0) or not (exit 1). Complements quality_battery.py's GSM8K lane for the
 "quality at depth" question on long-context KV configs.
 
 Usage:
