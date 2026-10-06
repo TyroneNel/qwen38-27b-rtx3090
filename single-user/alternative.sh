@@ -38,6 +38,9 @@ REPO="$ALT_REPO"   # resolve_vllm_key reads $REPO/api_key.txt; unset, the file f
 # shellcheck disable=SC1091
 source "$ALT_REPO/resolve_api_key.sh" \
   || { echo "[alternative] cannot source resolve_api_key.sh - refusing to boot with an unknown key" >&2; exit 1; }
+# shellcheck disable=SC1091
+source "$ALT_REPO/launcher_common.sh" \
+  || { echo "[alternative] cannot source launcher_common.sh - refusing to boot" >&2; exit 1; }
 resolve_vllm_key
 resolve_bind_host
 export VLLM_DFLASH2_LOOKUP=${LOOKUP:-1}
@@ -138,7 +141,7 @@ if [ "${REQ_METRICS:-0}" = 1 ]; then
                 --per-request-spec-decode-metrics "$SPEC_METRICS")
 fi
 
-exec vllm serve "$MODEL" \
+qwen_exec vllm serve "$MODEL" \
   --served-model-name qwen3.8-27b \
   --host $BIND_HOST --port $PORT \
   --gpu-memory-utilization $GPU_UTIL \
