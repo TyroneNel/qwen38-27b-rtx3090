@@ -14,10 +14,10 @@ audio request function skips SSE comments like the other two. Checked against a 
 that sends a keep-alive before three tokens: stock fails with the error above, patched returns the
 text. Upstream main has the same code.
 
---- exported from cpuchip/vllm bebdd65c5 (bench-sse-keepalive); regenerate with scripts/export-patch.sh, do not edit ---
+--- exported from cpuchip/vllm 757723b (bench-sse-keepalive); regenerate with scripts/export-patch.sh, do not edit ---
 
 diff --git a/benchmarks/lib/endpoint_request_func.py b/benchmarks/lib/endpoint_request_func.py
-index 54c6ce63b..a12cbf6ad 100644
+index 54c6ce6..a12cbf6 100644
 --- a/benchmarks/lib/endpoint_request_func.py
 +++ b/benchmarks/lib/endpoint_request_func.py
 @@ -207,8 +207,9 @@

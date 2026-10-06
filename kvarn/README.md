@@ -30,8 +30,8 @@ What's in it:
   torch.compile cache key (see "Environment knobs" below).
 - `install.sh` — copies the modules into the venv's `site-packages/vllm` (found by asking the venv's python, so any Python version)
   and applies the four patches at `--fuzz 0` (safe to re-run; a rejected hunk stops it).
-  Each one's `exported from` line names a fork commit, and `PATCHES.md` ("Where the commits are") says which fork
-  and which ref hold it. All four sit after the whole `patches/` series, so they are never edited by hand.
+  Like the `patches/` files, each one is the source and is written by `scripts/export-patch.sh` from a commit that
+  sits after the whole `patches/` series, so they are never edited by hand.
 
 Port notes, for whoever bumps vLLM next:
 

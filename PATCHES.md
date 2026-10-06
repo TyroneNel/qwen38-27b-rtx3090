@@ -9,28 +9,11 @@ them in the order of `patches/series` onto the installed vLLM wheel; `verify.sh`
 - **local**: this hardware or environment (WSL2, sm80, a tuned build, env knobs). Stays.
 - **own**: a fix to a feature this repo introduced. Rides with that feature.
 
-Cut against: the pin the current hunks were generated on. Every file is exported from one commit on a vLLM 0.30.0 fork (subject `[qwen38] <topic>`; the file's `--- exported from` line names the commit, and the list below says which fork ref holds it), so the series applies to the 0.30.0 tree with exact context; `patches/apply.sh` (which the Dockerfile and the install pages call),
+Cut against: the pin the current hunks were generated on. The files are the source. Each contributor keeps the topics as commits (subject `[qwen38] <topic>`) in any vLLM 0.30.0 checkout, and `scripts/export-patch.sh` turns a commit into a file whose `--- exported from` line names that commit, so the series applies to the 0.30.0 tree with exact context; `patches/apply.sh` (which the Dockerfile and the install pages call),
 `patches/check_vllm_series.sh`, `kvarn/install.sh` and `verify.sh` apply and check with `--fuzz 0`, and a hunk whose context has moved fails the
-build by name instead of landing by guess. Regenerate a file with `bash scripts/export-patch.sh <fork checkout>
+build by name instead of landing by guess. Regenerate a file with `bash scripts/export-patch.sh <vllm checkout>
 <commit> patches/<topic>.patch`; do not edit the files by hand. A patch that reads an env knob registers it in
 `envs.py` in its own hunk (so the knob is in the torch.compile cache key), and reads it through `vllm.envs`.
-
-Where the commits are. The `exported from` line always says `cpuchip/vllm`, because `scripts/export-patch.sh` writes
-it that way. The fork rewrites its branch `qwen38/0.30` when it cuts again (cut8 dropped most of cut7's commits), so
-a commit stays reachable only from a tag or from another branch. Checked 2026-10-04 with `git for-each-ref --contains`
-on both forks:
-
-- tag `qwen38/0.30-cut7` on `cpuchip/vllm`: every file that the next five items do not name.
-- tag `qwen38/0.30-cut9` on `cpuchip/vllm` (the head of `qwen38/0.30`): `bench-sse-keepalive`, `marlin-int8-asym-zp`,
-  `marlin-repack-staged-sm80`, `sampler-warmup-cuda`, `speed-knobs-envs` and `kvarn/kvarn-0.30.0`.
-- branch `qwen38/0.30-chainfix` on `cpuchip/vllm`, which has no tag: `dflash2-ngram-chains` and
-  `kvarn/kvarn-v2-runner-0.30.0`.
-- tag `qwen38/0.30-pinned-kv-cut1` on `TyroneNel/vllm`: `pinned-kv-empty-cache` (cpuchip/vllm#4 is open for it).
-- tag `qwen38/0.30-kvarn-fp16-cut1` on `TyroneNel/vllm`: `kvarn/kvarn-fp16-dequant-0.30.0` (cpuchip/vllm#3 is open
-  for it).
-- no ref on either fork: `kvarn/kvarn-recycled-pages-0.30.0` (`40ab8e0`). Its fork commits (on cut7, cut9 and
-  `qwen38/0.30-chainfix`) also carry the `kvarn_attn.py` half, which this repo keeps in `kvarn/files`, so none of
-  them exports to this file.
 
 | patch | kind | what | upstream | cut against | retires when |
 |---|---|---|---|---|---|
@@ -68,7 +51,7 @@ on both forks:
 | cudagraph-memory-from-allocator | fix | measure captured CUDA-graph memory by the allocator's reserved bytes and log the driver's free-memory delta beside it; under WSL2's driver that delta reads zero once the KV cache fills the budget and collapses by 5.44 GiB during a cold compile, which the graph estimate subtracted from the KV budget and refused the CTX=huge first boot | none yet | 0.30.0, hand-resolved against #54646 (both readings inside the gc-freeze block) | upstream measures by the allocator |
 | compile-key-runtime-knobs | fix | keeps this repo's runtime-only env knobs (`VLLM_ENGINE_STALL_SENTINEL_S`, `VLLM_MAMBA_ALIGN_KEEP_CHECKPOINTS`, `VLLM_DFLASH2_CHAIN_LOG_SEC`, `VLLM_MARLIN_TUNE_DIR`) and the deprecated `VLLM_PREFIX_CACHE_RETENTION_INTERVAL` out of `compile_factors()`, so changing one no longer forces a cold torch.compile (#183) | none | 0.30.0 | stays while the knobs exist |
 | serve-404-served-names | fix | the model-not-found 404 lists the served names (`Served models: ...`) so a misnamed model is a one-read response body | vllm #59889 (merged to main as `7867d6c52d`, not in a release yet; upstream says `Valid aliases: ...`) | 0.30.0 | the pin carries vllm #59889 |
-| serve-model-path-match | fix | a model name equal to a served model's root path or its basename is accepted (exact matches only): /v1/models publishes the root, and echoing it back used to 404 | vllm #59890 | 0.30.0 | upstream PR |
+| serve-model-path-match | fix | a model name equal to a served model's root path or its basename is accepted (exact matches only): /v1/models publishes the root, and echoing it back used to 404 | vllm #59890 (accepts the root path only, not its basename) | 0.30.0 | the pin carries vllm #59890, if no client here sends the basename |
 | tokenize-v1-route | feature | /tokenize and /detokenize also served under /v1 for OpenAI-SDK base_urls; operation ids stay unique (name+path+method) | none (vllm #59891 was closed: upstream keeps `/v1` for the official OpenAI endpoints) | 0.30.0 | stays |
 | triton-spec-attn-fp8-kv | feature | split-KV verify attention on the per-tensor fp8 KV cache (TRITON_ATTN, sm89+); registers `VLLM_SPEC_ATTN_DEBUG` | none | 0.30.0 | upstreamed |
 | spec-decode-int4-kv-mq3d | feature | multi-query 3D int4 verify path | none | 0.30.0 | rides with int4-kv-per-token-head |
@@ -103,8 +86,8 @@ this line's readers already go through `vllm.envs`, so applying it duplicates th
 `speed-knobs-envs` rather than adding a second copy, before the pin-flip PR. Until then the 0.28
 and 0.29 shapes differ here by design.
 
-Six files have a preamble of one line or none, because their fork commit bodies are that short. `dflash2-prewarm` and
+Six files have a preamble of one line or none, because their commit bodies are that short. `dflash2-prewarm` and
 `dflash2-z-adaptive-emitted` have none: only blank lines come before their `exported from` line.
 `dflash2-lookup-drafting`, `offload-wsl2-devptr`, `spec-decode-int4-kv-mq3d` and `vllm-pr50021-gdn-spec-bounds` have
 one line. Their rows above describe them, and `docs/wsl2-4090.md` ("CPU offload tier under WSL2") explains
-`offload-wsl2-devptr`. A preamble comes from the fork commit body and a re-export, not from an edit to the file.
+`offload-wsl2-devptr`. A preamble comes from the commit body at export, not from an edit to the file.
