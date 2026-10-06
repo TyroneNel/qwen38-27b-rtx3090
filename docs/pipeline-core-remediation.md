@@ -5,6 +5,102 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **Updated 2026-10-05 on upstream/main @ 10bb488.** The group_1 gap (D1 in the
+> tracker) is in review as syv-ai/HyperQwen#276 (`f56f0d5`). The fix is not the
+> `requires=` check that the 2026-10-04 block, §2 and §3.1 name.
+> - `quant_embed.py:91` clones `group_0`, as `quant_mtp.py` and
+>   `quant_heads_stream.py` do. `quant_lm_head.py:102-109` builds `group_1` as
+>   `group_0` with `targets`, `num_bits`, `symmetric` and `zp_dtype` set, and
+>   `quant_embed.py` sets the same four fields on its copy. So `group_2` does
+>   not change. Run first, `quant_embed.py` now completes. The recommended
+>   order stays. Only in that order does `quant_lm_head.py`'s `.bak-quant`
+>   hold the pristine `config.json` and index.
+> - Measured on CPU, on the `test_prepare_crash.py` fixture. The
+>   `docker/prepare.sh` sequence leaves the same 34 files, byte for byte, on
+>   main and on #276. On main, `quant_embed.py` alone exits 1 with
+>   `KeyError: 'group_1'` after it replaced the shard and wrote `.bak_embed`.
+> - The test is a new `order` step, not a `BAD_CONFIGS` case. Both orders
+>   must exit 0 and leave the same files. It fails with main's
+>   `quant_embed.py`. `group_2` must also equal `group_1` except for
+>   `targets`, as on main. All steps: 169 cases, 0 failures.
+> - For this plan, `load_config(d, requires=...)` is not needed, and PR A does
+>   not start with it. Every `prepare/` script now clones `group_0`, which
+>   `load_config` already checks. The one clone of another group is
+>   `drafter/export_mtp.py:136`, from the `group_3` that the same script
+>   writes at `:101`.
+
+**Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
+
+**Status:** Not started. Worth exploring; not urgent. Build on prepare/quant_schema.py (#246), not a new module.
+
+- Not landed. There is no `pipeline_core.py` and no PR A, B or C. The §6
+  greps return the d5e2a01 results: `torch.round(g / s` six sites,
+  `MTP_LINEARS\|"mtp.fc"` six definition sites, `sys.path.insert` 5 in
+  `drafter/`, `draft_lm_head.weight_packed` two writers
+  (`build_draft_vocab.py:141`, `export_mtp.py:122`). No open PR touches
+  `prepare/` or `drafter/` (`gh pr list -R syv-ai/HyperQwen --state open`).
+- Of the 13 commits since d5e2a01, only accc8cf (#246) touches `prepare/`.
+  `drafter/`, `docker/prepare.sh`, `prepare/atomic_publish.py`,
+  `prepare/build_draft_vocab.py`, `prepare/fetch_fast_variant.py` and
+  `patches/qwen3_5-mtp-draft-vocab.patch` are unchanged
+  (`git diff --stat d5e2a01 e371b42 -- <paths>` is empty for them).
+- What #246 changed. It adds `prepare/quant_schema.py` (71 lines, stdlib
+  only, one public function). `load_config(d)` (`:34-71`) reads
+  `config.json` and returns `(c, qc)`. It exits before any write unless
+  `quant_method` is compressed-tensors (`:52-58`), `ignore` is a list
+  (`:60-62`) and `config_groups.group_0` exists (`:64-67`). The four quant
+  scripts call it before they read a shard (`quant_lm_head.py:45`,
+  `quant_embed.py:43`, `quant_mtp.py:56`, `quant_heads_stream.py:74`) and
+  drop their inline `json.load` + `qc = c["quantization_config"]` pairs.
+  `bench/test_prepare_crash.py` gains a `reject` step (`BAD_CONFIGS`
+  `:359-371`, `reject_case`/`reject` `:374-412`): each script must exit
+  non-zero on three bad configs and write nothing. `prepare/README.md:9-36`
+  documents the accepted schema.
+- What it means for this plan. `load_config` takes over the config read at
+  the head of the 1.2 write tail (four inline copies become one). It also
+  checks the inputs that §2's `clone_group` and `repair_ignore_list` take.
+  It does not touch 1.1, 1.3, 1.4, 1.5 or 1.6, and it conflicts with
+  nothing: §2 can consume its `(c, qc)`. It adds no copy of the MTP list or
+  of the RTN math. It restates three facts: every added group is a clone of
+  `group_0` (`:67`), the scripts rewrite the ignore list (`:62`), and the
+  shard is written before config.json and the index (docstring `:7-8`, also
+  `atomic_publish.py:12-15`). The same four-line docstring paragraph and
+  two-line comment are pasted into all four scripts.
+- The group_1 gap. `load_config` checks only `group_0`
+  (`quant_schema.py:65`). `quant_embed.py` clones `group_1`, which
+  `quant_lm_head.py` writes. Run `quant_embed.py` by hand before
+  `quant_lm_head.py`: it passes the check, runs `backup_once` and
+  `save_tensors` on the shard (`:85-86`), then reads
+  `qc["config_groups"]["group_1"]` (`:89`) and raises KeyError. That is the
+  #241 failure mode (a KeyError after the shard is replaced) through another
+  key. `docker/prepare.sh:62-63,83-84` runs the scripts in order, so only a
+  manual run hits it. The three `BAD_CONFIGS` cover the method, `group_0`
+  and `ignore`, not `group_1`. The fix is `load_config(d,
+  requires=("group_1",))` in `quant_embed.py` (§2, §3.1). (2026-10-05:
+  replaced. #276 clones `group_0` instead; see the top block.)
+- Recounts, d5e2a01 → e371b42: RTN copies 5 → 5; MTP list 6 sites /
+  4 spellings → 6 / 4; killed-run resume check 5 → 5; write-tail sites 9 in
+  8 files → 9 in 8 files; inline config reads in the quant scripts 4 → 1;
+  `drafter/` non-atomic and in-place write lists unchanged; shared
+  `prepare/` modules 1 → 2; `prepare/*.py` files 11 → 12; `.py` files that
+  name `weight_packed` 10 → 10; `.py` files that name `.bak` 10 → 10.
+- 1.7 import count. Bare imports in `prepare/` go from 8 lines to 12: eight
+  `from atomic_publish import`, four `from quant_schema import load_config`
+  (`grep -n 'from atomic_publish\|from quant_schema' prepare/*.py
+  drafter/*.py`). No `drafter/` file imports either module. `drafter/`
+  shims stay at 5. `bench/test_prepare_crash.py` puts `prepare/` on
+  `sys.path` at three sites, not two (`:91`, `:233`, and `:382` in the new
+  `reject_case`).
+- Line cites. #246 shifts the four quant scripts by +4 to +9 lines (docstring
+  +4, import +1, `load_config` call +3 or +4, inline config read −2). Every
+  stale cite in §1.1–1.7 is re-cited in place below, each re-read at
+  e371b42. `verify.sh:269` is now `:270` (177ce26). The older blocks keep
+  their cites as history.
+- CI (§4). `patch-integrity.yml` now has a CPU-torch job,
+  `kvarn-torch-gate` (`:25-37`, bd6c5e2). The `model-verification` job
+  (`:13-23`), where §4 puts the new test, installs no torch.
+  `bench/test_prepare_crash.py` is still not in CI.
+
 **Re-verified 2026-09-29 against upstream/main @ d5e2a01 (vLLM 0.30.0).**
 
 - Unchanged: none of the seven commits since 2522ef9 (8d9848d #231, e355f9f
@@ -87,10 +183,10 @@ The same two lines, byte-identical except where noted:
 
 | site | lines | variant |
 |---|---|---|
-| `prepare/quant_lm_head.py` | `:61-62` | QMAX=127, clamp min **1e-10**, keepdim |
-| `prepare/quant_embed.py` | `:61-62` | identical to quant_lm_head (verified) |
-| `prepare/quant_mtp.py` | `:74-75` | identical |
-| `prepare/quant_heads_stream.py` | `:84-85` | chunked (per-block), lowercase qmax/s |
+| `prepare/quant_lm_head.py` | `:69-70` | QMAX=127, clamp min **1e-10**, keepdim |
+| `prepare/quant_embed.py` | `:69-70` | identical to quant_lm_head (verified) |
+| `prepare/quant_mtp.py` | `:83-84` | identical |
+| `prepare/quant_heads_stream.py` | `:92-93` | chunked (per-block), lowercase qmax/s |
 | `drafter/export_mtp.py` | `:112-113` | the draft-head RTN, identical to quant_lm_head |
 
 A shared `rtn_quantize` **already exists** at `drafter/gptq_utils.py:77-84` —
@@ -111,15 +207,18 @@ Since the #195 saga (2026-09-27) the I/O half of the tail is one module,
 down in its docstring (`:12-15`; the consumer is `docker/prepare.sh`'s
 `state()`, which reads only the index, `:26,:62-69`, and sends torn files to
 re-download — `intact()`, `:41-53`, #203). All eight `prepare/` writers
-import it (`quant_lm_head.py:29`, `quant_embed.py:29`, `quant_mtp.py:30`,
-`quant_heads_stream.py:47`, `build_draft_vocab.py:35`,
+import it (`quant_lm_head.py:33`, `quant_embed.py:33`, `quant_mtp.py:34`,
+`quant_heads_stream.py:51`, `build_draft_vocab.py:35`,
 `fetch_fast_variant.py:18`, `harden_chat_template.py:30`,
-`translate_chat_template.py:40`; the other two `prepare/*.py`,
-`fetch_dflash2.py:18` and `fetch_thirdparty.py:35`, write only through
-`snapshot_download`); each still sequences the calls itself
-("The index is the commit point, so it goes last" — `quant_lm_head.py:106-111`
-and twins). `prepare/README.md:62-66` documents the protocol and its
-crash-injection test (`bench/test_prepare_crash.py`).
+`translate_chat_template.py:40`; of the other `prepare/*.py`,
+`fetch_dflash2.py:18` and `fetch_thirdparty.py:35` write only through
+`snapshot_download`, and `quant_schema.py` (#246, 2026-10-04) writes
+nothing); each still sequences the calls itself
+("The index is the commit point, so it goes last" — `quant_lm_head.py:112-117`
+and twins). `prepare/README.md:91-95` documents the protocol and its
+crash-injection test (`bench/test_prepare_crash.py`). Since #246 the config
+read before the tail is shared too: `load_config` (`quant_schema.py:34-71`)
+replaces the four inline reads (2026-10-04).
 
 The contract half — `pack_to_int32(q, BITS)` → `scale.to(dtype)` →
 `weight_shape = tensor([out_f, in_f], int64)` → `weight_map` edit →
@@ -129,10 +228,10 @@ assembly:
 
 | site | pack/scale/shape | weight_map | config group | ignore edit |
 |---|---|---|---|---|
-| `prepare/quant_lm_head.py` | `:69-72` | `:108-110` | clone `group_0`→`group_1`, `:96-103` | drop `lm_head`, `:81` (+ MTP list, 1.4) |
-| `prepare/quant_embed.py` | `:69-72` | `:94-96` | clone `group_1`→`group_2`, `:83-90` | — |
-| `prepare/quant_mtp.py` | `:79-81` | `:105-108` | clone `group_0`→`group_3`, `:93-100` | `:92` |
-| `prepare/quant_heads_stream.py` | `:205-208` (heads), `:249-251` (MTP) | `:218-222`, `:262-265` | `group()` factory `:274-286` → `group_1..3`, `:290-294` | `:289` |
+| `prepare/quant_lm_head.py` | `:77-80` | `:114-116` | clone `group_0`→`group_1`, `:102-109` | drop `lm_head`, `:87` (+ MTP list, 1.4) |
+| `prepare/quant_embed.py` | `:77-80` | `:100-102` | clone `group_1`→`group_2`, `:89-96` (`group_0` after #276) | — |
+| `prepare/quant_mtp.py` | `:88-90` | `:112-115` | clone `group_0`→`group_3`, `:100-107` | `:99` |
+| `prepare/quant_heads_stream.py` | `:213-216` (heads), `:257-259` (MTP) | `:226-230`, `:270-273` | `group()` factory `:280-292` → `group_1..3`, `:296-300` | `:295` |
 | `drafter/export_mtp.py` (GPTQ MTP) | `:84-86` | `:87-89` | `group_3`, `:98-101` | `:97` |
 | `drafter/export_mtp.py` (draft head) | `:122-124` | `:127-128` | `group_4` when HBITS≠BITS, `:136-138` | — |
 | `drafter/requant_mtp_gptq.py` | `:51-53` | (index copied verbatim, `:31`) | `group_3` num_bits in place, `:60-62` | — |
@@ -145,26 +244,28 @@ drafter`; eleven files with `drafter/README.md`, corrected 2026-09-29): the
 nine writers above plus
 `drafter/train_mtp.py:203-204`, which only reads the packed entries to find
 shards. Three details the table hides: the group ordinals are hardcoded per
-script and chained (`quant_embed.py:83` clones the `group_1` that
-`quant_lm_head.py` wrote — an ordering dependency); `drafter/` writes are
+script and chained (`quant_embed.py:89` clones the `group_1` that
+`quant_lm_head.py` wrote — an ordering dependency that #246's `load_config`
+does not check, see the 2026-10-04 block; #276 removes it, see the 2026-10-05
+block); `drafter/` writes are
 still non-atomic (`save_file`/`json.dump` straight to the final path:
 `export_mtp.py:54,91-93,102,125,129,139` — `:54` and `:139` were missing from
 this list at 2522ef9 — `requant_mtp_gptq.py:57,63`, `gptq_lm_head.py:105-109`,
 `quant_dflash2.py:94,117`); and the killed-run resume check ("already packed
 … completing an interrupted run") that the atomic protocol needs is itself a
-per-script copy, five times: `quant_lm_head.py:52-56`, `quant_embed.py:52-56`,
-`quant_mtp.py:64-68`, `quant_heads_stream.py:187-193` and `:238-244`.
+per-script copy, five times: `quant_lm_head.py:60-64`, `quant_embed.py:60-64`,
+`quant_mtp.py:73-77`, `quant_heads_stream.py:195-201` and `:246-252`.
 
 ### 1.3 The one difference that matters is invisible
 
 Scale dtype: fp16 for lm_head, bf16 for embed_tokens. Encoded as:
-- `prepare/quant_lm_head.py:70-71` — a **comment** ("linear layers use fp16
+- `prepare/quant_lm_head.py:78-79` — a **comment** ("linear layers use fp16
   scales in this checkpoint") and `.to(torch.float16)`;
-- `prepare/quant_embed.py:70-71` — a **comment** ("the embedding path creates
+- `prepare/quant_embed.py:78-79` — a **comment** ("the embedding path creates
   scales in params_dtype (bf16), unlike the linears") and `.to(torch.bfloat16)`;
-- `prepare/quant_heads_stream.py:178` — as **data**:
+- `prepare/quant_heads_stream.py:186` — as **data**:
   `for key, scale_dtype in ((lm_key, torch.float16), (emb_key, torch.bfloat16))`
-  (plus a fourth restatement as a comment at `:206-207`).
+  (plus a fourth restatement as a comment at `:214-215`).
 
 Three encodings of one fact across three scripts (four statements; only the
 data tuple is machine-checkable). Get it wrong and the checkpoint still loads
@@ -174,9 +275,9 @@ data tuple is machine-checkable). Get it wrong and the checkpoint still loads
 
 | site | form |
 |---|---|
-| `prepare/quant_lm_head.py:84-93` | inline tuple, inside the **ignore-list repair** — the script that quants lm_head secretly owns adding `mtp.*` to the ignore list, with the comment "The MTP draft head is stored in bf16 but missing from the ignore list, which breaks loading when speculative decoding is enabled (single-user mode)" (`:82-83`; a side job in the wrong file) |
-| `prepare/quant_mtp.py:38-46` | `MTP_LINEARS` (`mtp.fc` drops out under `--keep-fc`) |
-| `prepare/quant_heads_stream.py:56-64` | `MTP_LINEARS` (same `--keep-fc` conditional) |
+| `prepare/quant_lm_head.py:90-99` | inline tuple, inside the **ignore-list repair** — the script that quants lm_head secretly owns adding `mtp.*` to the ignore list, with the comment "The MTP draft head is stored in bf16 but missing from the ignore list, which breaks loading when speculative decoding is enabled (single-user mode)" (`:88-89`; a side job in the wrong file) |
+| `prepare/quant_mtp.py:43-51` | `MTP_LINEARS` (`mtp.fc` drops out under `--keep-fc`) |
+| `prepare/quant_heads_stream.py:61-69` | `MTP_LINEARS` (same `--keep-fc` conditional) |
 | `drafter/export_mtp.py:67-69` | `MTP_LINEARS` |
 | `drafter/requant_mtp_gptq.py:20-22` | named **`LIN`** |
 | `drafter/train_mtp.py:397-404` | dict literal mapping the same names to modules |
@@ -244,17 +345,17 @@ except where noted:
 
 | suffix | written | read |
 |---|---|---|
-| `.bak` | `quant_lm_head.py:74` (its shard) | `gptq_lm_head.py:26-30`, `train_mtp.py:210-213` |
-| `.bak-quant` | `quant_lm_head.py:79,107`; `quant_heads_stream.py:270,298` | — |
-| `.bak_embed` | `quant_embed.py:77` (why not `.bak`: `:74-76`) | `train_mtp.py:205-211` |
-| `.bak-mtp` | `quant_mtp.py:85,90,104`; `export_mtp.py:90,92,95` (hand-rolled `shutil.copy`, **not** first-wins) | `export_mtp.py:34-37`, `requant_mtp_gptq.py:34`, `train_mtp.py:186` |
+| `.bak` | `quant_lm_head.py:82` (its shard) | `gptq_lm_head.py:26-30`, `train_mtp.py:210-213` |
+| `.bak-quant` | `quant_lm_head.py:86,113`; `quant_heads_stream.py:277,304` | — |
+| `.bak_embed` | `quant_embed.py:85` (why not `.bak`: `:82-84`) | `train_mtp.py:205-211` |
+| `.bak-mtp` | `quant_mtp.py:94,98,111`; `export_mtp.py:90,92,95` (hand-rolled `shutil.copy`, **not** first-wins) | `export_mtp.py:34-37`, `requant_mtp_gptq.py:34`, `train_mtp.py:186` |
 | `.bak-draft` | `build_draft_vocab.py:140` | — |
-| `.bak-orig` | `quant_heads_stream.py:148-153` — an `os.link`, deliberately not `backup_once` (no copying 18.6 GB) | `gptq_lm_head.py:26-30` |
+| `.bak-orig` | `quant_heads_stream.py:156-161` — an `os.link`, deliberately not `backup_once` (no copying 18.6 GB) | `gptq_lm_head.py:26-30` |
 
 A filename protocol crossing a dozen files — ten `prepare/`+`drafter/` `.py`
 files (`git grep -l '\.bak' -- 'prepare/*.py' 'drafter/*.py'`, including
-`fetch_thirdparty.py:42`'s message naming `.bak-orig`), plus `verify.sh:269`
-(skips `.bak` shards) and `prepare/README.md:58` (`.bak*`) — still never
+`fetch_thirdparty.py:42`'s message naming `.bak-orig`), plus `verify.sh:270`
+(skips `.bak` shards) and `prepare/README.md:87` (`.bak*`) — still never
 written down in one place. Two cross-script couplings to know:
 `quant_embed.py` backs up only its
 shard — config.json and the index get no new backup, relying on
@@ -270,7 +371,10 @@ state by copying `.bak-mtp` files back over the live ones.
 `export_mtp.py:63`, `gptq_lm_head.py:13`, `quant_dflash2.py:24`,
 `requant_mtp_gptq.py:13`) — each script hand-rolling its access to
 `gptq_utils`. `prepare/` has no shim and needs none: the eight
-`from atomic_publish import ...` lines work because the interpreter puts the
+`from atomic_publish import ...` lines and, since #246, the four
+`from quant_schema import load_config` lines (`quant_lm_head.py:34`,
+`quant_embed.py:34`, `quant_mtp.py:35`, `quant_heads_stream.py:52`;
+2026-10-04) work because the interpreter puts the
 script's own directory on `sys.path` — the pattern §2 relies on, already in
 production. The same holds in `drafter/`: every one of the five shims inserts
 the script's own directory (`os.path.dirname(os.path.abspath(__file__))`, or
@@ -279,15 +383,40 @@ the script's own directory (`os.path.dirname(os.path.abspath(__file__))`, or
 imports `gptq_utils` with no shim at all (added 2026-09-29). The one caller
 that does not get the script directory for free is `runpy`:
 `bench/test_prepare_crash.py` adds `prepare/` to `sys.path` itself
-(`:86`, `:228`) before `runpy.run_path` (`:87-88`, `:235`).
+(`:91`, `:233`, and since #246 `:382`) before `runpy.run_path` (`:92-93`,
+`:240`, `:383`).
 
 ## 2. The design: `prepare/pipeline_core.py`
+
+**Adjusted 2026-10-04: build on `prepare/quant_schema.py`, not a new
+module.** #246 landed a second shared module in `prepare/`. Its
+`load_config` already does the config read that `write_packed`,
+`clone_group` and `repair_ignore_list` start from (2026-10-04 block). So:
+
+- `quant_schema.py` is the home of the core. It takes the config and
+  contract facts first: `MTP_LINEARS`, `clone_group`, `repair_ignore_list`,
+  the group ordinals, the per-key scale dtypes and the backup-suffix
+  constants. The quant mechanics (`rtn_quantize`, `write_packed`,
+  `resume_packed`) and the `drafter/` pieces (`assemble_variant`,
+  `fresh_write`, `write_draft_head`) go there too. Split them into one new
+  sibling only if `quant_schema.py` grows past about 150 lines.
+- `load_config(d, requires=("group_0",))` names the config groups a script
+  clones. `quant_embed.py` passes `("group_1",)`. This closes the group_1
+  gap: today a manual run out of order replaces the shard and then raises
+  KeyError (`quant_schema.py:65`; `quant_embed.py:85-86`, then `:89`).
+  **2026-10-05:** not needed. #276 makes `quant_embed.py` clone
+  `group_0`, the group `load_config` already checks (top block).
+- `atomic_publish.py` stays the I/O layer. The core imports it and does
+  not re-implement it.
+
+Read `pipeline_core` below as "the core", in `quant_schema.py`. The
+original design follows unchanged.
 
 One stdlib+torch module in `prepare/`, the sibling of `atomic_publish.py` —
 the #195 saga landed that module in exactly this shape (74 lines,
 stdlib-only, safetensors imported lazily at `:60`, no classes) and answered
 the placement/import question: `prepare/` scripts import it bare (`from
-atomic_publish import ...`, `quant_lm_head.py:29`) because the interpreter
+atomic_publish import ...`, `quant_lm_head.py:33`) because the interpreter
 puts the script's own directory on `sys.path`, and `docker/prepare.sh:83-87`
 invokes them as `python prepare/<script>.py`. Eight production importers and
 a crash-injection test (`bench/test_prepare_crash.py`) say the
@@ -364,6 +493,16 @@ Migrate the four `prepare/` quant scripts + `build_draft_vocab.py`'s
 slicing writer. The shape is pre-approved by precedent: #195's
 `atomic_publish.py` landed as exactly such a module (74 lines, eight
 importers, its own crash-injection test at `bench/test_prepare_crash.py`).
+
+**Adjusted 2026-10-04.** Extend `prepare/quant_schema.py` instead of
+adding `pipeline_core.py` (§2). #246's `quant_schema.py` is a second
+precedent: 71 lines, four importers, its own `reject` step in
+`bench/test_prepare_crash.py` (`:359-412`). Land `load_config(d,
+requires=...)` first, as its own small PR: `quant_embed.py` passes
+`("group_1",)`, and `BAD_CONFIGS` gains a case with `group_0` but no
+`group_1` for `quant_embed.py`. The rest of PR A follows on top of it.
+**2026-10-05:** #276 closes the gap with no `requires=` and no new
+`BAD_CONFIGS` case (top block), so PR A starts with the core itself.
 **Bit-identical acceptance:** run each migrated script on a copy of a small
 prepared fixture model, before and after, and `diff` the resulting
 shard/index/config bytes — the eps-per-caller rule (§2) exists to make this
@@ -378,6 +517,11 @@ imports the core's RTN/dequant; the five shims become the one documented
 pattern. `train_mtp.py`'s dict literal becomes `MTP_LINEARS` (its only
 change — research code otherwise untouched).
 
+**Adjusted 2026-10-04.** The core now lives in `prepare/quant_schema.py`,
+so the one documented `drafter/` import pattern has to reach `prepare/`.
+No `drafter/` file imports from `prepare/` today (no `atomic_publish` or
+`quant_schema` import in `drafter/*.py`).
+
 ### 3.3 PR C — one draft-head writer + the ignore-list's proper home
 
 `write_draft_head` becomes the only writer of the contract;
@@ -386,12 +530,18 @@ change — research code otherwise untouched).
 repair (currently quant_lm_head's side job, 1.4) moves into the core and
 runs as its own step in `docker/prepare.sh`'s sequence (a new explicit
 step, not a hidden one). The module docstring's protocol section (backup
-suffixes, group ordinals) lands with the code.
+suffixes, group ordinals) lands with the code. (2026-10-04: the core is
+`quant_schema.py`, §2. Its docstring already states the group_0 clone rule
+and the shard-before-config order, `:3-9`.)
 
 ## 4. Test plan
 
 `bench/test_pipeline_core.py` (CPU, seconds, wired into
-`patch-integrity.yml` next to `test_model_verification.py`):
+`patch-integrity.yml` next to `test_model_verification.py`; 2026-10-04:
+that job, `model-verification` `:13-23`, installs no torch, and the new
+`kvarn-torch-gate` job `:25-37` installs CPU torch only — the core's
+tests also need `safetensors` and `compressed_tensors`, which the quant
+scripts import, `quant_lm_head.py:30-31`):
 
 | test | proves |
 |---|---|
