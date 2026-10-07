@@ -6,6 +6,9 @@ this is the deep dive on that card, with every claim re-verified against the
 tree on 2026-09-26 (and one of the review's sub-claims softened where the
 evidence didn't support it — see 1.2).
 
+> **Merged 2026-10-06 (upstream/main @ 7af097b).** PR A as #279 (`94b9dd4`), and PR B as #271 (`4fad697`),
+> #277 (`a79dbc7`) and #278 (`3334c8b`). D3 merged as #280 (`95180ec`). The block below is the review-time state.
+>
 > **Updated 2026-10-05 on upstream/main @ 10bb488.** PR A is in review as #279,
 > and PR B is in review in three parts. #271 adds `test_no_key_bind.sh`, `mq3d_capacity_property.py` (with
 > `--mutate seq-rows`) and `verbatim.py` to `model-verification`. #277
@@ -98,7 +101,7 @@ evidence didn't support it — see 1.2).
 
 **Re-verified 2026-10-04 against upstream/main @ e371b42 (vLLM 0.30.0).**
 
-**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271, #277 and #278, and PR A as #279; see the top block.)
+**Status:** Not started. Next in sequence (the cheapest card; urgency up). Ship PR B first, with test_no_key_bind.sh. (2026-10-05: PR B is in review as #271, #277 and #278, and PR A as #279; see the top block.) (2026-10-06: all four merged.)
 
 Thirteen commits landed since d5e2a01. Four of them touch this doc's area
 (`git diff --stat d5e2a01 e371b42 -- .github bench kvarn/tests .gitignore

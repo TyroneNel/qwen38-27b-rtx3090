@@ -7,7 +7,17 @@ on 2026-09-26.
 
 **Implemented 2026-10-04 and 2026-10-05 on upstream/main @ 10bb488 (vLLM 0.30.0).**
 
-**Status:** In review. PR B is syv-ai/HyperQwen#274 (`c485c94`). PR A is
+**2026-10-06: #274 reworked (`91b0321`, CI green).** cpuchip proposed that the patch files are
+the source and no fork is named. `export-patch.sh` writes `--- exported from <hash> (<topic>) ...`,
+`PATCHES.md:12` and `kvarn/README.md` name no fork, and one commit removes `cpuchip/vllm ` from all 50
+markers. The series check passes, and the installed tree is the same git tree (`35a640355e`) before
+and after. The "Where the commits are" list and the two re-exports in the PR B bullet below are
+dropped. The upstream cells, the stale-pointer fixes and the `apply.sh --kvarn` check stay. #275 waits
+for #274 and for @mhenrichsen on whether a preamble may be edited in the file (cpuchip agrees). If
+yes, #275 adds the headers to the files directly, and the `qwen38/0.30-index` cut below is not
+needed. cpuchip closed cpuchip/vllm#3 and #4: their commits are in his cut10 (`626f7da75`).
+
+**Status:** In review. PR B is syv-ai/HyperQwen#274 (`c485c94` at first, now `91b0321`). PR A is
 #275 (`17b1551`), stacked on #274, so #274 merges first. CI is green on
 both, and #275 also runs the new `patch-index` job.
 

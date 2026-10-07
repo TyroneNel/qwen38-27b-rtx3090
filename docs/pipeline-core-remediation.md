@@ -5,6 +5,8 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **Merged 2026-10-06 (upstream/main @ 7af097b).** D1 merged as #276 (`7796b64`).
+>
 > **Updated 2026-10-05 on upstream/main @ 10bb488.** The group_1 gap (D1 in the
 > tracker) is in review as syv-ai/HyperQwen#276 (`f56f0d5`). The fix is not the
 > `requires=` check that the 2026-10-04 block, §2 and §3.1 name.

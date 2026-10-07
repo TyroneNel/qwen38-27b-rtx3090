@@ -6,6 +6,9 @@ this is the deep dive on that card. Every number below was measured against the
 tree on 2026-09-26 (method noted where it matters); nothing is carried over
 from the review on trust.
 
+> **Merged 2026-10-06 (upstream/main @ 7af097b).** PR A as #272 (`631748f`), PR B as #273 (`53557bc`). The
+> status below is the review-time state. The next steps are unchanged: the shared blocks, §3.2 and §3.3.
+>
 > **Partly implemented 2026-10-04 on upstream/main @ 10bb488 (vLLM 0.30.0); checked 2026-10-05.**
 > **Status:** In review. PR A is syv-ai/HyperQwen#272 (`75d285e`). PR B is
 > #273 (`7227b0b`), stacked on #272, so #272 merges first. CI is green on

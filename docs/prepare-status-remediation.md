@@ -5,6 +5,8 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **Merged 2026-10-06 (upstream/main @ 7af097b).** D1 merged as #276 (`7796b64`).
+>
 > **Updated 2026-10-05 on upstream/main @ 10bb488.** D1, the `group_1` gap in
 > §1 and §2.1, is in review as syv-ai/HyperQwen#276 (`f56f0d5`).
 > `quant_embed.py` clones `group_0`, so the embed step no longer needs the
