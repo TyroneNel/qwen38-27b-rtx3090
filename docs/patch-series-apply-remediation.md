@@ -9,6 +9,9 @@ line, the design, and the rollout.
 
 **Status:** Merged upstream as e1459c7 (squash of #242/#243/#244, 2026-09-30). Done-when: 6 of 6 pass at e371b42.
 
+**2026-10-08:** the one item left, a check that `apply.sh`'s `KVARN` array agrees with `kvarn/*.patch`
+(`apply.sh --kvarn` exits 2 when they disagree), merged with #274 as `76e1a15` (upstream/main @ `9133015`).
+
 Thirteen commits landed since d5e2a01 (`git log d5e2a01..e371b42`). e1459c7 is
 this plan. Four others touch the patch series: #233 (e7a5823), #261 (69036cb),
 #263 (210db97) and #262 (bd6c5e2). Section 1 now records the d5e2a01 tree,

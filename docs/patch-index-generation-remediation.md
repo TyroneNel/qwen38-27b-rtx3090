@@ -7,6 +7,15 @@ on 2026-09-26.
 
 **Implemented 2026-10-04 and 2026-10-05 on upstream/main @ 10bb488 (vLLM 0.30.0).**
 
+**Merged 2026-10-08 (upstream/main @ `9133015`).** #274 merged as `76e1a15` and #275 as `c5a6e78`.
+After #274 merged, @mhenrichsen rebased #275 onto main (`560dd47`). He kept #275's headers, #274's
+marker form and #274's `PATCHES.md` prose, added a paragraph for the table, dropped the "Where the
+commits are" paragraph and regenerated the table. `PATCHES.md:20-21` now says to change a row, change
+the headers in the patch file and run the script, which answers the preamble question below. Still to
+do, each in its own PR: `PATCHES.md:15` and `export-patch.sh:4` still say a file is never edited by
+hand; the `auth-deny-default` `Cut-against:` header is stale; `verify.sh:114-128` names the KVarN
+patches instead of reading `apply.sh --list --kvarn`; and the `Verify:` header (§2.3).
+
 **2026-10-06: #274 reworked (`91b0321`, CI green).** cpuchip proposed that the patch files are
 the source and no fork is named. `export-patch.sh` writes `--- exported from <hash> (<topic>) ...`,
 `PATCHES.md:12` and `kvarn/README.md` name no fork, and one commit removes `cpuchip/vllm ` from all 50
@@ -17,8 +26,8 @@ for #274 and for @mhenrichsen on whether a preamble may be edited in the file (c
 yes, #275 adds the headers to the files directly, and the `qwen38/0.30-index` cut below is not
 needed. cpuchip closed cpuchip/vllm#3 and #4: their commits are in his cut10 (`626f7da75`).
 
-**Status:** In review. PR B is syv-ai/HyperQwen#274 (`c485c94` at first, now `91b0321`). PR A is
-#275 (`17b1551`), stacked on #274, so #274 merges first. CI is green on
+**Status:** Merged 2026-10-08. PR B is syv-ai/HyperQwen#274 (`c485c94` at first, then `91b0321`), merged as
+`76e1a15`. PR A is #275 (`17b1551`, rebased to `560dd47`), merged as `c5a6e78`. Before that, #275 was stacked on #274, so #274 merged first. CI is green on
 both, and #275 also runs the new `patch-index` job.
 
 - **12 of 50 hashes were off cut5.** The 2026-10-04 pass below checked only
