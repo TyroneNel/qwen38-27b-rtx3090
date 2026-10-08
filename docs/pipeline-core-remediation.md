@@ -5,6 +5,66 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **PR A built 2026-10-08 on upstream/main @ `3acb93f`.** Branch `feat/prepare-core`,
+> commit `517bfa0`. It is local: not pushed, no PR.
+> - The core is in `prepare/quant_schema.py`, now 151 lines (was 71). It adds `GROUP`,
+>   `SUFFIXES`, `MTP_LINEARS` (the eight names, in the base ignore list's order),
+>   `GROUPS` (part to group name and targets), `pack`, `packed_already`,
+>   `index_packed` and `clone_group`. torch and compressed-tensors are imported
+>   inside `pack`, so `load_config` stays stdlib-only. Migrated: `quant_lm_head.py`,
+>   `quant_embed.py`, `quant_mtp.py`, `quant_heads_stream.py` (its `quantize` and
+>   `group` are gone), and `build_draft_vocab.py`'s index write. 10 files,
+>   +244/−270.
+> - How it departs from §2:
+>   - `pack(base, w, bits, scale_dtype, rows=16384)` replaces `rtn_quantize` and
+>     `write_packed`. It returns the three entries and the round-trip error. Each
+>     script keeps its own loader and its write. Every caller quantizes in row
+>     chunks, as `quant_heads_stream.py` did. Rows are independent, so the bytes are
+>     unchanged, and the in-RAM scripts no longer hold an fp32 copy of the whole
+>     matrix. `scale_dtype` has no default.
+>   - No `eps` parameter. Every `prepare/` caller uses 1e-10. PR B adds it with
+>     `gptq_utils.py`'s 1e-8 caller. The core is then past ~150 lines, so PR B
+>     also decides the split into a sibling module.
+>   - `resume_packed` is `packed_already(names, base, shard, backup)`: one message
+>     for the five copies.
+>   - `clone_group(qc, part, bits)` takes the name and targets from `GROUPS`. It
+>     sets `group_size`, `strategy` and `type` on all four scripts' groups, as
+>     `quant_heads_stream.py` already did. That changes no bytes on the fixture,
+>     whose `group_0` has the same values. On a `group_0` with another
+>     `group_size`, the three in-RAM scripts used to declare that value for
+>     tensors packed at 128.
+>   - Not yet: `repair_ignore_list`, which stays PR C's own step
+>     (`quant_lm_head.py`'s loop is now one line over `MTP_LINEARS`); the
+>     backup-suffix constants and the docstring protocol (PR C, plus PR B's
+>     `drafter/` readers); `write_draft_head` (PR C).
+>   - The test is `bench/test_quant_schema.py`, not `test_pipeline_core.py`. It
+>     has 6 unittest cases and runs in the `prepare-crash` CI job, the job that has
+>     torch and compressed-tensors.
+> - Checks:
+>   - Bit-identical gate. Each sequence ran with main's `prepare/` and the branch's
+>     on copies of `test_prepare_crash.py`'s fixture, then every file was compared,
+>     backups included. All 8 sequences match, with the same exit codes. They are:
+>     the usual order; embed first with mtp int4 `--keep-fc`; mtp alone; stream on
+>     the 3-shard base; stream on the single shard; stream int4 `--keep-fc`; the
+>     in-RAM scripts on the asymmetric single shard; a re-run. The draft step is in
+>     four of them. A branch copy with lm_head's scale set to bf16 fails the gate.
+>   - `test_prepare_crash.py`: 169 cases, 0 failures.
+>   - `test_quant_schema.py`: 6 pass. Nine mutants of the core each fail at least
+>     one test: eps 1e-8, amax over the whole chunk, trunc for round, scale dtype
+>     ignored, no `symmetric`, shared targets list, no pop of `.weight`, no backup
+>     name in the message, shallow copy of `group_0`.
+>   - ruff: the same findings as main on `prepare/`.
+> - §6 after PR A:
+>   - `torch.round(` matches one `prepare/` site (the core) and five in `drafter/`:
+>     `gptq_utils.py` ×4 and `export_mtp.py:113`.
+>   - MTP list definitions: the core, `export_mtp.py:67`,
+>     `requant_mtp_gptq.py:20` (`LIN`) and `train_mtp.py:397`.
+>   - `sys.path.insert` in `drafter/`: 5. Draft-head writers: 2. Both are PR B and
+>     PR C's.
+> - `prepare/README.md` said the in-RAM scripts cannot handle an asymmetric AWQ
+>   body. That was already false on main, since they declare symmetric groups
+>   (#197). It is now corrected.
+
 > **Merged 2026-10-06 (upstream/main @ 7af097b).** D1 merged as #276 (`7796b64`).
 >
 > **Updated 2026-10-05 on upstream/main @ 10bb488.** The group_1 gap (D1 in the
