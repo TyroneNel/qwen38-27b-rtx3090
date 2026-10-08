@@ -10,24 +10,10 @@ Usage:
     python bench/needle_test.py [target_tokens] [depth]
     # default: 100000 tokens, needle at 90% depth
 """
-import json
-import os
 import sys
 import time
-import urllib.request
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-
-
-def _key(path):  # same convention as quality_battery.py
-    try:
-        return open(path).read().strip()
-    except OSError:
-        return ""
-
-
-KEY = os.environ.get("VLLM_API_KEY") or _key(os.path.join(HERE, "..", "api_key.txt"))
-API = os.environ.get("VLLM_API", "http://127.0.0.1:18020/v1")
+import harness
 
 TARGET_TOKENS = int(sys.argv[1]) if len(sys.argv) > 1 else 100_000
 DEPTH = float(sys.argv[2]) if len(sys.argv) > 2 else 0.9
@@ -45,21 +31,12 @@ context = filler[:depth] + "\n\n" + needle_line + "\n\n" + filler[depth:]
 prompt = context + "\n\nQuestion: what is the secret passcode? Reply with the passcode only."
 
 
-def post(payload, timeout=1800):
-    req = urllib.request.Request(
-        API + "/chat/completions",
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + KEY},
-    )
-    return json.load(urllib.request.urlopen(req, timeout=timeout))
-
-
 t0 = time.perf_counter()
-resp = post({
+resp = harness.post("/v1/chat/completions", {
     "model": "qwen3.8-27b",
     "messages": [{"role": "user", "content": prompt}],
     "max_tokens": 32,
-})
+}, timeout=1800)
 elapsed = time.perf_counter() - t0
 
 answer = (resp["choices"][0]["message"].get("content") or "")

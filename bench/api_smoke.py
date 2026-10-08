@@ -3,36 +3,18 @@ model runner could break (logprobs, n, stop, seeds, structured outputs, penaltie
 thinking, prompt_logprobs, a 20k-token prompt). Prints PASS/FAIL per feature, and exits 1
 unless all of them pass. It exits 2 when no request reaches a server.
 
-  venv/bin/python bench/api_smoke.py          # key from api_key.txt or VLLM_API_KEY, PORT=18020
+  venv/bin/python bench/api_smoke.py          # server and key from bench/harness.py (PORT=18020 by default)
 """
-import json, os, sys, time, urllib.request
+import json, sys, time, urllib.request
 
-HERE = os.path.dirname(os.path.abspath(__file__)); REPO = os.path.dirname(HERE)
-def _key(path):  # a key is optional; keyless servers ignore the header
-    try:
-        return open(path).read().strip()
-    except OSError:
-        return ""
-KEY = os.environ.get("VLLM_API_KEY") or _key(os.path.join(REPO, "api_key.txt"))
-PORT = os.environ.get("PORT", "18020")
-URL = f"http://127.0.0.1:{PORT}/v1/chat/completions"
-URLC = f"http://127.0.0.1:{PORT}/v1/completions"
-
-
-def post(url, payload, stream=False):
-    req = urllib.request.Request(url, data=json.dumps(payload).encode(),
-                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + KEY})
-    r = urllib.request.urlopen(req, timeout=600)
-    if stream:
-        return r.read().decode()
-    return json.loads(r.read())
+import harness
 
 
 def chat(msg, **kw):
     p = {"model": "qwen3.8-27b", "messages": [{"role": "user", "content": msg}], "max_tokens": 64,
          "chat_template_kwargs": {"enable_thinking": False}}
     p.update(kw)
-    return post(URL, p)
+    return harness.post("/v1/chat/completions", p, timeout=600)
 
 
 results, unreached = [], []
@@ -75,8 +57,9 @@ def t_min_tokens_penalty():
     r = chat("Sig hej.", temperature=0.7, min_tokens=30, presence_penalty=1.2, frequency_penalty=0.3, max_tokens=48)
     return r["usage"]["completion_tokens"] >= 30, r["usage"]
 def t_stream():
-    body = post(URL, {"model": "qwen3.8-27b", "messages": [{"role": "user", "content": "Skriv to sætninger om vejret."}],
-                      "max_tokens": 48, "stream": True, "chat_template_kwargs": {"enable_thinking": False}}, stream=True)
+    req = harness.request("/v1/chat/completions", {"model": "qwen3.8-27b", "messages": [{"role": "user", "content": "Skriv to sætninger om vejret."}],
+                          "max_tokens": 48, "stream": True, "chat_template_kwargs": {"enable_thinking": False}})
+    body = urllib.request.urlopen(req, timeout=600).read().decode()
     chunks = [l for l in body.splitlines() if l.startswith("data: ") and "[DONE]" not in l]
     return len(chunks) > 5, f"{len(chunks)} chunks"
 def t_thinking():
@@ -84,8 +67,8 @@ def t_thinking():
     m = r["choices"][0]["message"]
     return ("391" in (m.get("content") or "")) and bool(m.get("reasoning_content") or m.get("reasoning")), (m.get("content") or "")[:60]
 def t_completions_echo_logprobs():
-    r = post(URLC, {"model": "qwen3.8-27b", "prompt": "København er hovedstaden i", "max_tokens": 4, "temperature": 0,
-                    "echo": True, "logprobs": 1})
+    r = harness.post("/v1/completions", {"model": "qwen3.8-27b", "prompt": "København er hovedstaden i", "max_tokens": 4,
+                                         "temperature": 0, "echo": True, "logprobs": 1}, timeout=600)
     lp = r["choices"][0]["logprobs"]
     return len(lp["tokens"]) > 4 and lp["token_logprobs"][0] is None, lp["tokens"][:6]
 def t_long_ctx_greedy():
@@ -108,6 +91,6 @@ for name, fn in [("greedy determinism", t_greedy_det), ("seeded sampling determi
     check(name, fn)
 print("SUMMARY", sum(1 for _, ok, _ in results if ok), "/", len(results), "passed")
 if len(unreached) == len(results):
-    print(f"INVALID: no server answered on port {PORT}, so there is no verdict.")
+    print(f"INVALID: no server answered at {harness.base_url()}, so there is no verdict.")
     sys.exit(2)
 sys.exit(0 if all(ok for _, ok, _ in results) else 1)
