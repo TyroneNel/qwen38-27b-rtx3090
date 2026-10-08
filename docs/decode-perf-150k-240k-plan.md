@@ -335,6 +335,7 @@ The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep 
 | 2026-10-08 | `9133015` | CI green on #290: `build-push`, `git-apply`, `kvarn-torch-gate`, `model-verification`, `patch-index` and `prepare-crash` all pass. A6 (C3) PR A started: recount against `9133015` first. |
 | 2026-10-08 | `ce6e881` | A6 PR A built on `feat/bench-harness`, not pushed. The recount at `9133015` found the same 16 scripts, with six URL conventions and no script reading `OPENAI_API_KEY`. `bench/harness.py` resolves the key exactly as `resolve_client_key` does, and `bench/test_harness.py` checks that against the bash function and runs in CI. On a recording stub, all 16 scripts send identical requests before and after, apart from per-run salts. `DEMO_BASE` gives way to `VLLM_API`, and the four `~/qwen-serving` key reads give way to the repo key chain. |
 | 2026-10-08 | `ce6e881` | A6 PR A opened as #291. It merges cleanly onto `3acb93f` (#285), which touches neither `bench/` nor the workflow. |
+| 2026-10-08 | `10bc003` | Review of #291 found nothing that had to be fixed. Fixed: `bench/README.md` now names the harness's server and key order, and the PR body lists the other behavior changes (`OPENAI_API_KEY` first everywhere, every script honors `VLLM_API` and `PORT`, `Bearer EMPTY` in replay). |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
