@@ -592,10 +592,12 @@ renaming the served model is a one-line change.
 > - warmup.sh's `--served-model-name` comment.
 >
 > **Checks:**
-> - `test_harness.py` adds two tests:
+> - `test_harness.py` adds three tests:
 >   - `request()` adds `VLLM_MODEL` and sends no model without it.
 >   - `model()` and the `model` CLI return the first id, read with the key
 >     on the stub. With `VLLM_MODEL` set, `model()` sends no request.
+>   - The `model` CLI exits 1 with one stderr line and nothing on stdout
+>     with no server, an empty list, or a non-JSON reply.
 > - A mutant for each rule.
 > - The recording stub on PR B's tree and on this one: the same requests
 >   with `model` removed from the old bodies. With `VLLM_MODEL=x`, every POST
