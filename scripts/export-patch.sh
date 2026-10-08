@@ -2,9 +2,8 @@
 # Export one topic commit from a vLLM checkout as a patch file in this repo's convention
 # (paths relative to the vllm package, applied with `patch -p1 -d site-packages/vllm`; prose above the first hunk).
 # The file is the source (PATCHES.md, the "Cut against" paragraph). Its hunks come only from here and are never
-# edited by hand. Its preamble (prose and headers) is edited in the file: a new file takes the commit body, and a
-# re-export into an existing file keeps the file's preamble. The marker names no repo: the hash belongs to whoever
-# exported it.
+# edited by hand; a re-export keeps an existing file's preamble. The marker names no repo: the hash belongs to
+# whoever exported it.
 #
 #   bash scripts/export-patch.sh <vllm checkout> <commit> [patches/<name>.patch]
 set -eu
