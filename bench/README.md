@@ -23,8 +23,9 @@ its exit code means. CI runs the ones that `.github/workflows/patch-integrity.ym
 
 Needs: **CPU** is Python 3 and its standard library. **torch** is a CPU torch wheel. **image**
 is the patched vLLM venv (the Docker image or `venv/`), with no GPU. **GPU** is the patched
-venv on a CUDA card. **server** is a running server on `PORT` (default 18020), with the key
-from `VLLM_API_KEY` or `api_key.txt`. **model** is the checkpoint under `models/`.
+venv on a CUDA card. **server** is a running server at `VLLM_API` (a trailing `/v1` is fine), else on
+`PORT` (default 18020), with the key from `OPENAI_API_KEY`, `VLLM_API_KEY` or `api_key.txt`, in that
+order (`bench/harness.py`). **model** is the checkpoint under `models/`.
 
 | file | kind | needs | exit | what it does |
 |---|---|---|---|---|

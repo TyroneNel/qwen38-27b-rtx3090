@@ -11,8 +11,8 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def client_key():
-    """resolve_client_key in resolve_api_key.sh, exactly: OPENAI_API_KEY, else VLLM_API_KEY, else api_key.txt,
-    else "EMPTY" (a server that bound no key ignores it). test_harness.py runs both and compares."""
+    """resolve_client_key in resolve_api_key.sh: OPENAI_API_KEY, else VLLM_API_KEY, else api_key.txt, else
+    "EMPTY" (a server that bound no key ignores it). test_harness.py runs both and compares."""
     for name in ("OPENAI_API_KEY", "VLLM_API_KEY"):
         if os.environ.get(name):
             return os.environ[name]
