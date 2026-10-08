@@ -6,7 +6,7 @@ this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
 > **PR A built 2026-10-08 on upstream/main @ `3acb93f`.** Branch `feat/prepare-core`,
-> commit `517bfa0`. It is local: not pushed, no PR.
+> commit `8da90dd`, opened as [#294](https://github.com/syv-ai/HyperQwen/pull/294).
 > - The core is in `prepare/quant_schema.py`, now 151 lines (was 71). It adds `GROUP`,
 >   `SUFFIXES`, `MTP_LINEARS` (the eight names, in the base ignore list's order),
 >   `GROUPS` (part to group name and targets), `pack`, `packed_already`,
