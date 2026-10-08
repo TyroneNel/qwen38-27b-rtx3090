@@ -534,6 +534,87 @@ Acceptance: `grep -c '"qwen3.8-27b"' bench/*.py` → 0 outside harness tests
 (20 matches in 16 files today) and `grep -n 'qwen3\.8-27b' bench/*.sh` → 0;
 renaming the served model is a one-line change.
 
+> **PR C as built, planned 2026-10-08 on PR B (`10f0ca2`).** Re-counted on
+> that tree: 15 `"model": "qwen3.8-27b"` literals in 11 files, 5 env or flag
+> defaults (`VLLM_MODEL` in interleave_dose, needle_reuse and
+> prefix_alternation, `MODEL` in concurrent_collapse, `--model` in
+> labd_accept), replay_offload_serve's label strip, and the 4 bash
+> `vllm bench serve` commands. That makes 20 Python matches, as before.
+>
+> **The Python scripts send no model.** This is a change from section 2.
+> vLLM 0.30.0 serves a request whose `model` is missing:
+> - `model` is `str | None = None` on `ChatCompletionRequest`,
+>   `CompletionRequest`, `TokenizeCompletionRequest` and `TokenizeChatRequest`.
+> - `_is_model_supported(None)` returns True
+>   (`entrypoints/serve/engine/serving.py:70-72`).
+> - The response is named `base_model_paths[0].name`, which is the first id
+>   that `/v1/models` lists.
+> - The two patches that touch model checks (`serve-model-path-match`,
+>   `serve-404-served-names`) leave the `None` path alone.
+> - Checked in-process on vLLM 0.30.1rc1: all four request types validate
+>   with `model=None`.
+>
+> So `model()` in front of every request would add a round trip and a new
+> failure before the first request, for the same answer. Instead:
+> - The payloads drop `model`.
+> - `harness.request()` adds `"model": $VLLM_MODEL` only when that is set.
+> - `labd_accept --model` sets `VLLM_MODEL`, as `--base` sets `VLLM_API`.
+> - concurrent_collapse's `MODEL` gives way to `VLLM_MODEL`. Its `MODEL`
+>   collides with the checkpoint-path `MODEL` that the launchers and the bash
+>   scripts read.
+> - Every script now works against a plain `vllm serve` under any name.
+>   demo_capture's docstring suggests that setup, and the old literal 404'd
+>   there.
+> - replay's label strip becomes a regex on `model_name="[^"]*"`. Its output
+>   keys stay the same.
+>
+> **The bash scripts ask the harness.** Left without `--model`,
+> `vllm bench serve` 0.30.0 reads `/v1/models` (`benchmarks/serve.py:2092`).
+> But it sends only `--header` values, and `bench-probe-errors` adds the key
+> to the probe and the scrapes, not to this read. So on a keyed server it
+> 401s. Instead:
+> - `harness.model()` returns `VLLM_MODEL`, else the first id of
+>   `/v1/models`, read with the key. `python3 bench/harness.py model` prints
+>   it.
+> - The four scripts pass that name as `--model` and `--served-model-name`,
+>   read after the server is known to be up:
+>   - prefill_ab builds `B` after its boot.
+>   - run_benchmarks checks `/health` before building `B`.
+>   - real_rep exits 1 when the read fails, instead of running N failing
+>     benches.
+> - run_benchmarks, real_rep and prefill_ab take the tokenizer directory
+>   from `single-user/select_model.sh`, as warmup.sh does (1.5.4).
+>
+> **Docs:**
+> - replay's docstring: "Set VLLM_API_KEY" and `python replay.py`.
+> - README: the server entry names the model rule. The `harness.py` and
+>   `test_harness.py` rows name `model()`.
+> - warmup.sh's `--served-model-name` comment.
+>
+> **Checks:**
+> - `test_harness.py` adds two tests:
+>   - `request()` adds `VLLM_MODEL` and sends no model without it.
+>   - `model()` and the `model` CLI return the first id, read with the key
+>     on the stub. With `VLLM_MODEL` set, `model()` sends no request.
+> - A mutant for each rule.
+> - The recording stub on PR B's tree and on this one: the same requests
+>   with `model` removed from the old bodies. With `VLLM_MODEL=x`, every POST
+>   carries `x`.
+> - The bash stub, with all four scripts: the same argv as PR B when
+>   `/v1/models` lists `qwen3.8-27b`, except `--tokenizer`, which now
+>   follows `select_model.sh`. It passes the other name when the stub lists
+>   another one. With no server or a 401 on `/v1/models`, each script exits 1
+>   with one stderr line.
+> - The greps in this section's acceptance line.
+>
+> **Not in PR C:**
+> - The launchers' `--served-model-name qwen3.8-27b` (3), `verify.sh` (4)
+>   and `drafter/` (3). A served-name change still edits those, but no
+>   longer edits `bench/`.
+> - Keying `vllm bench serve`'s own `/v1/models` read. That would extend
+>   `bench-probe-errors`.
+> - The live-server gate (4.2) is still owed for A, B and C.
+
 ## 4. Test plan
 
 ### 4.1 `bench/test_harness.py` (CPU, seconds, wired into `patch-integrity.yml`)
