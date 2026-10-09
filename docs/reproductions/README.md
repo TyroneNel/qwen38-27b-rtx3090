@@ -17,6 +17,10 @@ full reproductions; the list below collects the shorter reports from issues.
   under WSL2 in Docker (250 W, driver 610.88, `3acb93f`): the live-server gate
   for the harness PRs #291–#293, the real-checkpoint prepare gate for #294, and
   `--root-path /` for #290
+- [track-b-3090-wsl2-2026-10-09.md](track-b-3090-wsl2-2026-10-09.md) — the same
+  RTX 3090 under WSL2: the decode-plan run list (T1 on E at 90k/149k/240k, the
+  MTP shared-verify check, MTP k=4, DFlash2 + fp8 on the FA2 plugin, the
+  adaptive-verification boot check)
 - [cmp-170hx-64gb.md](cmp-170hx-64gb.md) — the third sm80 box the README asked for:
   unlocked CMP 170HX 64 GB, Docker, vLLM 0.27.1 AND 0.29.0. The #72/#98 fault did
   not reproduce on either image (including a stock positive control and the
