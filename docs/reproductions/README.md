@@ -13,6 +13,10 @@ full reproductions; the list below collects the shorter reports from issues.
   batch arm only a headless box can run
 - [../wsl2-4090.md](../wsl2-4090.md) — RTX 4090 under Windows 11 / WSL2, the
   cross-platform half of the same campaign
+- [track-a-3090-wsl2-2026-10-09.md](track-a-3090-wsl2-2026-10-09.md) — RTX 3090
+  under WSL2 in Docker (250 W, driver 610.88, `3acb93f`): the live-server gate
+  for the harness PRs #291–#293, the real-checkpoint prepare gate for #294, and
+  `--root-path /` for #290
 - [cmp-170hx-64gb.md](cmp-170hx-64gb.md) — the third sm80 box the README asked for:
   unlocked CMP 170HX 64 GB, Docker, vLLM 0.27.1 AND 0.29.0. The #72/#98 fault did
   not reproduce on either image (including a stock positive control and the
