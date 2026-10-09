@@ -7,6 +7,77 @@ document. Analyzed tree: `main` @ `1cf86656c26b7725743c41a0ad7b9de99f5d7844` (id
 **Branch tracker:** [§0](#0-branch-tracker-sequence-and-progress) holds the sequence and progress
 for every architecture candidate (C1–C7) and every T-item on this branch. Update it first.
 
+**Re-verified 2026-10-09 against upstream/main @ `3acb93f`** (17 commits after `e371b42`), Track B only.
+This pass still runs nothing on a GPU. It reads the code at `3acb93f`, the vLLM v0.30.0 and v0.31.0
+sources, and the GitHub threads. Those include the maintainer's runs on the reference 3090 (native Linux,
+250 W) on 2026-10-08. [§0.3](#03-handover-the-rtx-3090-agent) turns the result into a run list. What
+changed:
+- **No Track B code changed.** None of the 17 commits touches the KVarN kernels, the spec config or an
+  attention backend. #285 (`EMBED_UVA=1`) frees VRAM, but `SPEC=dflash2 CTX=huge` pins its pool with
+  `KV_MEM=5261334938` (`single-user/start_qwen.sh:380`), so E's pool does not grow.
+- **T1.** Both knobs are still off by default (`kvarn/kvarn-0.30.0.patch:84`,
+  `kvarn/kvarn-fp16-dequant-0.30.0.patch:43`), and no launcher sets them. The maintainer ran E natively
+  on 2026-10-08 (comments on #262 and #263). 3 of 3 cold boots got the same 268,169-token pool, with
+  22,959 MiB in use with `KVARN_FP16_DEQUANT=1` and 23,101 MiB without. C1 decode on short prompts read
+  155.5–157.6 tok/s with fp16 on, against 154.7 off. #263's native check is done. Decode at 150k and
+  240k is still not measured on native Linux. The shared verify path runs only when `qlen × 8` is a
+  power of two (`kvarn/files/vllm/v1/attention/ops/triton_kvarn_decode.py:992-994`; 24 query heads over
+  4 KV heads pads to 8). MTP k=3 and DFlash2 k=7 qualify. MTP k=4 (qlen 5) falls back to the per-token
+  kernel.
+- **T2: still blocked, on 0.31.0 too.** Adaptive verification is off by default, and no launcher sets
+  it. Turned on, 0.30.0 should refuse it at boot, for three reasons. GDN opts out of the query-length
+  mismatch. FlashInfer supports the mismatch only on SM100. `_validate_adaptive_verification`
+  (`vllm/config/vllm.py:2927-2932`) needs full CUDA graphs, which `CTX=huge SPEC=mtp` does not have: it
+  is forced to PIECEWISE (`start_qwen.sh:643`). This third refusal is new to this plan. The two
+  `ValueError`s the plan cites are at `adaptive_verification.py:471` and `:490`. vLLM 0.31.0
+  (2026-10-02) changes none of the three on sm86. "About 0 gain" is the projection if it were
+  unblocked. As shipped, it is off.
+- **T3: unchanged in code.** `SPEC=mtp CTX=long DRAFT_TOKENS=4` reaches k=4 by env
+  (`start_qwen.sh:206`, `:501`). No launcher carries the #34 or #121 workaround, and async scheduling is
+  on (`:660-661`). The C1 baseline on 0.30 (native 3090, `MAX_SEQS=2`) is now 110.1–112.6 tok/s (#196,
+  2026-10-08), not 93–102.
+- **T4: no longer blocked.** On #153 (2026-10-08) the maintainer showed that the FA2-fp8 adapter gates
+  only on head size and bf16 queries. Its TP=1 limit is a README statement. Its `check_backend.py` gives
+  a max error of 0.0003–0.006 at (256, 4) and (128, 8), the same as at the tested shapes. The plugin's
+  public `vllm-0.29-7646a2d` build boots on vLLM 0.30.0 with the current series, from `PYTHONPATH` and
+  `FA2_FP8KV_LIBRARY`, with no repo change. On `SPEC=dflash2 CTX=long` (k=7, `MAX_SEQS=2`), fp8 + FA2
+  against the shipped int8 + Triton:
+  - Pool: 140,902 against 136,429 tokens.
+  - C1 decode: 152.1 against 156.1 tok/s.
+  - A 90k-token prompt: 112 s against 218 s.
+  - Exact answers 7/8 and needles 3/3 on both.
+
+  On `SPEC=mtp CTX=long` it reads 113.9 against 109.5 tok/s for stock FlashInfer fp8. Not done: GSM8K,
+  PPL, a soak, cold-restart and prefix-cache checks, and any cell at 150k. The run used `MAX_LEN`
+  131072, the `CTX=long` DFlash2 default (`start_qwen.sh:390`). The maintainer still prefers a source
+  port checked by `check_upstream.py` over the prebuilt `.so`. #261 merged on 2026-10-04, so
+  `VLLM_DFLASH2_CHAIN=1` works on 0.30.
+- **T5: weaker.** Nothing new is implemented. The repo's own numbers put int4 + MQ-3D below KVarN at
+  depth. At 72.6k on a 4090 it reads 25.2 tok/s, against 35.6 for KVarN (`docs/wsl2-4090.md:221-222`).
+  At 90k it reads 19.1–19.5 on a 4090, against 38.6 for KVarN on the native 3090
+  (`docs/vllm-0.29.md:120,127`). With T1 at 51.9, T5 is a capacity option (a 314,915-token pool), not
+  a speed one.
+- **Commands in §5 that do not work.**
+  - `labd_bench.py --ctx a,b,c` raises `ValueError`, because `--ctx` is one integer
+    (`bench/labd_bench.py:38`). Run one depth per run.
+  - `--ctx` is not a token count. With `--corpus ~/bench/labd_corpus_long.txt`, `--ctx 100000` gave
+    112,655 tokens (`bench/make_long_corpus.py:18`). So `--ctx 240000` is about 270k, which is over
+    `MAX_LEN` 245,760. §0.3 gives the values to use.
+  - `bench/acceptance/acceptance.sh`, which `docs/main-track.md` names, is not in the repo: not on any
+    branch, and not in the history.
+  - IFBench has no runner in `bench/` (`docs/quality.md:9`).
+  - T1's absolute quality bars do not fit E: E's own GSM8K at n=100 is 0.89–0.93
+    (`docs/vllm-0.29.md:123`). Compare each arm with a knobs-off run on the same box instead.
+- **§7.**
+  - Q3 is answered (#196, 2026-10-08, native 3090, `SPEC=mtp CTX=long` k=3). On English the shipped
+    draft list reads 112.6 tok/s, against 110.1 for the full head. On Chinese it reads 44.0, against
+    81.4. The open part is #295's script-union list (opened 2026-10-09).
+  - Q8 is partly answered (#107, 2026-10-08). D on 0.30 with `PREFIX_CACHE=1 MAX_SEQS=2` completed 42
+    of 42 turns over a shared prompt of about 34k, with no wedge. The run at about 190k is still owed.
+- **Launcher cites drifted** by one to three lines. The current lines in `start_qwen.sh`: 199–202
+  (`CTX=huge`), 204–207 (`CTX=long`), 263 (`DFLASH_TOKENS`), 378 (221184), 380 (`KV_MEM`), 643
+  (PIECEWISE), 660–661 (async). In `single-user/alternative.sh`: 51 (`INT4_MQ_3D`).
+
 **Re-verified 2026-10-04 against upstream/main @ `e371b42`** (13 commits after `d5e2a01`).
 This pass still runs nothing on a GPU. It adds the first measured E rows at depth, which come
 from PR #262, and fixes the claims they overturn. What changed:
@@ -241,7 +312,8 @@ caveat are in the top block]. D still has no measured point past 112k.
 **Updated 2026-10-04 against upstream/main @ `e371b42`.** The C1, A1, A2, A3, A4, A5, A6 and A7 rows and D1 were updated
 on 2026-10-05, at `10bb488`, and D3 was added and opened. On 2026-10-06, A4 was reworked, and A1, A2, A3,
 D1 and D3 merged (upstream/main @ `7af097b`). On 2026-10-08, A4 and A5 merged (upstream/main @ `9133015`),
-then #285 merged (upstream/main @ `3acb93f`), and A7 PR A opened as #294.
+then #285 merged (upstream/main @ `3acb93f`), and A7 PR A opened as #294. On 2026-10-09, Track B was
+re-verified at `3acb93f`, and §0.3 was added as the handover to the RTX 3090 agent.
 This section tracks the whole
 `docs/decode-perf-150k-240k-plan` branch. It covers two tracks:
 
@@ -268,6 +340,9 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 - (2026-10-08, `9133015`) Track A: C6 PR B and PR A (#274, #275) are merged. All of C6's planned PRs are merged,
   and no Track A PR is in review. C1, C5 and C6 are merged in full. C2 has PR A and PR B merged.
 - Track B: T1 is measured but is not the default yet. No T-item ships by default.
+- (2026-10-09, `3acb93f`) Track B re-verified, with nothing run. No Track B code changed. T4 is no longer
+  blocked (#153). T2 is still blocked, and vLLM 0.31.0 does not change that. T5 is weaker. §0.3 is the
+  run list for the RTX 3090 agent.
 
 ### 0.1 Track A: architecture candidates (no GPU)
 
@@ -294,16 +369,169 @@ The two tracks do not block each other. Each row names the doc that holds the ev
 ### 0.2 Track B: decode performance (GPU)
 
 The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep their original numbers.
+(2026-10-09) T4 is no longer blocked, so it runs next to T1. [§0.3](#03-handover-the-rtx-3090-agent) is
+the run list for the RTX 3090 agent.
 
-| Order | Item | Status @ `e371b42` | Next action | Depends on |
+| Order | Item | Status @ `3acb93f` (2026-10-09) | Next action | Depends on |
 |---|---|---|---|---|
-| B1 | **T1** KVarN shared verify + fp16 dequant | Moved forward. #262 and #263 merged. `KVARN_SHARED_VERIFY` and `KVARN_FP16_DEQUANT` are both off by default. Measured at about 103k (3090, 250 W, WSL2), median tok/s: main 23.0, knobs off 23.7, knobs on 51.9 (runs 50–52). The 240k pass bar (≥45 tok/s) looks out of reach: about 28 tok/s [ESTIMATE], against a baseline of about 11 [ESTIMATE]. See T1 "Status 2026-10-04". | Do a native Linux run with 150k and 240k cells, plus PPL and needle checks. Measure fp16 alone for MTP. Then turn both knobs on for `SPEC=dflash2 CTX=huge`. | GPU host |
-| B2 | **T3** MTP k=4 at `CTX=long` | Unchanged. Issue #34 is closed as not planned. | Run the k=4 soak and the #121 check on 0.30. | GPU host |
-| B3 | **T4** DFlash2 + fp8 at 150k | Blocked | Wait for the #153 adapter. #261 lets n-gram chains stack on top of it. | #153 |
-| B4 | **T5** int4 KV hedge (lossy) | Unchanged. The measured T1 result makes it weaker. | Do it only if T1 stalls. | B1 result |
-| B5 | **T2** Adaptive verification | Unchanged. It gives about 0 gain as shipped. | It needs a GDN and backend patch first. | — |
+| B1 | **T1** KVarN shared verify + fp16 dequant | Moved forward, not the default. #262 and #263 merged. `KVARN_SHARED_VERIFY` and `KVARN_FP16_DEQUANT` are both off by default, and no launcher sets them. Measured at about 103k (3090, 250 W, WSL2), median tok/s: main 23.0, knobs off 23.7, knobs on 51.9 (runs 50–52). The 240k pass bar (≥45 tok/s) looks out of reach: about 28 tok/s [ESTIMATE], against a baseline of about 11 [ESTIMATE]. See T1 "Status 2026-10-04". (2026-10-08, maintainer, native 3090) E boots 3 of 3 with the same 268,169-token pool, and fp16 dequant is neutral at short context (155.5–157.6 against 154.7 tok/s). #263's native check is done. The shared path skips MTP k=4 (qlen 5). | §0.3 run 1: native decode at about 90k, 150k and 240k, with knobs off, fp16 alone, and both. Then quality against knobs off on the same box. §0.3 run 2: the MTP corruption (Q1). | GPU host |
+| B2 | **T3** MTP k=4 at `CTX=long` | Unchanged in code. `DRAFT_TOKENS=4` reaches k=4 by env. Issue #34 is closed as not planned. #121 is open, with no activity since 2026-09-23. The k=3 baseline on 0.30 is 110.1–112.6 tok/s at C1 (native, #196). | §0.3 run 3: k=3 against k=4, then the churn test, the #121 check and a soak, on 0.30. | GPU host |
+| B3 | **T4** DFlash2 + fp8 at 150k | **Unblocked** (2026-10-08, #153). The adapter's TP=1 limit is a README statement only. The public `vllm-0.29-7646a2d` build serves on 0.30.0 with no repo change: C1 decode −2.6%, 90k prompt −49% wall, pool +3.3%, answers and needles equal. No quality battery, soak or 150k cell yet. The maintainer offered to run the battery on the reference box. | §0.3 run 4: the quality battery and a soak against the shipped int8 arm, then 60k, 112k and 150k cells. The integration route, a source port or the `.so`, is the maintainer's call. | — |
+| B4 | **T5** int4 KV hedge (lossy) | Weaker. Nothing new is implemented. At depth, int4 + MQ-3D reads below KVarN in the repo's own numbers (25.2 against 35.6 tok/s at 72.6k on a 4090). | Do it only if T1 fails quality. Then run Q7 (int4 PPL at 100k+). | B1 result |
+| B5 | **T2** Adaptive verification | Blocked. It is off as shipped. Turned on, it should refuse at boot on sm86: GDN, FlashInfer (SM100 only) and, for `CTX=huge`, full CUDA graphs. vLLM 0.31.0 changes none of these. | §0.3 run 5: the 5-minute boot check (Q6), for the record. Otherwise wait for a GDN and backend change upstream. | upstream vLLM |
 
-### 0.3 Progress log
+### 0.3 Handover: the RTX 3090 agent
+
+Written 2026-10-09 against upstream/main `3acb93f`, for an agent on a Linux host with an RTX 3090. Every
+Track B item needs a GPU run, and this section is the run list. Every command was checked against
+`3acb93f`. Nothing here was run.
+
+**What exists already, so do not repeat it.**
+- T1 at about 103k, from WSL2 on the 3090 that owns this branch (#262): knobs off 23.7 tok/s, both on 51.9.
+- From the maintainer's reference 3090 (native Linux, 250 W, vLLM 0.30.0, 2026-10-08):
+  - E boots and its pool: 268,169 tokens, 3 of 3 cold boots (#263).
+  - fp16 dequant at short context: neutral (#262).
+  - D's draft-list A/B (#196).
+  - The T4 sanity run on `CTX=long` (#153).
+  - D at about 34k with prefix caching, no wedge (#107).
+  - `EMBED_UVA=1` on D: pool 204,336 → 236,479 tokens, C1 decode 110.1 → 108.9 tok/s (#285).
+
+**Setup.**
+1. Use upstream/main `3acb93f` or later. Use `main`'s `bench/`, not the open A6 branches (#291–#293),
+   so the numbers compare with the maintainer's. Clone to `~/qwen-serving`: `bench/labd_bench.py:28`
+   reads `~/qwen-serving/api_key.txt` and posts to port 18020. It also builds its corpus from
+   `~/qwen-serving/*.md`. If those files are missing, the corpus is blank lines with no error.
+2. Install as `docs/install.md` says: vLLM 0.30.0, the prepare steps, `bash patches/apply.sh "$SP"` and
+   `bash kvarn/install.sh`. Then check:
+   - Before boot: `bash verify.sh --no-server` exits 0.
+   - With the server up: `bash verify.sh --wait 300` exits 0.
+3. Build the corpora once:
+   - `venv/bin/python bench/labd_bench.py init`, with any tag, to freeze `~/bench/labd_corpus.txt`.
+   - `venv/bin/python bench/make_long_corpus.py`, for `~/bench/labd_corpus_long.txt`.
+4. Set controls for every run:
+   - Power: `sudo nvidia-smi -pl 250`. `verify.sh:58-61` prints the limit of the card torch uses.
+   - One fresh boot per arm. Rotate the arm order across repeats.
+   - `VLLM_CACHE_ROOT=$(mktemp -d)` when a knob is in the compile key, as `KVARN_FP16_DEQUANT` is.
+   - Run `sudo dmesg -w | grep -i xid` alongside.
+   - Remove stale `/dev/shm/vllm_offload_*` files.
+   - On WSL2, say so in every result. Native cells are the gap.
+5. Check every argv before it boots: `PRINT_ARGV=1 bash single-user/start_qwen.sh` prints the command
+   and exits.
+
+**Depth.** `labd_bench.py --ctx` takes one integer, and it is not a token count. With
+`--corpus ~/bench/labd_corpus_long.txt`, one `--ctx` gives about 1.13 tokens: `--ctx 100000` gave
+112,655. Use these values, then read `prompt=` on the `LABD` lines and adjust:
+
+| Target | `--ctx` | Fits |
+|---|---|---|
+| ~90k | 80000 | all arms |
+| ~149k | 132000 | `MAX_LEN` 150,000 (D) |
+| ~240k | 213000 | `MAX_LEN` 245,760 (E with DFlash2) |
+
+The command for each cell:
+
+`venv/bin/python bench/labd_bench.py <arm>-<depth> --ctx <N> --tasks qa,summary --corpus ~/bench/labd_corpus_long.txt`
+
+**Run 1. T1 on E, native (B1, Q2).** This run is first, and it has the most value.
+- Arms, each started with `CTX=huge SPEC=dflash2 PREFIX_CACHE=1 bash single-user/start_qwen.sh`:
+  - A: the knobs off.
+  - B: `KVARN_FP16_DEQUANT=1`.
+  - C: `KVARN_FP16_DEQUANT=1 KVARN_SHARED_VERIFY=1`.
+- Cells: ~90k, ~149k and ~240k, plus `--ctx 20000 --tasks copy`. Use one depth per run and three
+  repeats per cell.
+- Record for each cell: decode tok/s, steps (tok/step), the prompt tokens, the pool from the boot log,
+  and `nvidia-smi` VRAM in use.
+- Pass:
+  - At ~90k: ≥ 55 tok/s.
+  - At ~240k: ≥ 45 tok/s, a bar the plan estimates is out of reach (about 28).
+  - No arm more than 3% below A on the 20k copy cell.
+- Quality, on the best arm and on A:
+  - `venv/bin/python bench/quality_battery.py <arm> --gsm-n 200`
+  - `bench/needle_test.py 150000 0.9` and `bench/needle_test.py 240000 0.9`. Exit 0 means the needle was
+    retrieved.
+  - `bench/residue_sweep.py <arm>`: clean, exit 0.
+  - `bench/concurrent_collapse.py <arm> 30`, on one boot: the #208 collapse check, exit 0.
+  - `bench/labd_soak.py --minutes 30`
+- Quality bars are relative to A on the same box: GSM8K at most 1.0 point lower, and "PPL all" at most
+  2% higher. E's own GSM8K is 0.89–0.93, so the plan's absolute bars do not apply.
+
+**Run 2. The MTP corruption with `KVARN_SHARED_VERIFY=1` (Q1).**
+- Boot `CTX=huge SPEC=mtp KVARN_SHARED_VERIFY=1` (k=3), once with `ASYNC_SCHED=1` (the default) and
+  once with `ASYNC_SCHED=0`. Then repeat with `KVARN_FP16_DEQUANT=1` alone.
+- On each boot, run `bench/labd_soak.py --conc 1 --minutes 30`.
+- Then boot the same arm again with `PREFIX_CACHE=1` and run `bench/residue_sweep.py <arm>`. The
+  sweep's second send is a self-hit only with prefix caching on. On this profile, prefix caching
+  corrupts `prompt_logprobs` (#64, `start_qwen.sh:231-240`), so take no PPL from that boot.
+- Look for invalid `[-1,...]` spec tokens, embedding-index asserts at temperature > 0, and degenerate
+  greedy output (`triton_kvarn_decode.py:995-1002`).
+- This run decides whether the shared path can be the default for MTP.
+
+**Run 3. T3: MTP k=3 against k=4 on D (B2, Q4).**
+- Arms: `SPEC=mtp CTX=long DRAFT_TOKENS=3` and `DRAFT_TOKENS=4`, a fresh boot each.
+- Speed:
+  - `bash bench/run_benchmarks.sh single`, run twice. Keep the second run, because the first reads
+    30–50% low.
+  - The ~90k and ~149k cells.
+- Stability, on k=4 only:
+  - `venv/bin/python bench/concurrent_collapse.py k4 30 30000`: 30 trials, each overlapping a short
+    request and a ~30k one, close to the #34 shape. The script was written for #208, which is why it
+    checks for "!" runs. It also exits 1 when a request errors.
+  - The #121 check: 3 concurrent ~48k prompts, three times, then 3 serial. The prompt generator is in
+    the issue body, not in `bench/`.
+  - `bench/labd_soak.py --conc 4 --minutes 240`
+  - `bench/quality_battery.py long-k4 --gsm-n 200`
+- Pass: decode at least 5% above k=3 at C1 and at ~90k. Zero Xid or `EngineDeadError`. #121 9/9 and 3/3.
+  GSM8K at least 95.5. PPL at most 2% above k=3.
+- On a crash, keep k=3. Reopen #34 with the driver version, the last engine log lines before the fault,
+  and an `ASYNC_SCHED=0` rerun.
+- Use English or code prompts. The draft list (#196, #295) does not change between the two arms.
+
+**Run 4. T4: DFlash2 with fp8 KV on the FA2 plugin (B3).**
+- Install the plugin's `vllm-0.29-7646a2d` build as #153's 2026-10-08 comment does: the wheel on
+  `PYTHONPATH`, the libraries on `FA2_FP8KV_LIBRARY`, with checksums verified. Where to download it is
+  not checked here: #153 cites club-3090 #1274.
+- Flags: `EXTRA_ARGS="--attention-backend FLASH_ATTN --kv-cache-dtype fp8"`, plus
+  `"attention_backend":"FLASH_ATTN"` in the speculative config. The launcher builds `SPEC_CFG` itself,
+  so confirm with `PRINT_ARGV=1` which `--speculative-config` the server gets.
+- Arms: the fp8 + FA2 arm against the shipped `SPEC=dflash2 CTX=long`, which is int8 + Triton.
+- Order:
+  1. `bench/quality_battery.py <arm> --gsm-n 200` on both arms, and `bench/labd_soak.py --minutes 240`
+     on fp8.
+  2. A cold restart with prefix caching on, followed by `bench/residue_sweep.py`.
+  3. The ~60k (`--ctx 53000`) and ~90k cells.
+- A ~149k cell does not fit with these defaults. The launcher pins `KV_MEM=5583457484` for this
+  setting (`start_qwen.sh:391`), and the fp8 pool at that size is 140,902 tokens. `EMBED_UVA=1` moves
+  about 2 GiB to host RAM (#285), which could pay for a larger `KV_MEM` [ESTIMATE, not measured]. Try
+  `EMBED_UVA=1 MAX_LEN=150000 KV_MEM=<larger>`, and record the pool and any warning at boot.
+- The maintainer has offered to run the battery on the reference box. Say on #153 before you start, so
+  the work is not done twice.
+
+**Run 5. T2 boot check (B5, Q6). It takes 5 minutes.**
+- Boot `SPEC=mtp CTX=long` with `enable_adaptive_verification: true` added to the speculative config.
+- Expect a `ValueError` naming the GDN/SSM backend. Report the exact message, and whether the log says
+  Model Runner V2.
+
+**Not in this list:**
+- T5: run it only if run 1 fails quality. It is then Q7: int4 PPL at 100k+ and needles at 150k and 240k.
+- Q5 (an nsys profile of E at 90k and 240k): optional.
+- Q8 (#107 at ~190k with MTP, fp8 and prefix caching): it belongs to #107.
+- Optional, not Track B: run each bench script on #291, #292 and #293 once against a live server. That
+  is the live gate those PRs still owe.
+
+**Report back.**
+- For each boot, record:
+  - The host (native or WSL2).
+  - The driver, the commit and the power limit.
+  - The argv from `PRINT_ARGV=1`.
+  - The pool from the boot log.
+  - VRAM in use.
+- For each cell, record: prompt tokens, decode tok/s, tok/step, and the exit code.
+- Record each quality number against its own baseline arm.
+- Post the results on the thread that owns the item: #262 for run 1, #25 for run 2, #34 or #121 for
+  run 3, #153 for run 4, and a new issue for run 5 (#189 is merged). Write long results up in `docs/reproductions/`. Add one log
+  line in §0.4, and update the row in §0.2.
+
+### 0.4 Progress log
 
 | Date | Upstream @ | Event |
 |---|---|---|
@@ -348,6 +576,7 @@ The recommended order (2026-10-04) is **T1, T3, T4, T5, T2**. The T labels keep 
 | 2026-10-08 | `8da90dd` | A7 PR A opened as [#294](https://github.com/syv-ai/HyperQwen/pull/294) after a subagent review. Fixes from it: `pack()` returns nan for an all-zero weight instead of raising `ZeroDivisionError`; the test asserts each group's targets and the eight MTP names as literals (8 tests); `docs/third-party-checkpoints.md` and `prepare/fetch_thirdparty.py` drop the asymmetric-AWQ reason, which #212 removed. Gate 8/8 identical to main, crash test 169/0. |
 | 2026-10-08 | `3acb93f` | #285 merged as `3acb93f`: `EMBED_UVA=1` keeps the quantized token embedding in pinned host RAM (issue #281). It touches the two `start_qwen.sh`, `single-user/README.md`, `PATCHES.md` and the series (new `qwen3_5-embed-uva.patch`), and neither `bench/` nor `prepare/`. #286 to #293 still merge cleanly onto it. |
 | 2026-10-08 | `8da90dd` | CI green on #294: `build-push`, `git-apply`, `kvarn-torch-gate`, `model-verification`, `patch-index` and `prepare-crash` (runs `bench/test_quant_schema.py`) all pass. Mergeable, no review yet. |
+| 2026-10-09 | `3acb93f` | Track B re-verified against the code, vLLM v0.30.0 and v0.31.0, and the GitHub threads. Nothing was run. T4 is unblocked: the maintainer's #153 run shows that the FA2-fp8 adapter serves TP=1 on 0.30.0 with no repo change. T1's native boot check is done (#263), and the shared path skips MTP k=4. T2 has a third refusal (full CUDA graphs) and stays blocked on 0.31.0. T5 reads below KVarN at depth. §7 Q3 is answered, and Q8 is partly answered. §5's multi-value `--ctx` commands and `acceptance.sh` do not exist as written. §0.3 added: the handover run list for the RTX 3090 agent. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
