@@ -76,18 +76,24 @@ def t_long_ctx_greedy():
     t0 = time.time()
     r = chat(doc + "\nHvor mange gange står ordet Nordeuropa i teksten ovenfor, cirka? Svar kort.", temperature=0, max_tokens=32)
     return r["usage"]["prompt_tokens"] > 12000, f"prompt={r['usage']['prompt_tokens']} tok, {time.time()-t0:.1f}s, {r['choices'][0]['message']['content'][:50]!r}"
-def t_thinking_budget_rejected():
-    try:
-        chat("Hej", max_tokens=8, thinking_token_budget=10)  # V2 runner: expected 400
-        return False, "accepted (unexpected)"
-    except urllib.error.HTTPError as e:
-        return e.code == 400, f"HTTP {e.code} (expected 400 on the V2 runner)"
+def t_thinking_budget():
+    # vLLM 0.30's model runner enforces thinking_token_budget (v1/worker/gpu/sample/thinking_budget.py),
+    # so the old expectation of a 400 is gone. A control without the budget shows the cap binds.
+    def reasoning(**kw):
+        r = chat("Hvad er 17*23? Svar kort.", temperature=0, max_tokens=512,
+                 chat_template_kwargs={"enable_thinking": True}, **kw)
+        details = r["usage"].get("completion_tokens_details") or {}
+        return details.get("reasoning_tokens"), (r["choices"][0]["message"].get("content") or "").strip()
+    free, _ = reasoning()
+    capped, answer = reasoning(thinking_token_budget=16)
+    ok = free is not None and capped is not None and capped <= 16 < free and bool(answer)
+    return ok, f"reasoning {free} tokens unbudgeted, {capped} with budget 16, answer {answer[:20]!r}"
 
 for name, fn in [("greedy determinism", t_greedy_det), ("seeded sampling determinism", t_seed), ("logprobs/top_logprobs", t_logprobs),
                  ("n=2", t_n2), ("stop strings", t_stop), ("json_schema structured output", t_json_schema),
                  ("min_tokens + penalties", t_min_tokens_penalty), ("streaming", t_stream), ("thinking mode", t_thinking),
                  ("completions echo+logprobs (prompt_logprobs)", t_completions_echo_logprobs), ("20k-token prompt", t_long_ctx_greedy),
-                 ("thinking_token_budget -> 400", t_thinking_budget_rejected)]:
+                 ("thinking_token_budget enforced", t_thinking_budget)]:
     check(name, fn)
 print("SUMMARY", sum(1 for _, ok, _ in results if ok), "/", len(results), "passed")
 if len(unreached) == len(results):

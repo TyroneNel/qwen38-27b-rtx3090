@@ -6,6 +6,10 @@ fractional depth, asks the model for it, and reports whether the answer
 contains the passcode (exit 0) or not (exit 1). Complements quality_battery.py's GSM8K lane for the
 "quality at depth" question on long-context KV configs.
 
+Thinking is off. The chat template turns it on when the flag is absent, and the
+model then spends the 32-token reply on reasoning and returns no content: every
+depth reads MISSED, whatever the cache holds.
+
 Usage:
     python bench/needle_test.py [target_tokens] [depth]
     # default: 100000 tokens, needle at 90% depth
@@ -36,6 +40,7 @@ resp = harness.post("/v1/chat/completions", {
     "model": "qwen3.8-27b",
     "messages": [{"role": "user", "content": prompt}],
     "max_tokens": 32,
+    "chat_template_kwargs": {"enable_thinking": False},
 }, timeout=1800)
 elapsed = time.perf_counter() - t0
 
