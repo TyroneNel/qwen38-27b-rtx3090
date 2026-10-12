@@ -21,6 +21,9 @@ full reproductions; the list below collects the shorter reports from issues.
   RTX 3090 under WSL2: the decode-plan run list (T1 on E at 90k/149k/240k, the
   MTP shared-verify check, MTP k=4, DFlash2 + fp8 on the FA2 plugin, the
   adaptive-verification boot check)
+- [t4-port-3090-wsl2-2026-10-12.md](t4-port-3090-wsl2-2026-10-12.md) — the same
+  RTX 3090 under WSL2: the five T4 branches (#153, the fp8-KV FA2 source port) on
+  vLLM 0.31.0, with the port's GPU checks, the T4 battery and the default flip
 - [cmp-170hx-64gb.md](cmp-170hx-64gb.md) — the third sm80 box the README asked for:
   unlocked CMP 170HX 64 GB, Docker, vLLM 0.27.1 AND 0.29.0. The #72/#98 fault did
   not reproduce on either image (including a stock positive control and the
