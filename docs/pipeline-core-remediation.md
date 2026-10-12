@@ -5,6 +5,11 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **PR A merged 2026-10-10 as #294 (`d1ba27f`); checked 2026-10-12 on upstream/main @ `95ee3b6`.**
+> The maintainer's native check: 27/27, 8 OK, 169 cases with 0 failures. PR B (`drafter/`) and PR C
+> are next. Re-run the §6 greps against `95ee3b6` before starting PR B: #295 added about 200 lines to
+> `prepare/build_draft_vocab.py`. The Status line below is the review-time state.
+>
 > **PR A built 2026-10-08 on upstream/main @ `3acb93f`.** Branch `feat/prepare-core`,
 > commit `8da90dd`, opened as [#294](https://github.com/syv-ai/HyperQwen/pull/294).
 > - The core is in `prepare/quant_schema.py`, now 151 lines (was 71). It adds `GROUP`,

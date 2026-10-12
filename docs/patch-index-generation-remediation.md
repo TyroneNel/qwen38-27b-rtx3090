@@ -7,6 +7,18 @@ on 2026-09-26.
 
 **Implemented 2026-10-04 and 2026-10-05 on upstream/main @ 10bb488 (vLLM 0.30.0).**
 
+**Follow-ups merged 2026-10-10; checked 2026-10-12 on upstream/main @ `95ee3b6`.**
+- #286 (`1a9d846`): a re-export keeps the file's preamble. `scripts/export-patch.sh:4-5` now says only
+  the hunks are never edited by hand.
+- #287 (`daf3dbb`): "three preambles claimed offsets and a hand cut the series no longer has".
+- #288 (`e1bced7`): `verify.sh`'s KVarN rungs read `apply.sh --list --kvarn`.
+- #289 (`fe616ba`): CI checks that each `graded()` call in `verify.sh` names a patch that adds its
+  marker. The `Verify:` header (§2.3) has not landed, and #289 may make it unnecessary.
+- #290 (`73b88f9`, tracker D2) changed `auth-deny-default` itself. It was carried onto 0.31.0 in `3512f0e`.
+- Still open: `PATCHES.md:15` still says "do not edit the files by hand", although `PATCHES.md:20-21`
+  says to edit a file's headers. `PATCHES.md:12` still says the topic commits live in a vLLM 0.30.0
+  checkout, but the pin has been 0.31.0 since #308.
+
 **Merged 2026-10-08 (upstream/main @ `9133015`).** #274 merged as `76e1a15` and #275 as `c5a6e78`.
 After #274 merged, @mhenrichsen rebased #275 onto main (`560dd47`). He kept #275's headers, #274's
 marker form and #274's `PATCHES.md` prose, added a paragraph for the table, dropped the "Where the

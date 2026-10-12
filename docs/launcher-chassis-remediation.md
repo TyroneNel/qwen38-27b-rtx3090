@@ -6,6 +6,10 @@ this is the deep dive on that card. Every number below was measured against the
 tree on 2026-09-26 (method noted where it matters); nothing is carried over
 from the review on trust.
 
+> **Checked 2026-10-12 on upstream/main @ `95ee3b6`.** §3.2 and §3.3 are not started. Re-measure them
+> first: since `3acb93f` the launchers changed in #298 (`KV_OFFLOAD_GB`), #313 (boolean knobs must be 0
+> or 1) and the 0.31 port (`GPU_UTIL` 0.94 on batch, `--tool-strict-level`).
+>
 > **Merged 2026-10-06 (upstream/main @ 7af097b).** PR A as #272 (`631748f`), PR B as #273 (`53557bc`). The
 > status below is the review-time state. The next steps are unchanged: the shared blocks, §3.2 and §3.3.
 >

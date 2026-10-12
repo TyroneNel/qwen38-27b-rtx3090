@@ -5,6 +5,10 @@ is [architecture-review-20260926-194530.html](architecture-review-20260926-19453
 this is the deep dive on that card, every claim re-verified against the tree on
 2026-09-26.
 
+> **Checked 2026-10-12 on upstream/main @ `95ee3b6`.** #267 merged on 2026-10-08 as `bb3c579`, so
+> the wait in the Status line is over and PR A can start. Re-read `verify.sh` first: since `bb3c579` it
+> has changed in #288 (`e1bced7`), the 0.31 port (`87e813d`) and `06e38f4`.
+>
 > **Merged 2026-10-06 (upstream/main @ 7af097b).** D1 merged as #276 (`7796b64`).
 >
 > **Updated 2026-10-05 on upstream/main @ 10bb488.** D1, the `group_1` gap in

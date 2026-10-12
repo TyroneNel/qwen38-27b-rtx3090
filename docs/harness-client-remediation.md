@@ -6,6 +6,12 @@ this is the deep dive on that card. Every claim below was re-verified against
 the tree on 2026-09-26; where the review's numbers were wrong, they are
 corrected here and in the report.
 
+> **Merged 2026-10-10 (checked 2026-10-12 on upstream/main @ `95ee3b6`).** PR A merged as #291
+> (`33599fb`). PR B (#292) and PR C (#293) landed together as #302 (`659eed2`): the maintainer rebased
+> them himself, because the PRs did not allow maintainer edits. His native check went from 11/12 to
+> 12/12 (MISSED became RETRIEVED). Nothing in this plan is left to do. The Status line below is the
+> review-time state.
+>
 > **Updated 2026-10-05 on upstream/main @ 10bb488.** The `_created` defect in
 > 1.5.1 does not exist, so the two bash guards are dropped from PR B.
 > - vLLM 0.30 names the counters `vllm:spec_decode_num_drafts` and
