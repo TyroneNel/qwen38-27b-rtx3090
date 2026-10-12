@@ -647,7 +647,7 @@ The command for each cell:
 | 2026-10-11 | `95ee3b6` | vLLM 0.31.0 is the pin (#308, from #300). #290 and #296 were carried onto 0.31.0 (`3512f0e`). #153: the prebuilt FA2-fp8 plugin is not adopted, and a source port is tracked instead. Closed: #121 (fixed on 0.31), #196 (with #295) and #107 (not reproduced on 0.30). |
 | 2026-10-12 | `95ee3b6` | Tracker finalised. §0.1 records the merges. §0.2 marks the WSL2 speed numbers as not decision-grade (the owner's call) and records the upstream changes. §0.3 is closed. §7 Q3, Q4 and Q8 are updated. New: #314 reports DFlash2 on 0.31 at 23–29% slower single-stream on reproduction-heavy prompts (A5000, native Linux). It has no reply yet. |
 | 2026-10-12 | `95ee3b6` | T4 source port planned (§T4), read-only. The plugin's code at `5c3a7d8` equals the `7646a2d` build that was measured. `fa2-fp8kv.patch` applies byte-exact on vLLM 0.31's flash-attention pin `9cd61de`, so there is no kernel rebase. Found on 0.31: gates 1 and 2 are overridden and gate 3 is never reached. The plugin narrows FLASH_ATTN to `LBNHC` for every dtype, so registration must be gated. That layout conflicts with `KV_OFFLOAD_GB`. Plugin PR #2 fixes an out-of-bounds LSE write. Five PRs are planned, with the default flip after the native battery. |
-| 2026-10-12 | `95ee3b6` | T4 source port built as five stacked branches on the fork, no PR open: `t4/fa2-1-source` `8adbd33`, `t4/fa2-2-build` `33e080b`, `t4/fa2-3-launcher` `f7cbe71`, `t4/fa2-4-battery` `acc3b76`, `t4/fa2-5-default` `550f8e8`. Checked here without a GPU: `check_upstream.py` PASS at `9cd61de`, the full Docker build (fa2 layer 184 s, +31 MB), `verify.sh` and the gate test in the image, all launcher and battery CPU tests, actionlint, and the default arm's real install probe in the image. The adapter now selects the extension only on sm86/sm89, the architectures `install.sh` builds for. The testing plan (latest upstream, then 3090, per branch) is in §T4. |
+| 2026-10-12 | `95ee3b6` | T4 source port built as five stacked branches on the fork, no PR open: `t4/fa2-1-source` `8adbd33`, `t4/fa2-2-build` `33e080b`, `t4/fa2-3-launcher` `f7cbe71`, `t4/fa2-4-battery` `acc3b76`, `t4/fa2-5-default` `550f8e8`, then `71253a4` (the default on only on compute capability 8.6). Checked here without a GPU: `check_upstream.py` PASS at `9cd61de`, the full Docker build (fa2 layer 184 s, +31 MB), `verify.sh` and the gate test in the image, all launcher and battery CPU tests, actionlint, and the default arm's real install probe in the image. The adapter now selects the extension only on sm86/sm89, the architectures `install.sh` builds for. The testing plan (latest upstream, then 3090, per branch) is in §T4. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
@@ -1456,7 +1456,7 @@ on the native RTX 3090 before its PR opens, bottom first. Nothing in the stack h
 | 2 | `t4/fa2-2-build` | `d281695` `0e804e6` `3776d3e` `10d8ed1` `33e080b` | `fa2/install.sh` (CUTLASS at its pin, nvcc 13 from apt or pip, stamp), gated `register()`, `paths.py`, layout narrowed only for fp8, extension only on sm86/sm89, the plugin's GPU checks in `fa2/tests/`, `gate_test.py`, Dockerfile layer before `COPY . .`, optional `verify.sh` section | Full `docker build` passes. The fa2 layer is 184 s and +31 MB; `fa2_fp8kv.so` 9.66 MB, `fa2_fp8kv_prefill.so` 0.21 MB. In the image: `verify.sh` fa2 section 5 PASS, `gate_test.py` 24 assertions, `check_mixed_prefill.py --device cpu` OK. Host pip-nvcc path builds the same libraries; a re-run takes 9 s |
 | 3 | `t4/fa2-3-launcher` | `f7cbe71` | `FA2_FP8KV` (default 0) on `SPEC=dflash2 CTX=long`: FLASH_ATTN + fp8 for target and drafter, install probe, refusals (other SPEC/CTX, `KV_OFFLOAD_GB`, connector flags, batch and `alternative.sh`) | `test_fa2_fp8kv_knob.sh` 51 checks; off argv byte-equal to `95ee3b6` |
 | 4 | `t4/fa2-4-battery` | `acc3b76` | `bench/t4_battery.py`: both arms, own boots, argv identity check, restart gate, `summary.md`/`summary.json` | `test_t4_battery.py` 51 checks; `check_argv` accepts each arm's real `PRINT_ARGV` and rejects the swapped one |
-| 5 | `t4/fa2-5-default` | `550f8e8` | `FA2_FP8KV` defaults to 1 on `SPEC=dflash2 CTX=long`; unset with an offload tier resolves to 0; plugin missing refuses with a hint; docs flipped with three `<battery result: fill in before PR>` placeholders | knob test 126 checks. In the branch-2 image with the real probe: unset gives FLASH_ATTN + fp8 `(default)`, `FA2_FP8KV=0` gives TRITON_ATTN + int8, plugin uninstalled refuses |
+| 5 | `t4/fa2-5-default` | `550f8e8` `71253a4` | `FA2_FP8KV` defaults to 1 on `SPEC=dflash2 CTX=long` when `nvidia-smi` reports compute capability 8.6 (other GPUs or no answer: 0 with a note; an explicit 1 is allowed, the 4090 opt-in); unset with an offload tier resolves to 0; plugin missing refuses with a hint; docs flipped with three `<battery result: fill in before PR>` placeholders | knob test 159 checks (stub `nvidia-smi`). In the branch-2 image with the real probe: no GPU gives `FA2_FP8KV=0 (default, off: compute capability unknown)`, a stub 8.6 gives FLASH_ATTN + fp8 `(default)`, `FA2_FP8KV=0` gives TRITON_ATTN + int8, plugin uninstalled refuses |
 
 All five tips pass `check_upstream.py`, `test_bool_knobs.sh`, `test_kv_offload_knob.sh`,
 `test_export_patch.sh`, `check_verify_graded.py`, `bash -n` and actionlint.
@@ -1522,18 +1522,18 @@ All five tips pass `check_upstream.py`, `test_bool_knobs.sh`, `test_kv_offload_k
 - **Branch 5** (only after branch 4 passes).
   1. Fill the three placeholders.
   2. `SPEC=dflash2 CTX=long bash single-user/start_qwen.sh`. Pass: `FA2_FP8KV=1 (default)`, and it
-     boots as in branch 3.
+     boots as in branch 3. On a non-8.6 GPU (or with no GPU in a dry run) the same command says
+     `FA2_FP8KV=0 (default, off: compute capability ...)` with one note.
   3. `FA2_FP8KV=0` gives the int8 arm unchanged.
   4. `KV_OFFLOAD_GB=12` resolves to 0 with one note, and boots int8 with the tier.
   5. With the plugin uninstalled, it refuses with the `fa2/install.sh` hint.
   6. `SPEC=mtp CTX=long` and `SPEC=dflash2 CTX=huge` are unchanged.
 
 *Open before the branch 5 PR.*
-- The default reaches every `dflash2 CTX=long` user. On sm89 (4090, WSL2) the sm_86 cubin should run
-  but is untested.
-- On sm120 the adapter no longer selects the extension (`33e080b`), but the launcher still asks for
-  FLASH_ATTN + fp8, so a 50-series card would fail at boot rather than fall back. Either gate the
-  default on compute capability 8.6/8.9, or accept and document it.
+- Resolved by `71253a4`: the default is on only when the server's GPU is compute capability 8.6,
+  so a 4090 (sm89) and a 50-series card (sm120) stay on int8 + Triton with a note. On sm89
+  `FA2_FP8KV=1` is an unmeasured opt-in; on sm120 an explicit 1 still fails at boot, which is the
+  user's explicit choice.
 - `FA2_FP8KV=` (empty) now means the default, not off.
 
 **Validation (Setup D-prime, copy-focused).** `bench/run_benchmarks.sh single` (C1 cohort),
