@@ -330,7 +330,7 @@ on 2026-10-05, at `10bb488`, and D3 was added and opened. On 2026-10-06, A4 was 
 D1 and D3 merged (upstream/main @ `7af097b`). On 2026-10-08, A4 and A5 merged (upstream/main @ `9133015`),
 then #285 merged (upstream/main @ `3acb93f`), and A7 PR A opened as #294. On 2026-10-09, Track B was
 re-verified at `3acb93f`, and §0.3 was added as the handover to the RTX 3090 agent. On 2026-10-10, #286 to
-#294 merged. On 2026-10-11, vLLM 0.31.0 became the pin (#308). Upstream/main was `95ee3b6` on 2026-10-12.
+#294 merged. On 2026-10-11, vLLM 0.31.0 became the pin (#308). Upstream/main was `95ee3b6` on 2026-10-12. Later on 2026-10-12, the T4 source port was built as five stacked branches and pushed, unverified on a GPU (B3).
 This section tracks the whole
 `docs/decode-perf-150k-240k-plan` branch. It covers two tracks:
 
@@ -419,7 +419,7 @@ read higher.
 |---|---|---|---|---|
 | B1 | **T1** KVarN shared verify + fp16 dequant | Moved forward, not the default. #262 and #263 merged. `KVARN_SHARED_VERIFY` and `KVARN_FP16_DEQUANT` are both off by default, and no launcher sets them. Measured at about 103k (3090, 250 W, WSL2), median tok/s: main 23.0, knobs off 23.7, knobs on 51.9 (runs 50–52). The 240k pass bar (≥45 tok/s) looks out of reach: about 28 tok/s [ESTIMATE], against a baseline of about 11 [ESTIMATE]. See T1 "Status 2026-10-04". (2026-10-08, maintainer, native 3090) E boots 3 of 3 with the same 268,169-token pool, and fp16 dequant is neutral at short context (155.5–157.6 against 154.7 tok/s). #263's native check is done. The shared path skips MTP k=4 (qlen 5). (2026-10-09, §0.3 run 1, **WSL2**, 3090, 250 W, Docker, 9 fresh boots, pool 268,169 on every boot.) Median decode for A (off) / B (fp16) / C (fp16 + shared): 90,009 tokens 18.4 / 27.4 / **41.7**; 149,231 tokens 13.6 / 20.5 / **35.7**; 240,102 tokens 9.2 / 14.6 / **25.8**; 20k copy 155.2 / 189.0 / 220.6. **Both speed bars missed** (≥55 at 90k, ≥45 at 240k). The copy bar passed. The 240k estimate of about 28 holds (measured 25.8). (2026-10-10, follow-ups) **Quality passes:** GSM8K over three batteries averages A 0.963 and C 0.955 (−0.8 pt, inside the 1.0 bar). PPL is equal to four decimals. Residue 0/128, collapse 0/30 and soaks are clean. **Needles RETRIEVED at 150k and 240k on A and C**, with #291's fixed `needle_test.py`. 0 Xid. Q1 (run 2): no MTP corruption with `KVARN_SHARED_VERIFY=1` in 8 of 8 boots, async on and off (greedy; temperature > 0 not exercised). [track-b-3090-wsl2-2026-10-09.md](reproductions/track-b-3090-wsl2-2026-10-09.md). | Native decode at 90k, 150k and 240k is still owed. Deciding the default: both knobs on is the fastest arm and passes quality on WSL2. (2026-10-12) A default flip needs one native A/B on 0.31.0: A against C at 90k, 150k and 240k. Watch #314, which reports lower DFlash2 acceptance on 0.31. E runs DFlash2. | GPU host |
 | B2 | **T3** MTP k=4 at `CTX=long` | Unchanged in code. `DRAFT_TOKENS=4` reaches k=4 by env. Issue #34 is closed as not planned. #121 is open, with no activity since 2026-09-23. The k=3 baseline on 0.30 is 110.1–112.6 tok/s at C1 (native, #196, `MAX_SEQS=2`, 4 English prompts × 512, greedy, the maintainer's script). (2026-10-10, §0.3 run 3, 3090, **WSL2**, 30-min soaks by the owner's choice.) k=4 is **stable**: collapse 0/30 at 30k, #121 9/9 concurrent and 3/3 serial (twice), soaks OK, 0 Xid, 0 `EngineDeadError`. GSM8K 0.965 / 0.950 / 0.950 against the 95.5 bar; PPL within 0.03% of k=3. **Not faster on WSL2.** First boots: C1 +3.5% / +10.8% (T=default / T=0), 90k +2.6%. Low-KV rerun with no spill: C1 −3.0% / −8.8%, 90k −3.6%. The first write-up blamed spill for C1 ~65 against ~110 native; that was wrong (the rerun had headroom and read the same). On the owner's D settings (`KV_MEM=4831838208`, `MAX_SEQS` 4–6, `MAX_LEN=106496`), k=3 greedy single-stream reads 64–69 tok/s at 39–42 ms/step, with **57% GPU utilization**. [INFERENCE] The decode is host-bound on WSL2 (PIECEWISE graphs). **The owner stopped run 3 on WSL2.** | The T3 speed decision moves to native Linux: k=3 against k=4 with several boots per arm, the #196 instrument or `real_rep.sh` at T=0. The 240-min soaks are still owed to #34 and #121. (2026-10-12) #121 is closed, fixed on 0.31.0: on cpuchip's retest, the failing arm went from 6/9 to 15/15. #34 stays closed as not planned. Only the native speed A/B is left. | native GPU host |
-| B3 | **T4** DFlash2 + fp8 at 150k | **Unblocked** (2026-10-08, #153). The adapter's TP=1 limit is a README statement only. The public `vllm-0.29-7646a2d` build serves on 0.30.0 with no repo change: C1 decode −2.6%, 90k prompt −49% wall, pool +3.3%, answers and needles equal. The maintainer offered to run the battery on the reference box. (2026-10-10, §0.3 run 4, 3090, **WSL2**, plugin artifact `b0ce0370…` checksum-verified.) fp8 + FA2 against int8 + Triton: pool 140,902 against 136,429; decode at 60k 43.9 against 42.7 (+2.8%), at 90k 40.9 against 33.8 (**+21%**); cold 60k TTFT 72 s against 124 s (−42%). GSM8K n=200 0.960 against 0.955 (and 0.960 again on a roomy boot with no spill), PPL all +0.004–0.02%. Both residue sweeps after a cold restart: 0/128. 30-min soaks on fp8 OK (not 240, the owner's choice). 0 Xid. **~149k fp8 cell:** `EMBED_UVA=1` fails at weight load on WSL2 (`pin_memory()` OOM), but without it `KV_MEM=6100000000 MAX_LEN=150000` gives a 157,054-token pool and 35.3 tok/s at 149,231 tokens, with no spill. | Native confirmation, and the 240-min soak. The integration route, a source port or the `.so`, is the maintainer's call. (2026-10-11, #153) **The maintainer decided:** the prebuilt plugin binary is not adopted. #153 stays open for a source port of the fp8-KV FA2 path (option (a)), which CI checks against the pinned vLLM like the rest of `patches/`. The battery runs against that port, on 0.31.0. (2026-10-12) The port is planned in [§T4](#t4--dflash2--fp8-at-150k-fa2-fp8-source-port-issue-153). The FA2 diff applies byte-exact on 0.31's flash-attention pin `9cd61de`, so it is a rebuild and an adapter check, not a kernel rebase. It goes in a new `fa2/` directory with a CPU CI check, a Docker builder stage, gated registration and a launcher knob that is off by default. It carries plugin PR #2's LSE fix. Next: PR 1 (`fa2/` and CI). | — |
+| B3 | **T4** DFlash2 + fp8 at 150k | **Unblocked** (2026-10-08, #153). The adapter's TP=1 limit is a README statement only. The public `vllm-0.29-7646a2d` build serves on 0.30.0 with no repo change: C1 decode −2.6%, 90k prompt −49% wall, pool +3.3%, answers and needles equal. The maintainer offered to run the battery on the reference box. (2026-10-10, §0.3 run 4, 3090, **WSL2**, plugin artifact `b0ce0370…` checksum-verified.) fp8 + FA2 against int8 + Triton: pool 140,902 against 136,429; decode at 60k 43.9 against 42.7 (+2.8%), at 90k 40.9 against 33.8 (**+21%**); cold 60k TTFT 72 s against 124 s (−42%). GSM8K n=200 0.960 against 0.955 (and 0.960 again on a roomy boot with no spill), PPL all +0.004–0.02%. Both residue sweeps after a cold restart: 0/128. 30-min soaks on fp8 OK (not 240, the owner's choice). 0 Xid. **~149k fp8 cell:** `EMBED_UVA=1` fails at weight load on WSL2 (`pin_memory()` OOM), but without it `KV_MEM=6100000000 MAX_LEN=150000` gives a 157,054-token pool and 35.3 tok/s at 149,231 tokens, with no spill. | Native confirmation, and the 240-min soak. The integration route, a source port or the `.so`, is the maintainer's call. (2026-10-11, #153) **The maintainer decided:** the prebuilt plugin binary is not adopted. #153 stays open for a source port of the fp8-KV FA2 path (option (a)), which CI checks against the pinned vLLM like the rest of `patches/`. The battery runs against that port, on 0.31.0. (2026-10-12) The port is planned in [§T4](#t4--dflash2--fp8-at-150k-fa2-fp8-source-port-issue-153). The FA2 diff applies byte-exact on 0.31's flash-attention pin `9cd61de`, so it is a rebuild and an adapter check, not a kernel rebase. It goes in a new `fa2/` directory with a CPU CI check, a Docker builder stage, gated registration and a launcher knob that is off by default. It carries plugin PR #2's LSE fix. (2026-10-12) The five branches are built and pushed as a stacked chain, `t4/fa2-1-source` to `t4/fa2-5-default`, with no PR open. Each passed its CPU checks here, and branch 2's Docker build passed. Nothing has run on a GPU. The per-branch testing plan is in [§T4](#t4--dflash2--fp8-at-150k-fa2-fp8-source-port-issue-153). Next: the owner verifies each branch on latest upstream main and on the native 3090, bottom first, then opens PR 1. | — |
 | B4 | **T5** int4 KV hedge (lossy) | Weaker. Nothing new is implemented. At depth, int4 + MQ-3D reads below KVarN in the repo's own numbers (25.2 against 35.6 tok/s at 72.6k on a 4090). (2026-10-10) Its trigger did not fire: T1 passes quality on WSL2 (GSM8K −0.8 pt over three batteries, PPL equal, needles retrieved at 150k and 240k). | Not needed unless T1 fails quality on native Linux. Then run Q7 (int4 PPL at 100k+). | B1 result |
 | B5 | **T2** Adaptive verification | Blocked. It is off as shipped. Turned on, it should refuse at boot on sm86: GDN, FlashInfer (SM100 only) and, for `CTX=huge`, full CUDA graphs. vLLM 0.31.0 changes none of these. (2026-10-10, §0.3 run 5 and a follow-up, 3090, **WSL2**) It refuses twice, in turn. With fp8 KV (`SPEC=mtp CTX=long` as shipped), the V2 runner narrows the backends to `['TRITON_ATTN']`, which refuses: `ValueError: FP8 KV cache is not supported by the Triton attention backend on NVIDIA GeForce RTX 3090 (compute capability 8.6)…`. With `--kv-cache-dtype bfloat16`, it gets FLASH_ATTN and passes model load, then refuses: `ValueError: Adaptive verification trims verification requests on device, which the GDNAttentionBackend attention backend does not support.` | Wait for a GDN and backend change upstream. (2026-10-12) The pin is now 0.31.0. The 2026-10-09 source check found that 0.31.0 changes none of the refusals. The WSL2 boots ran on 0.30.0. | upstream vLLM |
 
@@ -647,6 +647,7 @@ The command for each cell:
 | 2026-10-11 | `95ee3b6` | vLLM 0.31.0 is the pin (#308, from #300). #290 and #296 were carried onto 0.31.0 (`3512f0e`). #153: the prebuilt FA2-fp8 plugin is not adopted, and a source port is tracked instead. Closed: #121 (fixed on 0.31), #196 (with #295) and #107 (not reproduced on 0.30). |
 | 2026-10-12 | `95ee3b6` | Tracker finalised. §0.1 records the merges. §0.2 marks the WSL2 speed numbers as not decision-grade (the owner's call) and records the upstream changes. §0.3 is closed. §7 Q3, Q4 and Q8 are updated. New: #314 reports DFlash2 on 0.31 at 23–29% slower single-stream on reproduction-heavy prompts (A5000, native Linux). It has no reply yet. |
 | 2026-10-12 | `95ee3b6` | T4 source port planned (§T4), read-only. The plugin's code at `5c3a7d8` equals the `7646a2d` build that was measured. `fa2-fp8kv.patch` applies byte-exact on vLLM 0.31's flash-attention pin `9cd61de`, so there is no kernel rebase. Found on 0.31: gates 1 and 2 are overridden and gate 3 is never reached. The plugin narrows FLASH_ATTN to `LBNHC` for every dtype, so registration must be gated. That layout conflicts with `KV_OFFLOAD_GB`. Plugin PR #2 fixes an out-of-bounds LSE write. Five PRs are planned, with the default flip after the native battery. |
+| 2026-10-12 | `95ee3b6` | T4 source port built as five stacked branches on the fork, no PR open: `t4/fa2-1-source` `8adbd33`, `t4/fa2-2-build` `33e080b`, `t4/fa2-3-launcher` `f7cbe71`, `t4/fa2-4-battery` `acc3b76`, `t4/fa2-5-default` `550f8e8`. Checked here without a GPU: `check_upstream.py` PASS at `9cd61de`, the full Docker build (fa2 layer 184 s, +31 MB), `verify.sh` and the gate test in the image, all launcher and battery CPU tests, actionlint, and the default arm's real install probe in the image. The adapter now selects the extension only on sm86/sm89, the architectures `install.sh` builds for. The testing plan (latest upstream, then 3090, per branch) is in §T4. |
 
 **How to update.** When an item changes state, update its row and add one log line. Each
 re-verification pass adds one log line here, and one dated block at the top of each doc.
@@ -1444,6 +1445,96 @@ and its FlashAttention pin, club-3090's threads, and this repo at `95ee3b6`.
     4. The battery on native 0.31, run by the maintainer.
     5. The default flip, which replaces the int8 + Triton arm. It ships only after step 4
        passes.
+
+**Branches and testing plan (2026-10-12).** The five PRs of item 13 are built as a stacked chain on
+`95ee3b6` and pushed to the fork. No PR is open. Each branch is verified on latest upstream main and
+on the native RTX 3090 before its PR opens, bottom first. Nothing in the stack has run on a GPU.
+
+| # | Branch | Commits | What it adds | Checked here (no GPU) |
+|---|---|---|---|---|
+| 1 | `t4/fa2-1-source` | `1292f92` `c38b4c3` `8adbd33` | `fa2/`: the plugin's sources at `5c3a7d8`, PR #2's LSE fix (5 header hunks and the int64 combine grid), `PIN`, licences, `check_upstream.py`, CI job `fa2-upstream` | `check_upstream.py` PASS at `9cd61de` (18 files byte-exact); fails on a wrong pin |
+| 2 | `t4/fa2-2-build` | `d281695` `0e804e6` `3776d3e` `10d8ed1` `33e080b` | `fa2/install.sh` (CUTLASS at its pin, nvcc 13 from apt or pip, stamp), gated `register()`, `paths.py`, layout narrowed only for fp8, extension only on sm86/sm89, the plugin's GPU checks in `fa2/tests/`, `gate_test.py`, Dockerfile layer before `COPY . .`, optional `verify.sh` section | Full `docker build` passes. The fa2 layer is 184 s and +31 MB; `fa2_fp8kv.so` 9.66 MB, `fa2_fp8kv_prefill.so` 0.21 MB. In the image: `verify.sh` fa2 section 5 PASS, `gate_test.py` 24 assertions, `check_mixed_prefill.py --device cpu` OK. Host pip-nvcc path builds the same libraries; a re-run takes 9 s |
+| 3 | `t4/fa2-3-launcher` | `f7cbe71` | `FA2_FP8KV` (default 0) on `SPEC=dflash2 CTX=long`: FLASH_ATTN + fp8 for target and drafter, install probe, refusals (other SPEC/CTX, `KV_OFFLOAD_GB`, connector flags, batch and `alternative.sh`) | `test_fa2_fp8kv_knob.sh` 51 checks; off argv byte-equal to `95ee3b6` |
+| 4 | `t4/fa2-4-battery` | `acc3b76` | `bench/t4_battery.py`: both arms, own boots, argv identity check, restart gate, `summary.md`/`summary.json` | `test_t4_battery.py` 51 checks; `check_argv` accepts each arm's real `PRINT_ARGV` and rejects the swapped one |
+| 5 | `t4/fa2-5-default` | `550f8e8` | `FA2_FP8KV` defaults to 1 on `SPEC=dflash2 CTX=long`; unset with an offload tier resolves to 0; plugin missing refuses with a hint; docs flipped with three `<battery result: fill in before PR>` placeholders | knob test 126 checks. In the branch-2 image with the real probe: unset gives FLASH_ATTN + fp8 `(default)`, `FA2_FP8KV=0` gives TRITON_ATTN + int8, plugin uninstalled refuses |
+
+All five tips pass `check_upstream.py`, `test_bool_knobs.sh`, `test_kv_offload_knob.sh`,
+`test_export_patch.sh`, `check_verify_graded.py`, `bash -n` and actionlint.
+
+*Step L, latest (every branch, before its 3090 run).*
+1. Restack on latest upstream: `git fetch upstream && git checkout t4/fa2-5-default && git rebase
+   --update-refs upstream/main`. Pass: no conflicts. If upstream bumped the vLLM pin, stop: the
+   `fa2-upstream` job must be re-checked against the new FlashAttention pin first.
+2. CI on each branch: `gh workflow run patch-integrity.yml -R TyroneNel/qwen38-27b-rtx3090 --ref
+   t4/fa2-N-...`. Pushes to non-main branches do not trigger it. Pass: green, including
+   `fa2-upstream` (branch 1 on) and the new launcher and battery steps (branches 3 and 4).
+3. Docker, at branches 2 and 5: `docker build -t hyperqwen-fa2:N .`. The `docker image` workflow
+   runs only on a PR or main. Pass: the build completes; its build-time `verify.sh`, mq3d,
+   `gate_test.py` and `check_mixed_prefill.py --device cpu` pass.
+
+*3090 steps (native Linux, venv), cumulative.*
+- **Branch 1.** `python3 -I fa2/check_upstream.py --fa-dir <flash-attention at 9cd61de>`. Pass: PASS, 18 files.
+- **Branch 2.**
+  1. `bash fa2/install.sh`. Pass: ends with "fa2_fp8kv installed"; the .so sizes are about 9.66 MB and
+     0.21 MB; a second run prints "libraries are current".
+  2. `venv/bin/python -c 'import fa2_fp8kv_vllm.paths as p; p.check()'` exits 0.
+  3. `bash verify.sh --no-server`. Pass: five fa2 PASS lines and `verify: OK (0 failures)`.
+  4. With `FA2_FP8KV=1` exported: `venv/bin/python fa2/tests/check_full.py` (and `--full`),
+     `check_window.py`, `check_replay.py`, `check_backend.py`, `check_mixed_prefill.py --device cuda`.
+     Pass: every case passes, including `hq-target-verify`, `hq-target-decode` and `hq-draft-window`.
+     Any traceback or FAIL fails the branch. Before the run, check `hq-draft-window`'s 32 query heads
+     against the drafter's `config.json` (a guess).
+  5. Docker, the same checks: `docker run --rm --gpus all -e FA2_FP8KV=1 --entrypoint bash
+     hyperqwen-fa2:2 -c 'venv/bin/python fa2/tests/check_full.py && ...'`.
+- **Branch 3.**
+  1. `FA2_FP8KV=1 PRINT_ARGV=1 SPEC=dflash2 CTX=long bash single-user/start_qwen.sh`. Pass:
+     `--attention-backend FLASH_ATTN --kv-cache-dtype fp8`, and `"attention_backend":"FLASH_ATTN"` in
+     the speculative config.
+  2. Boot: `FA2_FP8KV=1 SPEC=dflash2 CTX=long PREFIX_CACHE=1 bash single-user/start_qwen.sh 2>&1 | tee
+     boot.log`. Pass:
+     - The target and drafter backend lines say FLASH_ATTN.
+     - The boot log shows the LBNHC layout. Branch 2 treats "no vLLM config" as fp8 when the engine
+       asks the workers for layouts.
+     - There is no fp8-refusal `ValueError`.
+     - Record "GPU KV cache size". Run 4 had 140,902.
+  3. One prompt of about 20k tokens. Pass: "FP8 FA2: bounded BF16 prefill with persistent FP8 KV" is
+     logged once, the answer is coherent, and there is no "Unsupported FP8 FA2 attention
+     configuration".
+  4. Negative checks. `FA2_FP8KV=1 KV_OFFLOAD_GB=12` refuses. `FA2_FP8KV=1 SPEC=mtp` refuses.
+     `FA2_FP8KV=0` boots the shipped int8 + Triton arm.
+- **Branch 4.** This is the battery.
+  1. `python3 bench/t4_battery.py --dry-run`.
+  2. Smoke, about 40 min: `python3 bench/t4_battery.py --cells d90,residue --soak-minutes 5`.
+  3. Full run, about 8 to 10 h: `python3 bench/t4_battery.py --cells
+     residue,quality,d149,d60,d90,soak`.
+
+  Pass:
+  - `summary.md` says PASS, host native, vLLM 0.31.0 and the fa2 pin.
+  - Every restart gate passes.
+  - Residue is 0/128 on both arms.
+  - GSM8K is within 1.0 pt of int8 and PPL within 2%.
+  - Decode at ~90k is fp8fa2 ≥ int8.
+  - The 240-min soak passes.
+  - Xid new is 0.
+
+  The quality bars are the script's own encoding of §0.3 run 1, and can be changed. Post
+  `summary.md` to #153.
+- **Branch 5** (only after branch 4 passes).
+  1. Fill the three placeholders.
+  2. `SPEC=dflash2 CTX=long bash single-user/start_qwen.sh`. Pass: `FA2_FP8KV=1 (default)`, and it
+     boots as in branch 3.
+  3. `FA2_FP8KV=0` gives the int8 arm unchanged.
+  4. `KV_OFFLOAD_GB=12` resolves to 0 with one note, and boots int8 with the tier.
+  5. With the plugin uninstalled, it refuses with the `fa2/install.sh` hint.
+  6. `SPEC=mtp CTX=long` and `SPEC=dflash2 CTX=huge` are unchanged.
+
+*Open before the branch 5 PR.*
+- The default reaches every `dflash2 CTX=long` user. On sm89 (4090, WSL2) the sm_86 cubin should run
+  but is untested.
+- On sm120 the adapter no longer selects the extension (`33e080b`), but the launcher still asks for
+  FLASH_ATTN + fp8, so a 50-series card would fail at boot rather than fall back. Either gate the
+  default on compute capability 8.6/8.9, or accept and document it.
+- `FA2_FP8KV=` (empty) now means the default, not off.
 
 **Validation (Setup D-prime, copy-focused).** `bench/run_benchmarks.sh single` (C1 cohort),
 plus `bench/labd_bench.py --ctx 60000,112000,150000` with the document-copy/verbatim tasks
