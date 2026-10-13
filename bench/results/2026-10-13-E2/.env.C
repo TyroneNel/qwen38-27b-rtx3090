@@ -10,4 +10,4 @@ DFLASH_TOKENS=7
 KV_MEM=5583457484
 MAX_LEN=65536
 VERIFY=0
-EXTRA_ARGS='--speculative-config {"method":"dflash","model":"/app/models/Qwen3.8-27B-DFlash2-W4A16","num_speculative_tokens":7,"draft_sample_method":"probabilistic","num_speculative_tokens_per_batch_size":[[1,3,7],[4,512,3]]}'
+EXTRA_ARGS='--attention-backend FLASHINFER --kv-cache-dtype fp8'
