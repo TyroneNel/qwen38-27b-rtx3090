@@ -3,11 +3,10 @@
 Who else serves this model on this class of card, what they have that we do not, and the experiments that
 would close the gaps. Surveyed 2026-10-13 at vLLM 0.31.0 (our pin).
 
-**How to read this page.** Nothing here was measured by us: there is no GPU in the environment this was
-written in, so every number is quoted from the repo that published it, with that repo's protocol attached. A
-quoted row is a lead, not a result — the point of the page is the *protocol* column, which says what to run on
-the 3090 to find out whether the lead survives contact with our stack. Our own published rows are in
-[benchmarks.md](benchmarks.md); this page is the other half of that comparison.
+**How to read this page.** The survey below was written with no GPU available, so every number in it is
+quoted from the repo that published it, with that repo's protocol attached, and every "expected" column is an
+inference. **It has since been tested on the reference card** — the outcomes are in *What the 3090 measured*
+below, and where the two disagree the measurement wins. Our own published rows are in [benchmarks.md](benchmarks.md).
 
 ## Where we stand
 
@@ -24,6 +23,45 @@ whose acceptance (5.66) is roughly 1.7× ours — the gap is largely acceptance,
 workload-dependent, so the honest next step is to measure ours on *their* workload before believing the gap.
 Second, our long-context and aggregate rows are not behind anyone's published number; do not trade them away
 to chase a short-context row.
+
+## What the 3090 measured (2026-10-13)
+
+Seven arms ran on the reference card (RTX 3090, `power.limit 250.00 W` verified, Docker Desktop WSL2, container
+boot, image built from this branch, pool pinned by bytes: `KV_MEM=5583457484`, `MAX_LEN=65536`). Raw logs,
+traces and per-arm reports: [bench/results/2026-10-13-SUMMARY.md](../bench/results/2026-10-13-SUMMARY.md).
+Nothing below is an estimate.
+
+| arm | outcome | number |
+|---|---|---|
+| E1 dynamic K | lead | schedule works with `dflash` and no launcher change, but the one proposed here can never engage; knee at 4 gives N=4 aggregate **+8.0%**, ms/pass 57 → 43, C1 unchanged |
+| E2 `TRITON_ATTN`+int8 | capacity win, not speed | C1 +1.8% (noise) but **116,440 KV tokens vs 68,605** and 1 preemption vs 20 at N=8 |
+| E2 FlashInfer (fp8, bf16) | fail | **−28.5% / −26.3%**: spec decode downgrades its CUDA graphs to PIECEWISE |
+| E3 acceptance by workload | answered | gsm8k **5.80**, code **4.78**, chat **3.50** tokens per step |
+| E4 `reasoning_effort=low` | pass on acceptance | code **+21.9%**, chat **+14.8%**, gsm8k **+5.2%**; quality at `low` not checked |
+| E5 `CG=40` | lead | C1 **+3.3%** (and +4.1% with `CUDAGRAPH_MODE=FULL`, which the GDN layers refuse anyway) |
+| E6 `--mamba-block-size 8192` | inconclusive | accepted in the args, attention block stayed 448; no measurable effect |
+| E7 draft-head quantisation | not applicable | the drafter has no LM head of its own (see G12) |
+
+Three of this page's claims did not survive:
+
+- **The 1.7× backend gap (G3) does not reproduce at C1.** It was inferred from a 2×3090, uncapped, TP=2 row.
+  On one card at 250 W the shipped `FLASH_ATTN`+bf16 path is level with `TRITON_ATTN`+int8, and FlashInfer is
+  the slow one. What the Triton arm does win is capacity: 70% more KV tokens at the same speed.
+- **The drafter was never the deficit (G2).** On greedy, thinking-off workloads it accepts 4.78-5.80 tokens
+  per step; our published ~3.3 is the hard end of its range, not a property of the checkpoint.
+- **The capture-set win was already collected (G9).** Graph memory is 0.13 GiB, not 3.7 GiB; narrowing the set
+  is worth 3-4%, and it cannot buy pool because `KV_MEM` pins the pool in bytes.
+
+And two things the list did not ask for, both machine-level:
+
+- **Free VRAM after boot is not a spill oracle.** It sits at 1.4-1.5 GB after boot (the 1.3 GB rule holds) but
+  falls to 423-921 MiB under load with Shared Usage flat — allocator growth, not a spill. The counter is the
+  oracle: idle Shared Usage on this box is **0.25 MiB**, the loaded-engine floor is 84-92 MiB, and the two
+  FlashInfer boots sit at 172-220 MiB from boot through every measurement even with the pool cut by 1 GiB,
+  which makes it a fixed host-side mapping of that backend rather than a working-set spill.
+- **The shipped single-user profile is a ~5-resident-request server**, not the 8 seats `MAX_SEQS=8` suggests:
+  preemptions begin at N=8 in every arm. That is the real reason a K schedule keyed on batch size has to put
+  its knee at 4, and it is why the C8 cohort rows carry a 37% within-boot spread and cannot settle an arm.
 
 ## The comparables
 
@@ -47,6 +85,12 @@ Ordered by expected tokens per second per unit of risk. "Cheapest experiment" is
 3090 with the metric to read; each one is a candidate for the benchmark harness we already have.
 
 ### G1. Verification width is static, and batch mode refuses to speculate at all
+
+**Measured 2026-10-13: lead, and the schedule proposed below cannot engage.** Dynamic SD works with `dflash`
+and a second `--speculative-config` in `EXTRA_ARGS` overrides the launcher (no product change needed), but at
+`MAX_SEQS=8` the pool holds at most 5 resident requests at K=7, so a bucket starting at 9 is unreachable. A
+knee at 4 (`[[1,3,7],[4,512,3]]`) reads N=4 aggregate +8.0% and ms/pass 57 → 43 ms with C1 unchanged — inside
+the tail-row spread, so a lead.
 
 Our two modes are a hard switch: `single` speculates with a fixed `num_speculative_tokens`, `batch` sets
 speculation aside entirely and says so on startup. That was the right call when nothing could vary K at
@@ -83,6 +127,11 @@ the attention backend; verify exactness on the quality battery.
 
 ### G2. We do not know our acceptance on the workloads where acceptance is high
 
+**Measured 2026-10-13: answered, and the premise was wrong in our favour.** Greedy thinking-off: gsm8k 5.80,
+code 4.78, chat 3.50 tokens per step (196 / 157 / 106-118 tok/s C1). The drafter is not the deficit. The served
+template does accept `reasoning_effort` (omitted = `xhigh`) and `low` raises acceptance: code +21.9%, chat
++14.8% free-run, gsm8k +5.2%; thinking itself costs 15.7-23.3% of tokens per step against thinking off.
+
 Published DFlash2 acceptance for this model (`z-lab/Qwen3.8-27B-DFlash2`, SGLang, H200, block 8, `xhigh`,
 temp 1.0/top-p 0.95/top-k 20): **5.46 GSM8K, 5.28 MATH-500, 4.79 MBPP, 4.39 HumanEval, 4.10 MT-Bench**;
 against MTP 5.02/4.72/3.99/3.91/3.74 and DSpark 4.36/3.92/3.51/3.30/3.01. r0b0tlab measures 5.66 on GSM8K
@@ -108,6 +157,11 @@ Two known drivers of the number, both cheap to control:
 workload. This is a measurement we should own regardless of what it says.
 
 ### G3. Our own reproduction says attention backend and KV dtype are worth 1.7× on the same box
+
+**Measured 2026-10-13: the 1.7× did not reproduce on one card at 250 W; the capacity finding did.** Shipped
+`FLASH_ATTN`+bf16 is level with `TRITON_ATTN`+`int8_per_token_head` (+1.8%, noise); both FlashInfer arms are
+26-29% slower because spec decode downgrades their CUDA graphs to PIECEWISE. But the Triton arm holds 116,440
+KV tokens against 68,605 with 1 preemption against 20 at N=8 — same speed, ~70% more pool. Take the capacity.
 
 [reproductions/README.md](reproductions/README.md) already contains the sharpest number on this page: on
 2×3090 at 420 W, setup D as shipped reads 90.9 tok/s, and the *same profile* with
@@ -210,6 +264,11 @@ this — a community 4-bit-KV HIP attention lost to the Triton packed path (598 
 
 ### G9. The CUDA-graph capture set is probably costing us memory and speed
 
+**Measured 2026-10-13: lead, and the graph-memory claim was already collected.** `CG=40` +3.3% C1, `CG=40`
+with `CUDAGRAPH_MODE=FULL` +4.1% (the GDN layers refuse FULL, so the engine lands where the default already
+was); graph memory 0.13 → 0.12 GiB, not 3.7 → 0.3 GiB. In the 3-10% band, no strict A-B-A, and it cannot buy
+pool because `KV_MEM` pins the pool in bytes.
+
 [riceharvest/b70-qwen38-cookbook](https://github.com/riceharvest/b70-qwen38-cookbook) reports a capture set of
 `[1..40]` instead of the default ladder: **0.3 GiB vs 3.7 GiB of graph memory, and decode +5-19%**. On a 24 GB
 card that is ~3.4 GiB back for the KV pool *and* a faster step. We already carry graph-related patches
@@ -265,6 +324,11 @@ have already paid for:
 
 ### G12. Smaller decode-path items
 
+**Measured 2026-10-13: the draft-head item is dead.** The DFlash2 checkpoint carries no LM head of its own
+(`tensors whose name contains head/embed/vocab: []`) and vLLM's `_maybe_share_lm_head` points it at the
+target's, which is already int4-packed — there is no full-width draft head left to quantise. The verify-depth
+sweep and the suffix-decoding item stand.
+
 - **Draft head cost.** [b70](https://github.com/riceharvest/b70-qwen38-cookbook) quantises only the *draft* LM
   head (the target verifies on the full vocab, so it stays lossless): 4.3 → **2.2 ms per verify step**, +28K KV
   tokens, KL +0.0006. We already requantise the main lm_head; the draft head is the one still read at full
@@ -284,7 +348,9 @@ have already paid for:
 
 ## The backlog
 
-Ranked by expected tokens per second per unit of risk. "Config" means no patch is needed on our pin.
+Ranked by expected tokens per second per unit of risk, as written before the run. "Config" means no patch
+is needed on our pin. **The 2026-10-13 measurement supersedes the "expected" column** — rows 1 and 4 came in as
+leads, row 2 as an answer, row 5 as a capacity win rather than a speed one, and row 7 is not applicable (G12).
 
 | # | change | artifact | metric | expected | risk |
 |---|---|---|---|---|---|
@@ -320,7 +386,9 @@ catalogue still points at our drafter as the quantized option.
 - **Not verified, treat as leads**: the A100 fastpath's per-layer timings, the b70 cookbook's capture-set and
   draft-head numbers, open-jet's megakernel rows, ninfer's ReplaySSM mechanism, and any figure quoted from a
   repo whose README is the only source. None of them were reproduced on our card.
-- **Nothing here was measured on a 3090 by us.** There is no GPU in the environment this survey was written
-  in, so every "expected" column is an inference from someone else's measurement and should be treated as a
-  hypothesis to falsify with `bench/run_benchmarks.sh`.
+- **The survey was written without a GPU; the arms have since been run on one.** The seven arms in
+  [decode-speed-experiments.md](decode-speed-experiments.md) ran on the reference 3090 on 2026-10-13; raw logs,
+  memory traces and per-arm reports are in [bench/results/2026-10-13-SUMMARY.md](../bench/results/2026-10-13-SUMMARY.md),
+  and *What the 3090 measured* above is the digest. Every "expected" column in the gap sections is the
+  pre-measurement hypothesis; the measured note on a gap supersedes it.
 

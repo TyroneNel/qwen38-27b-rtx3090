@@ -1,5 +1,10 @@
 # Experiments to close the decode-speed gaps
 
+**Ran on the reference 3090 on 2026-10-13.** Results, raw logs and per-arm reports are in
+[../bench/results/2026-10-13-SUMMARY.md](../bench/results/2026-10-13-SUMMARY.md); the outcomes are digested in
+[decode-speed-landscape.md](decode-speed-landscape.md#what-the-3090-measured-2026-10-13). This file is kept as
+the protocol that was run, with the two places the run diverged from it marked below.
+
 The run list for [decode-speed-landscape.md](decode-speed-landscape.md): seven arms, each an A/B on one RTX
 3090, each with the metric and the pass/fail rule decided **before** the run. Written to be executed by an
 agent on the GPU box with no judgement calls; see [gpu-agent-brief.md](gpu-agent-brief.md) for that agent's
@@ -106,6 +111,11 @@ supports a K schedule per batch size, so the question is whether it recovers the
 
 - **A** — shipped: `DFLASH_TOKENS=7`, no schedule.
 - **B** — A plus a schedule in the spec config: `[[1,8,7],[9,32,3],[33,512,0]]`.
+
+**The schedule above cannot engage on this profile — measured.** At `MAX_SEQS=8` the pool holds at most 5
+resident requests at K=7, so a bucket starting at batch 9 is never reached; the run replaced it with a knee
+read off the ladder, `[[1,3,7],[4,512,3]]`, which improved the N=4 steady state by 8.0% (ms/pass 57 → 43 ms)
+with C1 unchanged. See the E1 report.
 
 **How to apply B without editing the repo.** The launcher builds its own `--speculative-config` from
 `SPEC_CFG` and passes it in `SPEC_ARGS`; `EXTRA_ARGS` is appended to the same command line. Whether a second
@@ -241,7 +251,11 @@ decode win).
 
 ## E7 — Draft-head quantisation (G12) — needs a new image, last
 
-**Why:** the draft LM head is read at full width every verify step; quantising only the *draft* head is
+**Not applicable — measured 2026-10-13.** The DFlash2 drafter carries no LM head of its own and shares the
+target's, which is already int4-packed, so there is no full-width draft head to quantise. The arm is kept
+for the record.
+
+**Why (as written):** the draft LM head is read at full width every verify step; quantising only the *draft* head is
 lossless by construction (the target verifies on the full vocabulary) and is reported at 4.3 → 2.2 ms per
 verify step.
 
