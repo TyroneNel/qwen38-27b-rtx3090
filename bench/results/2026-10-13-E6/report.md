@@ -20,11 +20,14 @@ Padding mamba page size by 3.23% to ensure that mamba page size and attention pa
 GPU KV cache size: 68,605 tokens, Maximum concurrency for 65,536 tokens per request: 1.05x
 ```
 
-Free VRAM after boot: 1,477 MiB in both. No line mentions 8192. The 0.31.0 source explains why the user's
-value may not survive: `platforms/interface.py` overwrites it (`cache_config.mamba_block_size =
-attn_block_size` after `chunk_size = lcm(base_chunk_size, kernel_block_alignment_size)`), and this repo
-patches `interface.py` (`hybrid-kv-groups` patches). Whether 8192 was honoured at a level the log does not
-print is **not verified**.
+Free VRAM after boot: 1,477 MiB in both. No line mentions 8192. In the image's `platforms/interface.py`, a
+user-specified value feeds `base_chunk_size = mamba_block_size or model_config.get_mamba_chunk_size()`, then
+`chunk_size = lcm(base_chunk_size, kernel_block_alignment_size)` and `attn_block_size = chunk_size *
+cdiv(...)` (`raw-mamba-block-size-source.log`). Read literally, 8192 would give an attention block of at
+least 8192 tokens. B logged `Setting attention block size to 448 tokens`, the same as A. That suggests 8192 did
+not reach this derivation, which would make the result "knob not applied". I did not read the branch condition
+around those lines, so this is **not verified**. No file in `patches/` touches `platforms/interface.py`
+(`grep` over `patches/` found no match), so the repo's patch series is not the cause.
 
 The pool could not have grown in any case: `KV_MEM` pins it in bytes, so 68,605 tokens is arithmetic, not a
 knob effect.
@@ -48,7 +51,7 @@ decode aggregate, so the printed TTFT is whichever rep it kept, not the cached-r
 listed individually. Cold/cached TTFT at block size 448 vs 8192 was therefore **not measured**. G10's claim is
 a prefix-cache TTFT effect, and the one thing this arm ran that could show it cannot be read from these logs.
 
-## Verdict: knob applied, no measurable effect found (inconclusive)
+## Verdict: inconclusive; likely knob not applied (attention block unchanged at 448), not verified
 
 The engine took the flag. The two visible knob effects — reported pool tokens and preemptions — are identical
 to A, the first because the pool is pinned in bytes, the second because the pool is the same size. The
