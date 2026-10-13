@@ -1,0 +1,6 @@
+# start 2026-10-13T13:46:05Z
+None 53 ['Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.<|im_end|>']
+low 41 ['Reasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.<|im_end|>']
+xhigh 53 ['Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.<|im_end|>']
+chat status ok, finish_reason stop
+# end 2026-10-13T13:46:05Z exit=0

@@ -1,0 +1,9 @@
+# start 2026-10-13T13:47:48Z
+# e4-low-1 think=True effort=low max_tokens=1024 chunk=128
+WACC e4-low-1 gsm8k CAPTURED n=176 -> /tmp/targets-e4-low/gsm8k.json
+WACC e4-low-1 gsm8k  prompt=127 target=176 chunks=2/2 steps=35 tok/step=5.143 accept=0.592 freerun_tok/step=5.176 decode_c1=171.4/171.6 tok/s firstbad=None
+WACC e4-low-1 code CAPTURED n=1024 -> /tmp/targets-e4-low/code.json
+WACC e4-low-1 code   prompt=126 target=1024 chunks=7/8 steps=186 tok/step=4.866 accept=0.552 freerun_tok/step=4.858 decode_c1=159.0/158.6 tok/s firstbad=403
+WACC e4-low-1 chat CAPTURED n=1024 -> /tmp/targets-e4-low/chat.json
+WACC e4-low-1 chat   prompt=77 target=1024 chunks=1/8 steps=35 tok/step=3.629 accept=0.376 freerun_tok/step=3.042 decode_c1=90.2/100.4 tok/s firstbad=243
+# end 2026-10-13T13:49:13Z exit=0

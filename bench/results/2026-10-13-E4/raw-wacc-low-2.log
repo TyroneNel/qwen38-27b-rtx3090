@@ -1,0 +1,6 @@
+# start 2026-10-13T13:50:35Z
+# e4-low-2 think=True effort=low max_tokens=1024 chunk=128
+WACC e4-low-2 gsm8k  prompt=127 target=176 chunks=2/2 steps=35 tok/step=5.143 accept=0.592 freerun_tok/step=5.176 decode_c1=175.9/175.2 tok/s firstbad=None
+WACC e4-low-2 code   prompt=126 target=1024 chunks=7/8 steps=186 tok/step=4.866 accept=0.552 freerun_tok/step=4.858 decode_c1=163.5/136.8 tok/s firstbad=403
+WACC e4-low-2 chat   prompt=77 target=1024 chunks=1/8 steps=35 tok/step=3.629 accept=0.376 freerun_tok/step=3.042 decode_c1=102.1/92.2 tok/s firstbad=243
+# end 2026-10-13T13:51:41Z exit=0

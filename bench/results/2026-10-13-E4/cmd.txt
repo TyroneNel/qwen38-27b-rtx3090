@@ -1,0 +1,41 @@
+2026-10-13T13:43:47Z [A] cp bench/results/2026-10-13-E4/.env.A .env
+2026-10-13T13:43:47Z [A] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E4/mem-trace-A.csv
+2026-10-13T13:43:48Z [A] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T13:46:04Z [A] healthy after 135 s
+2026-10-13T13:46:05Z [template-check] docker compose --profile single exec -T single bash -lc 'cd /app/bench && /app/venv/bin/python -c "
+import harness,json
+for e in [None,\"low\",\"xhigh\"]:
+    kw={\"enable_thinking\":True}
+    if e: kw[\"reasoning_effort\"]=e
+    r=harness.post(\"/tokenize\",{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"add_generation_prompt\":True,\"chat_template_kwargs\":kw})
+    d=harness.post(\"/detokenize\",{\"tokens\":r[\"tokens\"]})[\"prompt\"]
+    print(e, len(r[\"tokens\"]), [l for l in d.splitlines() if \"effort\" in l])
+r=harness.post(\"/v1/chat/completions\",{\"messages\":[{\"role\":\"user\",\"content\":\"What is 2+2?\"}],\"max_tokens\":64,\"chat_template_kwargs\":{\"enable_thinking\":True,\"reasoning_effort\":\"low\"}})
+print(\"chat status ok, finish_reason\", r[\"choices\"][0][\"finish_reason\"])
+"'
+2026-10-13T13:46:05Z [wacc-default-1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py e4-default-1 --targets /tmp/targets-e4-default --think 1 '
+2026-10-13T13:47:48Z [wacc-low-1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py e4-low-1 --targets /tmp/targets-e4-low --think 1 --effort low'
+2026-10-13T13:49:13Z [wacc-default-2] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py e4-default-2 --targets /tmp/targets-e4-default --think 1 '
+2026-10-13T13:50:35Z [wacc-low-2] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py e4-low-2 --targets /tmp/targets-e4-low --think 1 --effort low'
+2026-10-13T13:51:41Z [A] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

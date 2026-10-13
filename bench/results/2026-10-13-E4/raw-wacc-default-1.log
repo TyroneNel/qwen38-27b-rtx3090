@@ -1,0 +1,9 @@
+# start 2026-10-13T13:46:05Z
+# e4-default-1 think=True effort=<template default> max_tokens=1024 chunk=128
+WACC e4-default-1 gsm8k CAPTURED n=383 -> /tmp/targets-e4-default/gsm8k.json
+WACC e4-default-1 gsm8k  prompt=139 target=383 chunks=2/3 steps=53 tok/step=4.887 accept=0.555 freerun_tok/step=4.728 decode_c1=115.4/175.6 tok/s firstbad=276
+WACC e4-default-1 code CAPTURED n=1024 -> /tmp/targets-e4-default/code.json
+WACC e4-default-1 code   prompt=138 target=1024 chunks=4/8 steps=129 tok/step=3.992 accept=0.427 freerun_tok/step=3.559 decode_c1=128.2/110.0 tok/s firstbad=224
+WACC e4-default-1 chat CAPTURED n=1024 -> /tmp/targets-e4-default/chat.json
+WACC e4-default-1 chat   prompt=89 target=1024 chunks=5/8 steps=239 tok/step=2.682 accept=0.240 freerun_tok/step=2.649 decode_c1=81.8/88.8 tok/s firstbad=307
+# end 2026-10-13T13:47:48Z exit=0
