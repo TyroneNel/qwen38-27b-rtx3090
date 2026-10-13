@@ -1,0 +1,81 @@
+637:    "DFlash2DraftModel": ("qwen3_dflash2", "DFlash2Qwen3ForCausalLM"),
+file: model_executor/models/qwen3_dflash2.py
+256:            # emits the block its checkpoint was trained for even when the target verifies a
+387:        # Without its own tag the selector shares the draft head's compile cache.
+419:            self.lm_head, hidden_states, self.model.candidate_selector.top_k
+170:class DFlashGroupedConv(nn.Module):
+229:class DFlash2Qwen3DecoderLayer(DFlashQwen3DecoderLayer):
+321:class CandidateSelector(nn.Module):
+368:class DFlash2Qwen3Model(DFlashQwen3Model):
+384:        self.input_embedding_scale = float(
+385:            draft_config.get("input_embedding_scale", 1.0)
+398:    def embed_input_ids(self, input_ids: torch.Tensor) -> torch.Tensor:
+399:        return super().embed_input_ids(input_ids) * self.input_embedding_scale
+402:class DFlash2Qwen3ForCausalLM(DFlashQwen3ForCausalLM):
+419:            self.lm_head, hidden_states, self.model.candidate_selector.top_k
+v1/spec_decode/draft_model.py:120:    def _maybe_share_lm_head(self, target_language_model: nn.Module) -> None:
+v1/spec_decode/gemma4.py:194:    def _maybe_share_lm_head(self, target_language_model: nn.Module) -> None:
+v1/spec_decode/llm_base_proposer.py:1399:        self._maybe_share_lm_head(target_language_model)
+v1/spec_decode/llm_base_proposer.py:1508:    def _maybe_share_lm_head(self, target_language_model: nn.Module) -> None:
+v1/spec_decode/llm_base_proposer.py:1513:        share_lm_head = False
+v1/spec_decode/llm_base_proposer.py:1517:                share_lm_head = True
+v1/spec_decode/llm_base_proposer.py:1535:                share_lm_head = True
+v1/spec_decode/llm_base_proposer.py:1547:            share_lm_head = True
+v1/spec_decode/llm_base_proposer.py:1553:        if share_lm_head and hasattr(target_language_model, "lm_head"):
+v1/spec_decode/llm_base_proposer.py:1556:            self.model.lm_head = target_language_model.lm_head
+v1/spec_decode/step3p5.py:156:    def _maybe_share_lm_head(self, target_language_model: torch.nn.Module) -> None:
+  PASS  lm_head requantized to int4, packed geometry matches the declared width (prepare/quant_lm_head.py / fast variant)
+  PASS  fast variant present (int4-GPTQ lm_head/MTP, own-output draft vocab)
+    def _maybe_share_lm_head(self, target_language_model: nn.Module) -> None:
+        """Some draft models may not have their own LM head, and some may have a
+        duplicate copy of the target model's LM head. In these cases, we share
+        the target model's LM head with the draft model to save memory.
+        """
+        share_lm_head = False
+        if hasattr(self.model, "has_own_lm_head"):
+            # EAGLE model
+            if not self.model.has_own_lm_head:
+                share_lm_head = True
+                logger.info(
+                    "Detected EAGLE model without its own lm_head in the checkpoint. "
+                    "Sharing target model lm_head weights with the draft model."
+                )
+            elif (
+                hasattr(target_language_model, "lm_head")
+                and hasattr(target_language_model.lm_head, "weight")
+                and hasattr(self.model.lm_head, "weight")
+                and isinstance(target_language_model.lm_head.weight, torch.Tensor)
+                and isinstance(self.model.lm_head.weight, torch.Tensor)
+                # TODO: Offload to CPU for comparison to avoid extra GPU memory
+                # usage in CI testing environments with limited GPU memory
+                and torch.equal(
+                    target_language_model.lm_head.weight.cpu(),
+                    self.model.lm_head.weight.cpu(),
+                )
+            ):
+                share_lm_head = True
+                logger.info(
+                    "Detected EAGLE model with lm_head identical to the target model. "
+                    "Sharing target model lm_head weights with the draft model."
+                )
+            else:
+                logger.info(
+                    "Detected EAGLE model with distinct lm_head weights. "
+                    "Keeping separate lm_head weights from the target model."
+                )
+        else:
+            # MTP model
+            share_lm_head = True
+            logger.info(
+                "Detected MTP model. "
+                "Sharing target model lm_head weights with the draft model."
+            )
+
+        if share_lm_head and hasattr(target_language_model, "lm_head"):
+            if hasattr(self.model, "lm_head"):
+                del self.model.lm_head
+            self.model.lm_head = target_language_model.lm_head
+
+            # MTP models call compute_logits via shared_head.head (a
+            # ParallelLMHead inside each MTP layer), not self.model.lm_head.
+            # If the checkpoint omits a copy of the lm_head weights at the

@@ -1,0 +1,6 @@
+# 2026-10-13T13:53:06Z host python, reading safetensors headers under G:/models (read-only)
+Qwen3.8-27B-DFlash2-W4A16/model.safetensors tensors: 153
+tensors whose name contains head/embed/vocab: []
+first/last tensor names: ['candidate_selector.hidden_projection.weight', 'candidate_selector.predecessor_codebook', 'candidate_selector.successor_codebook'] ['layers.4.self_attn.v_proj.weight_scale', 'layers.4.self_attn.v_proj.weight_shape', 'norm.weight']
+drafter config: {'architectures': ['DFlash2DraftModel'], 'tie_word_embeddings': False, 'vocab_size': 248320, 'draft_vocab_size': None}
+Qwen3.8-27B-W4A16-AutoRound-fast head tensors: ['lm_head.weight_packed', 'lm_head.weight_scale', 'lm_head.weight_shape', 'mtp.draft_lm_head.weight_packed', 'mtp.draft_lm_head.weight_scale', 'mtp.draft_lm_head.weight_shape']
