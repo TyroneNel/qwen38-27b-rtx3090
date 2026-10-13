@@ -1,0 +1,3 @@
+# after ladder B-2long 2026-10-13T14:54:45Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23412 MiB, 915 MiB, 250.00 W, 239.57 W, 79, 1065 MHz

@@ -1,0 +1,17 @@
+# start 2026-10-13T14:45:20Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=1, N=1
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       121.3      120.2      42.9      3.37       3.4     27.9        0   23.7    1     3836  121/121/121
+
+| N | 1 |
+|---|---|
+| per-stream tok/s | 121.3 |
+| decode aggregate tok/s | 120 |
+| end-to-end aggregate tok/s | 43 |
+| tok/step | 3.37 |
+| tok/pass | 3.4 |
+| ms/pass | 27.9 |
+| preemptions | 0 |
+
+wrote /tmp/ladder-A-discard.json
+# end 2026-10-13T14:45:26Z exit=0

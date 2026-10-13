@@ -1,0 +1,60 @@
+2026-10-13T14:43:02Z [A] cp bench/results/2026-10-13-E6/.env.A .env
+2026-10-13T14:43:02Z [A] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E6/mem-trace-A.csv
+2026-10-13T14:43:02Z [A] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T14:45:19Z [A] healthy after 135 s
+2026-10-13T14:45:20Z [A-discard] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --reps 1 --json /tmp/ladder-A-discard.json
+2026-10-13T14:45:27Z [A-2long] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 2 --ctx-tokens 24000 --out 256 --reps 1 --json /tmp/ladder-A-2long.json
+2026-10-13T14:46:20Z [A-n16] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 16 --json /tmp/ladder-A-n16.json
+2026-10-13T14:50:41Z [A-shared] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --ctx-tokens 24000 --out 128 --reps 3 --shared --json /tmp/ladder-A-shared.json
+2026-10-13T14:51:12Z [A] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-13T14:51:27Z [B] cp bench/results/2026-10-13-E6/.env.B .env
+2026-10-13T14:51:27Z [B] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E6/mem-trace-B.csv
+2026-10-13T14:51:28Z [B] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T14:53:45Z [B] healthy after 136 s
+2026-10-13T14:53:45Z [B-discard] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --reps 1 --json /tmp/ladder-B-discard.json
+2026-10-13T14:53:53Z [B-2long] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 2 --ctx-tokens 24000 --out 256 --reps 1 --json /tmp/ladder-B-2long.json
+2026-10-13T14:54:46Z [B-n16] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 16 --json /tmp/ladder-B-n16.json
+2026-10-13T14:59:06Z [B-shared] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --ctx-tokens 24000 --out 128 --reps 3 --shared --json /tmp/ladder-B-shared.json
+2026-10-13T14:59:36Z [B] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

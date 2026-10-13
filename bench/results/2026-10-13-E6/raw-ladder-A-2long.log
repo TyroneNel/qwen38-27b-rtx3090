@@ -1,0 +1,17 @@
+# start 2026-10-13T14:45:27Z
+prompts: distinct, ~24000 ctx tokens, out=256, reps=1, N=2
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 2        46.0      143.7      10.2      3.34       6.2     42.9        0   89.4    2    36020  10/82/82
+
+| N | 2 |
+|---|---|
+| per-stream tok/s | 46.0 |
+| decode aggregate tok/s | 144 |
+| end-to-end aggregate tok/s | 10 |
+| tok/step | 3.34 |
+| tok/pass | 6.2 |
+| ms/pass | 42.9 |
+| preemptions | 0 |
+
+wrote /tmp/ladder-A-2long.json
+# end 2026-10-13T14:46:20Z exit=0

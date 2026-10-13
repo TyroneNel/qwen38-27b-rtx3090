@@ -1,0 +1,58 @@
+2026-10-13T13:52:15Z [B] cp bench/results/2026-10-13-E5/.env.B .env
+2026-10-13T13:52:15Z [B] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E5/mem-trace-B.csv
+2026-10-13T13:52:15Z [B] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T13:57:29Z [B] healthy after 313 s
+2026-10-13T13:57:29Z [B] docker compose --profile single exec -T single env OUT=/tmp/rb-B-1 bash bench/run_benchmarks.sh single
+2026-10-13T14:06:29Z [B] docker compose --profile single exec -T single env OUT=/tmp/rb-B-2 bash bench/run_benchmarks.sh single
+2026-10-13T14:15:18Z [B] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,8 --json /tmp/ladder-B.json
+2026-10-13T14:17:23Z [B] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-13T14:17:37Z [C] cp bench/results/2026-10-13-E5/.env.C .env
+2026-10-13T14:17:37Z [C] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E5/mem-trace-C.csv
+2026-10-13T14:17:40Z [C] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T14:22:54Z [C] healthy after 313 s
+2026-10-13T14:22:55Z [C] docker compose --profile single exec -T single env OUT=/tmp/rb-C-1 bash bench/run_benchmarks.sh single
+2026-10-13T14:31:54Z [C] docker compose --profile single exec -T single env OUT=/tmp/rb-C-2 bash bench/run_benchmarks.sh single
+2026-10-13T14:40:41Z [C] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,8 --json /tmp/ladder-C.json
+2026-10-13T14:42:47Z [C] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

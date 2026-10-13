@@ -1,0 +1,6 @@
+image tag: hyperqwen:exp-e7fb509 (also ghcr.io/syv-ai/hyperqwen:latest, same ID; built locally by `docker compose build single`, not pulled)
+image ID (every boot, raw-image-<label>.log): sha256:01b36e7b1393147fe5876cb8c7043c52003bf6e03a1d14c04cdced8363502463
+commit built from: e7fb509 (b9c2220 + bench/results/2026-10-13-preflight only; bench/results is .dockerignored, so the image content is b9c2220's)
+boot class: container (Docker Desktop 29.8.2, WSL2 backend), compile cache in the pre-existing named volume hyperqwen_qwen-cache
+engine: vLLM 0.31.0 (pip show inside the image, ../2026-10-13-image/raw-engine-probe.log)
+GPU: RTX 3090 GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84 pinned via CUDA_VISIBLE_DEVICES/NVIDIA_VISIBLE_DEVICES (raw-cmdline-<label>.log), power.limit 250.00 W

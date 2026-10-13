@@ -1,0 +1,17 @@
+# start 2026-10-13T14:59:06Z
+prompts: shared, ~24000 ctx tokens, out=128, reps=3, N=1
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       120.0      120.9       5.1      4.03       4.0     32.8        0   47.5    1    23810  120/120/120
+
+| N | 1 |
+|---|---|
+| per-stream tok/s | 120.0 |
+| decode aggregate tok/s | 121 |
+| end-to-end aggregate tok/s | 5 |
+| tok/step | 4.03 |
+| tok/pass | 4.0 |
+| ms/pass | 32.8 |
+| preemptions | 0 |
+
+wrote /tmp/ladder-B-shared.json
+# end 2026-10-13T14:59:35Z exit=0

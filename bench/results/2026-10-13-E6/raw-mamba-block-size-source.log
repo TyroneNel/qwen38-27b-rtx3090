@@ -1,0 +1,143 @@
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:82:    user_specified_mamba_block_size: bool = field(default=False, init=False)
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:83:    """Whether mamba_block_size was explicitly provided. Derived automatically."""
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:182:    mamba_block_size: int | None = Field(default=None, gt=0)
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:218:    mode flushes are most efficient when mamba_block_size is a multiple of
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:297:            "user_specified_mamba_block_size",
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:341:        if self.mamba_block_size is not None:
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:342:            self.user_specified_mamba_block_size = True
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py:1423:            # hybrid mamba hook setting `mamba_block_size`) already see prefix
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py:3433:    def validate_mamba_block_size(self) -> "VllmConfig":
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py:3436:        mamba_block_size_is_set = (
+/app/venv/lib/python3.12/site-packages/vllm/platforms/interface.py
+/app/venv/lib/python3.12/site-packages/vllm/platforms/xpu.py
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/checkpoint.py
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/mamba_mixer2.py
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/abstract.py
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/mamba_mixer.py
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/models/config.py
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/models/colbert.py
+    def validate_mamba_block_size(self) -> "VllmConfig":
+        if self.model_config is None:
+            return self
+        mamba_block_size_is_set = (
+            self.cache_config.mamba_block_size is not None
+            and self.cache_config.mamba_block_size != self.model_config.max_model_len
+        )
+        if mamba_block_size_is_set and not self.cache_config.enable_prefix_caching:
+            raise ValueError(
+                "--mamba-block-size can only be set with --enable-prefix-caching"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_mamba_cached_kernel(self) -> "VllmConfig":
+        if not self.cache_config.use_replayssm:
+            self.cache_config.use_kda_recoverssm = False
+            return self
+        self.cache_config.use_kda_recoverssm = self.num_speculative_tokens > 0
+
+        if self.model_config is not None and not self.model_config.supports_replayssm:
+            raise ValueError(
+                "--use-replayssm is not supported for architecture "
+                f"{self.model_config.architecture!r}"
+            )
+        if self.cache_config.use_kda_recoverssm:
+            if self.model_config is not None and self.model_config.architecture not in (
+                "KimiLinearForCausalLM",
+                "KimiK3ForConditionalGeneration",
+            ):
+                raise ValueError("RecoverSSM is only supported for Kimi-K3 KDA")
+            if self.mamba_config.enable_stochastic_rounding:
+                raise ValueError(
+                    "RecoverSSM supports bfloat16/float32 "
+                    "SSM state caches, not --enable-mamba-cache-stochastic-"
+                    "rounding, which requires an explicit float16 cache"
+                )
+            if self.cache_config.mamba_cache_mode not in ("none", "align"):
+666:            if cache_config.mamba_block_size is None:
+667:                cache_config.mamba_block_size = cache_config.block_size
+674:            if cache_config.mamba_block_size is None:
+675:                cache_config.mamba_block_size = model_config.max_model_len
+959:        # mamba_block_size here should either be user specified value or None
+960:        mamba_block_size = (
+961:            cache_config.mamba_block_size
+962:            if cache_config.user_specified_mamba_block_size
+963-            else None
+964-        )
+965-
+966-        # Get kernel block alignment from the backend's supported sizes
+967-        with set_current_vllm_config(vllm_config):
+968-            kernel_block_alignment_size = max(
+--
+987:            base_chunk_size = mamba_block_size or model_config.get_mamba_chunk_size()
+988-            assert base_chunk_size is not None
+989-            attn_tokens_per_mamba_state = cdiv(mamba_page_size, attn_page_size_1_token)
+990-            chunk_size = lcm(base_chunk_size, kernel_block_alignment_size)
+991-            attn_block_size = chunk_size * cdiv(attn_tokens_per_mamba_state, chunk_size)
+992:            cache_config.mamba_block_size = attn_block_size
+993-        else:
+994-            # Without prefix caching, use minimum block size that satisfies
+995-            # both backend alignment and mamba page size compatibility
+996-            attn_block_size = kernel_block_alignment_size * cdiv(
+997-                mamba_page_size,
+998-                kernel_block_alignment_size * attn_page_size_1_token,
+--
+1013:            cache_config.mamba_block_size = cache_config.block_size
+1014-
+1015-        # Pad mamba page size to exactly match attention page size
+1016-        attn_page_size = cache_config.block_size * attn_page_size_1_token
+1017-        assert attn_page_size >= mamba_page_size
+1018-
+660-                assert vllm_config.scheduler_config.enable_chunked_prefill, (
+661-                    "Chunked prefill is required for mamba cache mode 'align'."
+662-                )
+663-            # By default, mamba block size will be set to max_model_len (see
+664-            # below). When enabling prefix caching, we align mamba block size
+665-            # to the block size as the basic granularity for prefix caching.
+666:            if cache_config.mamba_block_size is None:
+667:                cache_config.mamba_block_size = cache_config.block_size
+668-        else:
+669-            if cache_config.mamba_cache_mode != "none":
+670-                cache_config.mamba_cache_mode = "none"
+671-                logger.warning(
+672-                    "Mamba cache mode is set to 'none' when prefix caching is disabled"
+673-                )
+674:            if cache_config.mamba_block_size is None:
+675:                cache_config.mamba_block_size = model_config.max_model_len
+676-
+677-
+678-class NemotronHForCausalLMConfig(VerifyAndUpdateConfig):
+679-    DEFAULT_MAMBA_SSM_CACHE_DTYPE: "MambaDType" = "float32"
+680-    """Only `float32` is known to have no accuracy issues by default."""
+681-
+682-    @classmethod
+683-    def update_mamba_ssm_cache_dtype(
+684-        cls, *, cache_config: "CacheConfig", hf_config: "PreTrainedConfig"
+685-    ) -> None:
+
+        self._resolve_mm_encoder_only()
+
+        if self.is_mm_encoder_only and self.cache_config.enable_prefix_caching:
+            # Such an instance publishes encoder embeddings and runs no language
+            # model, so it holds no KV cache for prefix caching to reuse and its
+            # coordinator would have no group to manage. Disable before
+            # `try_verify_and_update_config` so model config hooks (e.g. the
+            # hybrid mamba hook setting `mamba_block_size`) already see prefix
+            # caching as disabled.
+            logger.info(
+                "Disabling prefix caching: this instance runs the "
+                "multi-modal encoder only."
+            )
+            self.cache_config.enable_prefix_caching = False
+
+        if self.performance_mode != "balanced":
+            logger.info_once("Performance mode set to '%s'.", self.performance_mode)
+
+        self.try_verify_and_update_config()
+        self._resolve_and_verify_engram_config()
