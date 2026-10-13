@@ -53,7 +53,7 @@ a prefix-cache TTFT effect, and the one thing this arm ran that could show it ca
 
 ## Verdict: inconclusive; likely knob not applied (attention block unchanged at 448), not verified
 
-The engine took the flag. The two visible knob effects — reported pool tokens and preemptions — are identical
+The engine's args show the flag, but the derived attention block did not change. The two visible knob effects — reported pool tokens and preemptions — are identical
 to A, the first because the pool is pinned in bytes, the second because the pool is the same size. The
 checkpoint-cadence effect G10 is about produces no line in this engine's log, and the TTFT probe was not
 designed well enough to read it. On this pin, this arm needs a checkpoint-counting metric (or a `--metrics`
