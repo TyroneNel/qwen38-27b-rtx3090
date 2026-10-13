@@ -49,6 +49,34 @@ version — ours is an RTX 3090 pinned at 250 W. Peak VRAM is comparable (23.0 v
 22.1 GiB at C8). The gap is mostly vLLM's continuous batching plus the memory this
 repo's requantization frees up.
 
+## Single-stream by workload
+
+The single-stream headline elsewhere in these docs (127 tok/s) is 8 mixed chat prompts at model-default
+sampling. Acceptance is a property of the workload, so that number is the hard end of this stack's range, not
+its rate. Measured 2026-10-13 on the reference 3090 at 250 W, greedy, thinking off, shipped `CTX=fast`
+(`SPEC=dflash2`, `PREFIX_CACHE=1`, `DFLASH_TOKENS=7`, `KV_MEM=5583457484`, `MAX_LEN=65536`), container boot:
+
+| workload | tokens/step | accept rate (of 7 drafts) | C1 decode, tok/s |
+|---|---:|---:|---:|
+| GSM8K | **5.80** | 0.685 | **196.0-196.8** |
+| code (one commented function) | **4.78** | 0.541 | **156.6-157.2** |
+| mixed chat ([`bench/prompts_real.jsonl`](../bench/prompts_real.jsonl)) | 3.50 | 0.357 | 106-118 |
+
+Tokens/step is teacher-forced (prefix-resync against a frozen continuation), so it is the noise-free column;
+the decode column is free-running and carries about 10% run-to-run spread. Raw logs, frozen targets and the
+method: [bench/results/2026-10-13-E3/](../bench/results/2026-10-13-E3/report.md).
+
+Read it as a lead, not a benchmark: one prompt per workload. The chat row is computed over 4 of its 8 chunks
+(greedy ties diverged from token 497), which biases it slightly high, and the GSM8K target stopped on its own at
+226 tokens. What it does establish is that the drafter's ~3.3-3.5 on our chat protocol is the workload, not the
+W4A16 requant — on math and code this stack accepts 1.37-1.66× more per step.
+
+That also makes GSM8K the row to compare against other engines with, because that is the row they publish. The
+one same-card competitor row above (r0b0tlab, 162.9 tok/s, acceptance 5.66) is GSM8K greedy with 512 new tokens
+at ctx 8192, so it is not yet like-for-like against these numbers — a protocol-matched run is scheduled in
+[batch 2](decode-speed-batch2.md#session-3--a-publishable-comparison-and-the-effort-gate-about-60-minutes).
+
+
 ## Quality
 
 The whole stack is quantized, so the honest question is what it costs. Short
