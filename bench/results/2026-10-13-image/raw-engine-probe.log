@@ -1,0 +1,34 @@
+ Container hyperqwen-single-run-a896692ee38c Creating 
+ Container hyperqwen-single-run-a896692ee38c Created 
+Name: vllm
+Version: 0.31.0
+--- dynamic K field
+492:    num_speculative_tokens_per_batch_size: list[tuple[int, int, int]] | None = None
+1955:        return self.num_speculative_tokens_per_batch_size is not None
+venv/lib/python3.12/site-packages/vllm/v1/spec_decode/dynamic/utils.py
+venv/lib/python3.12/site-packages/vllm/v1/spec_decode/dynamic/__pycache__/utils.cpython-312.pyc
+venv/lib/python3.12/site-packages/vllm/v1/worker/gpu/cudagraph_utils.py
+venv/lib/python3.12/site-packages/vllm/v1/worker/gpu/__pycache__/cudagraph_utils.cpython-312.pyc
+venv/lib/python3.12/site-packages/vllm/v1/core/sched/__pycache__/scheduler.cpython-312.pyc
+venv/lib/python3.12/site-packages/vllm/v1/core/sched/scheduler.py
+--- mamba flags
+MambaConfig:
+  Configuration for Mamba SSM backends.
+  --enable-mamba-cache-stochastic-rounding, --no-enable-mamba-cache-stochastic-rounding
+  --mamba-backend MAMBA_BACKEND
+                        Mamba SSU backend to use. (default:
+                        MambaBackendEnum.TRITON)
+  --mamba-cache-philox-rounds MAMBA_CACHE_PHILOX_ROUNDS
+  --mamba-ssu-algorithm {auto,horizontal,simple,vertical,None}
+  --enable-mamba-shared-prefix-checkpoint, --no-enable-mamba-shared-prefix-checkpoint
+                        Also register a Mamba "align" checkpoint at the
+                        `mamba_cache_mode` "align", EAGLE on the Mamba group,
+                        and a prefix match unit smaller than the Mamba block
+  --mamba-block-size MAMBA_BLOCK_SIZE
+                        for mamba cache. Can be set only when prefix caching
+  --mamba-cache-dtype {auto,bfloat16,float16,float32}
+                        The data type to use for the Mamba cache (both the
+  --mamba-cache-mode {align,all,none}
+                        The cache strategy for Mamba layers:
+                        - "all": cache the mamba state of all tokens at
+                        - "align": only cache the mamba state of the last

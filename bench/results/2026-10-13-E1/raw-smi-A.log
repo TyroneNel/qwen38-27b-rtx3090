@@ -1,0 +1,15 @@
+# before boot 2026-10-13T09:07:57Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 20.57 W, 44, 210 MHz
+# after boot, before any request 2026-10-13T09:13:41Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22856 MiB, 1471 MiB, 250.00 W, 65.39 W, 56, 210 MHz
+# after bench A-1 2026-10-13T09:23:30Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23406 MiB, 921 MiB, 250.00 W, 209.98 W, 79, 1875 MHz
+# after bench A-2 2026-10-13T09:32:29Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23406 MiB, 921 MiB, 250.00 W, 211.74 W, 80, 1890 MHz
+# after ladder A 2026-10-13T09:49:08Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23904 MiB, 423 MiB, 250.00 W, 237.56 W, 78, 1890 MHz

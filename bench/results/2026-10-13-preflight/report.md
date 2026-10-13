@@ -78,17 +78,22 @@ display deduction (gotcha 31).
 from earlier sessions. The arms reuse it, so the first boot may be a warm-cache boot. Its contents were not
 verified.
 
-**Idle Shared Usage baseline.** There are three adapter instances. I mapped them by dedicated usage against
-`nvidia-smi`:
+**Idle Shared Usage baseline.** There are three adapter instances. My preflight guess at the mapping was wrong.
+The first boot (E1-A, `../2026-10-13-E1/mem-trace-A.csv`) corrected it: the 3090 is `..114dd`. Its Dedicated
+Usage rose from 4.0 to 22,859.8 MiB while `nvidia-smi` showed 22,856 MiB used on GPU 0. `..1358d` stayed at
+0 throughout.
 
-| LUID | Dedicated | Shared | Card |
+| LUID | Idle dedicated | Idle shared | Card |
 |---|---|---|---|
-| `luid_0x00000000_0x0001358d_phys_0` | 0 | 8,192 B | 3090: 0 MiB used in `nvidia-smi`. The first boot confirms the mapping. |
+| `luid_0x00000000_0x000114dd_phys_0` | 4,227,072 B | 262,144 B (0.25 MiB) | 3090, confirmed by the E1-A boot |
 | `luid_0x00000000_0x0001252b_phys_0` | 554,065,920 B | 95.1-95.4 MB (90.7-91.0 MiB) | 3080 Ti, display card |
-| `luid_0x00000000_0x000114dd_phys_0` | 4,227,072 B | 262,144 B | Not identified |
+| `luid_0x00000000_0x0001358d_phys_0` | 0 | 8,192 B | Not identified. It stays at 0 when the 3090 loads. |
 
-The brief's "~86 MiB" baseline matches the display card's figure, not the headless 3090's. On this box the
-3090's idle Shared Usage is 8 KiB, flat across all six samples. Every spill check below uses the 3090's LUID
-against that baseline.
+The 3090's idle Shared Usage is 0.25 MiB and stays flat across all six samples. It is not ~86 MiB. In E1-A it
+jumped to 80.2 MiB at the sample where the engine created its CUDA context (dedicated 391.6 MiB) and settled at
+92.2 MiB once the weights loaded. That happened with 1,471 MiB still free on the card, so it is the engine's
+fixed host-side mapping, not a spill. The spill reference for every arm is therefore the loaded engine's own
+floor: the minimum Shared Usage over samples with Dedicated above 20,000 MiB. Any sample more than 16 MiB above
+that floor is flagged (`../2026-10-13-tools/memsum.sh`).
 
 **Free VRAM before load:** 3090 `24576 MiB, 0 MiB, 24326 MiB` (total, used, free).
