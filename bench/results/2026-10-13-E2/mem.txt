@@ -378,3 +378,197 @@ samples=171  max dedicated=23151.9 MiB  max shared=172.2 MiB  loaded-engine shar
   POSSIBLE SPILL 2026-10-13T15:07:07 shared=172.2 MiB dedicated=23151.9 MiB
   POSSIBLE SPILL 2026-10-13T15:07:17 shared=172.2 MiB dedicated=23151.9 MiB
 
+=== C2: engine memory lines (raw-boot-C2.log) ===
+(APIServer pid=1) INFO 10-13 13:08:41 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'po
+(EngineCore pid=138) INFO 10-13 13:08:53 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRou
+(EngineCore pid=138) INFO 10-13 13:08:57 [cuda.py:532] Using AttentionBackendEnum.FLASHINFER backend.
+(EngineCore pid=138) INFO 10-13 13:10:20 [cuda.py:592] Using FLASHINFER attention backend out of potential backends: ['FLASHINFER', 'TRITON_ATTN'].
+(EngineCore pid=138) INFO 10-13 13:10:27 [model_runner.py:410] Model loading took 15.33 GiB memory and 90.315373 seconds
+(EngineCore pid=138) INFO 10-13 13:10:33 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.2 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of
+(EngineCore pid=138) INFO 10-13 13:10:33 [kv_cache_utils.py:2659] GPU KV cache size: 67,931 tokens, Maximum concurrency for 65,536 tokens per request: 1.04x
+(EngineCore pid=138) INFO 10-13 13:10:33 [flashinfer.py:903] FlashInfer resolved query dtypes: prefill=torch.bfloat16, decode=torch.bfloat16, decode_backend=flashinfer-native, kv_cache_dtype=torch.float8_e4m3fn, arch=sm86
+(EngineCore pid=138) WARNING 10-13 13:10:33 [compilation.py:1462] CUDAGraphMode.FULL_AND_PIECEWISE is not supported with spec-decode for attention backend FlashInferBackend (support: AttentionCGSupport.UNIFORM_SINGLE_TOKEN_DECODE); setting cudagraph_mode=PIECEWISE
+(EngineCore pid=138) INFO 10-13 13:10:38 [model_runner.py:1102] Graph capturing finished in 4 secs, took 0.11 GiB (driver free-memory delta 0.23 GiB)
+
+=== C2: nvidia-smi, GPU 0 = 3090 (raw-smi-C2.log) ===
+# before boot 2026-10-13T13:08:30Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 22.31 W, 60, 210 MHz
+# after boot, before any request 2026-10-13T13:10:45Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 21640 MiB, 2687 MiB, 250.00 W, 22.07 W, 58, 210 MHz
+# after bench C2-1 2026-10-13T13:21:34Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22006 MiB, 2321 MiB, 250.00 W, 185.80 W, 82, 1890 MHz
+# after bench C2-2 2026-10-13T13:32:16Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22068 MiB, 2259 MiB, 250.00 W, 210.42 W, 82, 1875 MHz
+# after ladder C2 2026-10-13T13:34:05Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22542 MiB, 1785 MiB, 250.00 W, 230.55 W, 80, 1140 MHz
+
+=== C2: 3090 adapter counters (luid_0x00000000_0x000114dd_phys_0) from mem-trace-C2.csv ===
+samples=154  max dedicated=22761.8 MiB  max shared=220.2 MiB  loaded-engine shared floor=84.2 MiB
+  POSSIBLE SPILL 2026-10-13T15:10:42 shared=220.2 MiB dedicated=21644.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:10:52 shared=220.2 MiB dedicated=21644.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:11:02 shared=220.2 MiB dedicated=21940.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:11:12 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:11:22 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:11:32 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:11:42 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:11:52 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:12:02 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:12:12 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:12:22 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:12:32 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:12:42 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:12:52 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:13:02 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:13:12 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:13:22 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:13:32 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:13:42 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:13:52 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:14:03 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:14:13 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:14:23 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:14:33 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:14:43 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:14:53 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:15:03 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:15:13 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:15:23 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:15:33 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:15:43 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:15:53 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:16:03 shared=220.2 MiB dedicated=21952.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:16:13 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:16:23 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:16:33 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:16:43 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:16:53 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:17:03 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:17:13 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:17:23 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:17:33 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:17:44 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:17:54 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:18:04 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:18:14 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:18:24 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:18:34 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:18:44 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:18:54 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:19:04 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:19:14 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:19:24 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:19:34 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:19:44 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:19:54 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:20:04 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:20:14 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:20:24 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:20:34 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:20:44 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:20:54 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:21:04 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:21:14 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:21:24 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:21:35 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:21:45 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:21:55 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:22:05 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:22:15 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:22:25 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:22:35 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:22:45 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:22:55 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:23:05 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:23:15 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:23:25 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:23:35 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:23:45 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:23:55 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:24:05 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:24:15 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:24:25 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:24:35 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:24:45 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:24:55 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:25:05 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:25:15 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:25:26 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:25:36 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:25:46 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:25:56 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:26:06 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:26:16 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:26:26 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:26:36 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:26:46 shared=220.2 MiB dedicated=22010.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:26:56 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:27:06 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:27:16 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:27:26 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:27:36 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:27:46 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:27:56 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:28:06 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:28:16 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:28:26 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:28:36 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:28:46 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:28:56 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:29:06 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:29:17 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:29:27 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:29:37 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:29:47 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:29:57 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:30:07 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:30:17 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:30:27 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:30:37 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:30:47 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:30:57 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:31:07 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:31:17 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:31:27 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:31:37 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:31:47 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:31:57 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:32:07 shared=220.2 MiB dedicated=22072.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:32:17 shared=220.2 MiB dedicated=22408.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:32:27 shared=220.2 MiB dedicated=22408.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:32:37 shared=220.2 MiB dedicated=22408.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:32:47 shared=220.2 MiB dedicated=22544.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:32:57 shared=220.2 MiB dedicated=22544.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:33:08 shared=220.2 MiB dedicated=22544.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:33:18 shared=220.2 MiB dedicated=22546.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:33:28 shared=220.2 MiB dedicated=22546.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:33:38 shared=220.2 MiB dedicated=22546.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:33:48 shared=220.2 MiB dedicated=22546.0 MiB
+  POSSIBLE SPILL 2026-10-13T15:33:58 shared=220.2 MiB dedicated=22546.0 MiB
+
+=== Bq: engine memory lines (raw-boot-Bq.log) ===
+(APIServer pid=1) INFO 10-13 13:34:43 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'po
+(EngineCore pid=138) INFO 10-13 13:34:57 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRou
+(EngineCore pid=138) INFO 10-13 13:34:59 [cuda.py:532] Using AttentionBackendEnum.TRITON_ATTN backend.
+(EngineCore pid=138) INFO 10-13 13:36:22 [cuda.py:592] Using TRITON_ATTN attention backend out of potential backends: ['TRITON_ATTN'].
+(EngineCore pid=138) INFO 10-13 13:36:30 [model_runner.py:410] Model loading took 15.44 GiB memory and 89.515958 seconds
+(EngineCore pid=138) INFO 10-13 13:36:35 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 5.2 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of
+(EngineCore pid=138) INFO 10-13 13:36:35 [kv_cache_utils.py:2659] GPU KV cache size: 116,440 tokens, Maximum concurrency for 65,536 tokens per request: 1.78x
+(EngineCore pid=138) INFO 10-13 13:36:41 [model_runner.py:1102] Graph capturing finished in 5 secs, took 0.13 GiB (driver free-memory delta 0.32 GiB)
+
+=== Bq: nvidia-smi, GPU 0 = 3090 (raw-smi-Bq.log) ===
+# before boot 2026-10-13T13:34:32Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 24.63 W, 66, 210 MHz
+# after boot, before any request 2026-10-13T13:36:48Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22962 MiB, 1365 MiB, 250.00 W, 23.17 W, 60, 210 MHz
+
+=== Bq: 3090 adapter counters (luid_0x00000000_0x000114dd_phys_0) from mem-trace-Bq.csv ===
+samples=19  max dedicated=23161.8 MiB  max shared=92.2 MiB  loaded-engine shared floor=84.2 MiB
+  no sample above floor+16 MiB: no spill seen
+

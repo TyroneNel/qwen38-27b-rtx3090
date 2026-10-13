@@ -1,0 +1,29 @@
+2026-10-13T13:37:53Z [A] cp bench/results/2026-10-13-E3/.env.A .env
+2026-10-13T13:37:53Z [A] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E3/mem-trace-A.csv
+2026-10-13T13:37:54Z [A] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T13:40:11Z [A] healthy after 135 s
+2026-10-13T13:40:12Z [wacc-A-1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py e3-discard --targets /tmp/targets-e3'
+2026-10-13T13:41:26Z [wacc-A-2] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py e3-keep --targets /tmp/targets-e3'
+2026-10-13T13:42:28Z [gsm-A] docker compose --profile single exec -T single bash -lc 'cd /app && QUALITY_DATA=/app/models/quality-data venv/bin/python bench/quality_battery.py e3-A --gsm-only --gsm-n 50'
+2026-10-13T13:43:20Z [A] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

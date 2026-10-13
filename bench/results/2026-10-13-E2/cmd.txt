@@ -103,3 +103,41 @@ At line:1 char:32
  Container hyperqwen-single-1 Starting 
  Container hyperqwen-single-1 Started 
 
+2026-10-13T13:10:45Z [C2] healthy after 134 s
+2026-10-13T13:10:46Z [C2] docker compose --profile single exec -T single env OUT=/tmp/rb-C2-1 bash bench/run_benchmarks.sh single
+2026-10-13T13:21:34Z [C2] docker compose --profile single exec -T single env OUT=/tmp/rb-C2-2 bash bench/run_benchmarks.sh single
+2026-10-13T13:32:16Z [C2] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,8 --json /tmp/ladder-C2.json
+2026-10-13T13:34:06Z [C2] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-13T13:34:32Z [Bq] cp bench/results/2026-10-13-E2/.env.Bq .env
+2026-10-13T13:34:32Z [Bq] sampler: bench/results/2026-10-13-tools/sampler.ps1 -> bench/results/2026-10-13-E2/mem-trace-Bq.csv
+2026-10-13T13:34:32Z [Bq] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-13T13:36:48Z [Bq] healthy after 135 s
+2026-10-13T13:36:49Z [gsm-Bq] docker compose --profile single exec -T single bash -lc 'cd /app && QUALITY_DATA=/app/models/quality-data venv/bin/python bench/quality_battery.py e2-B --gsm-only --gsm-n 50'
+2026-10-13T13:37:40Z [Bq] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

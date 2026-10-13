@@ -1,0 +1,6 @@
+# start 2026-10-13T13:41:26Z
+# e3-keep think=False effort=<template default> max_tokens=1024 chunk=128
+WACC e3-keep gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=196.8/196.0 tok/s firstbad=None
+WACC e3-keep code   prompt=98 target=1024 chunks=8/8 steps=218 tok/step=4.784 accept=0.541 freerun_tok/step=4.725 decode_c1=157.2/156.6 tok/s firstbad=None
+WACC e3-keep chat   prompt=49 target=1024 chunks=4/8 steps=147 tok/step=3.497 accept=0.357 freerun_tok/step=3.589 decode_c1=105.7/118.3 tok/s firstbad=497
+# end 2026-10-13T13:42:28Z exit=0

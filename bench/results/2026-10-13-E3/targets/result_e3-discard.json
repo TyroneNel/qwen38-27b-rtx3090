@@ -1,0 +1,50 @@
+[
+ {
+  "task": "gsm8k",
+  "prompt_tokens": 99,
+  "target_tokens": 226,
+  "chunks_clean": 2,
+  "chunks": 2,
+  "steps": 39.0,
+  "tok_per_step": 5.794871794871795,
+  "accept_rate": 0.684981684981685,
+  "freerun_tok_per_step_last": 5.794871794871795,
+  "decode_tok_s": [
+   214.50685410704313,
+   215.16582858432673
+  ],
+  "first_bad": null
+ },
+ {
+  "task": "code",
+  "prompt_tokens": 98,
+  "target_tokens": 1024,
+  "chunks_clean": 8,
+  "chunks": 8,
+  "steps": 218.0,
+  "tok_per_step": 4.784403669724771,
+  "accept_rate": 0.5406290956749672,
+  "freerun_tok_per_step_last": 4.724770642201834,
+  "decode_tok_s": [
+   145.40676830271096,
+   170.0715607509245
+  ],
+  "first_bad": null
+ },
+ {
+  "task": "chat",
+  "prompt_tokens": 49,
+  "target_tokens": 1024,
+  "chunks_clean": 4,
+  "chunks": 8,
+  "steps": 147.0,
+  "tok_per_step": 3.496598639455782,
+  "accept_rate": 0.3566569484936832,
+  "freerun_tok_per_step_last": 3.5894736842105264,
+  "decode_tok_s": [
+   110.24286706843338,
+   123.33037073760148
+  ],
+  "first_bad": 497
+ }
+]

@@ -1,0 +1,9 @@
+# start 2026-10-13T13:40:12Z
+# e3-discard think=False effort=<template default> max_tokens=1024 chunk=128
+WACC e3-discard gsm8k CAPTURED n=226 -> /tmp/targets-e3/gsm8k.json
+WACC e3-discard gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=214.5/215.2 tok/s firstbad=None
+WACC e3-discard code CAPTURED n=1024 -> /tmp/targets-e3/code.json
+WACC e3-discard code   prompt=98 target=1024 chunks=8/8 steps=218 tok/step=4.784 accept=0.541 freerun_tok/step=4.725 decode_c1=145.4/170.1 tok/s firstbad=None
+WACC e3-discard chat CAPTURED n=1024 -> /tmp/targets-e3/chat.json
+WACC e3-discard chat   prompt=49 target=1024 chunks=4/8 steps=147 tok/step=3.497 accept=0.357 freerun_tok/step=3.589 decode_c1=110.2/123.3 tok/s firstbad=497
+# end 2026-10-13T13:41:26Z exit=0
