@@ -54,7 +54,11 @@ runtime, but the pin now can — twice.
 
 - **Dynamic SD** (`"num_speculative_tokens_per_batch_size": [[1,8,7],[9,32,3],[33,512,0]]`), documented in
   our own pin at `docs/features/speculative_decoding/dynamic_speculative_decoding.md` (v0.31.0). K is a
-  function of concurrency, including K=0.
+  function of concurrency, including K=0. The field is present in the v0.31.0 tag's
+  `vllm/config/speculative.py` and enforced in `vllm/v1/core/sched/scheduler.py` with a generic validator
+  (`vllm/v1/spec_decode/dynamic/utils.py`), so it is a scheduler-level feature rather than a method-specific
+  one — the published examples use eagle/eagle3 only because that is the common case. Confirm on our own
+  ladder before relying on it for dflash/mtp.
 - **Adaptive verification** (`"enable_adaptive_verification": true`), same directory: per-(request, position)
   survival scores compete for a global budget, so position 5 of a confident request can outrank position 1 of
   a doubtful one. Requires full cudagraphs (`--enforce-eager` is rejected at startup), no LoRA, no pipeline
