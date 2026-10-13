@@ -1,0 +1,316 @@
+PS> git status --short
+?? .env.bench
+?? .env.hf
+?? .env.long
+?? docker-compose.override.local.yml
+?? docs/decode-collapse-2026-09-22.md
+?? docs/handoff-2026-09-09.md
+?? docs/handoff-crash-proof-b2.md
+?? docs/model-prep-remediation-plan.md
+?? docs/patch-investigation/
+?? docs/project-investigation.md
+?? docs/quant-train-strategy.md
+?? docs/quantization-investigation.md
+?? docs/report-pr139-dstyle-int8-comment.md
+?? docs/report-ultimaterex-swift-uncensored-recipe.md
+?? docs/reverification-2026-09-17.md
+?? docs/self-improvement-loop.md
+?? evals/
+?? prepare/logs/
+
+
+PS> git log --oneline -1
+95ee3b6 launchers: refuse a boolean knob that is neither 0 nor 1 (#310) (#313)
+
+
+PS> git rev-parse --abbrev-ref HEAD
+main
+
+
+PS> git config core.autocrlf
+false
+
+
+PS> git config --show-origin --get-all core.autocrlf
+file:C:/Program Files/Git/etc/gitconfig	true
+file:.git/config	false
+
+
+PS> nvidia-smi --query-gpu=index,name,memory.total,driver_version,power.limit,power.default_limit,power.max_limit,power.draw,display_active,display_mode,pci.bus_id,uuid --format=csv
+index, name, memory.total [MiB], driver_version, power.limit [W], power.default_limit [W], power.max_limit [W], power.draw [W], display_active, display_mode, pci.bus_id, uuid
+0, NVIDIA GeForce RTX 3090, 24576 MiB, 610.88, 250.00 W, 350.00 W, 365.00 W, 20.09 W, Disabled, [Requested functionality has been deprecated], 00000000:01:00.0, GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84
+1, NVIDIA GeForce RTX 3080 Ti, 12288 MiB, 610.88, 350.00 W, 350.00 W, 400.00 W, 24.47 W, Enabled, [Requested functionality has been deprecated], 00000000:03:00.0, GPU-c190f571-609f-24a9-d678-207c2d0ac6fa
+
+
+PS> nvidia-smi --query-gpu=name,memory.total,driver_version,power.limit,power.draw --format=csv
+name, memory.total [MiB], driver_version, power.limit [W], power.draw [W]
+NVIDIA GeForce RTX 3090, 24576 MiB, 610.88, 250.00 W, 20.09 W
+NVIDIA GeForce RTX 3080 Ti, 12288 MiB, 610.88, 350.00 W, 24.47 W
+
+
+PS> docker version --format '{{.Server.Version}}'
+29.8.2
+
+
+PS> docker info --format '{{.OSType}}'
+linux
+
+
+PS> docker info --format '{{.DockerRootDir}} {{.OperatingSystem}} {{.MemTotal}} {{.NCPU}}'
+/var/lib/docker Docker Desktop (containerized) 24144400384 16
+
+
+PS> docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi -L
+GPU 0: NVIDIA GeForce RTX 3090 (UUID: GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84)
+GPU 1: NVIDIA GeForce RTX 3080 Ti (UUID: GPU-c190f571-609f-24a9-d678-207c2d0ac6fa)
+
+
+PS> Get-ChildItem G:\models | Select-Object Name
+
+Name                                   
+----                                   
+hf-download                            
+hf-upload                              
+mpf                                    
+Orca-Qwen3.8-27B-Uncensored-W4A16      
+Orca-Qwen3.8-27B-Uncensored-W4A16-fast 
+OrcaSAQ-2-27B                          
+quality-data                           
+Qwen3.8-27B-DFlash2-W4A16              
+Qwen3.8-27B-W4A16-AutoRound            
+Qwen3.8-27B-W4A16-AutoRound-fast       
+Swift-Qwen3.8-27B-Uncensored-W4A16     
+Swift-Qwen3.8-27B-Uncensored-W4A16-fast
+.env.hf                                
+.prepare.lock                          
+
+
+
+
+PS> Get-PSDrive -PSProvider FileSystem | Select-Object Name,@{n="FreeGB";e={[math]::Round($_.Free/1GB,1)}},@{n="UsedGB";e={[math]::Round($_.Used/1GB,1)}}
+
+Name FreeGB UsedGB
+---- ------ ------
+C      48.3  172.9
+D      82.9  161.1
+E     323.4  607.5
+F     323.4 1539.6
+G     180.7  285.1
+
+
+
+
+PS> nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv
+pid, process_name, used_gpu_memory [MiB]
+1120, [Insufficient Permissions], [N/A]
+9408, C:\Windows\explorer.exe, [N/A]
+11612, C:\Windows\SystemApps\Microsoft.Windows.Search_cw5n1h2txyewy\SearchApp.exe, [N/A]
+12388, C:\Windows\SystemApps\Microsoft.LockApp_cw5n1h2txyewy\LockApp.exe, [N/A]
+11708, C:\Program Files\WindowsApps\Microsoft.YourPhone_1.25072.81.0_x64__8wekyb3d8bbwe\PhoneExperienceHost.exe, [N/A]
+13968, C:\Windows\SystemApps\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\TextInputHost.exe, [N/A]
+14568, C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe, [N/A]
+15268, C:\Program Files\WindowsApps\Microsoft.ZuneMusic_11.2607.16.0_x64__8wekyb3d8bbwe\Microsoft.Media.Player.exe, [N/A]
+4484, C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_11.2607.0.0_x64__8wekyb3d8bbwe\CalculatorApp.exe, [N/A]
+12696, [Insufficient Permissions], [N/A]
+3176, [Insufficient Permissions], [N/A]
+11180, C:\Windows\SystemApps\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\StartMenuExperienceHost.exe, [N/A]
+4616, [Insufficient Permissions], [N/A]
+14428, C:\Program Files\WindowsApps\Microsoft.WindowsTerminal_1.24.12741.0_x64__8wekyb3d8bbwe\WindowsTerminal.exe, [N/A]
+12972, C:\Program Files\Docker\Docker\frontend\Docker Desktop.exe, [N/A]
+4, [Insufficient Permissions], [N/A]
+
+
+PS> nvidia-smi
+Tue Oct 13 10:47:27 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.88                 KMD Version: 610.88        CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3090      WDDM  |   00000000:01:00.0 Off |                  N/A |
+|  0%   40C    P8             20W /  250W |       0MiB /  24576MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA GeForce RTX 3080 Ti   WDDM  |   00000000:03:00.0  On |                  N/A |
+|  0%   46C    P8             24W /  350W |     523MiB /  12288MiB |      8%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    1   N/A  N/A            4484    C+G   ...ekyb3d8bbwe\CalculatorApp.exe      N/A      |
+|    1   N/A  N/A            9408    C+G   C:\Windows\explorer.exe               N/A      |
+|    1   N/A  N/A           11180    C+G   ...y\StartMenuExperienceHost.exe      N/A      |
+|    1   N/A  N/A           11612    C+G   ...h_cw5n1h2txyewy\SearchApp.exe      N/A      |
+|    1   N/A  N/A           11708    C+G   ...8bbwe\PhoneExperienceHost.exe      N/A      |
+|    1   N/A  N/A           12388    C+G   ...App_cw5n1h2txyewy\LockApp.exe      N/A      |
+|    1   N/A  N/A           12972    C+G   ...r\frontend\Docker Desktop.exe      N/A      |
+|    1   N/A  N/A           13968    C+G   ...5n1h2txyewy\TextInputHost.exe      N/A      |
+|    1   N/A  N/A           14428    C+G   ...yb3d8bbwe\WindowsTerminal.exe      N/A      |
+|    1   N/A  N/A           14568    C+G   ...t\Edge\Application\msedge.exe      N/A      |
+|    1   N/A  N/A           15268    C+G   ...we\Microsoft.Media.Player.exe      N/A      |
++-----------------------------------------------------------------------------------------+
+
+
+PS> Get-Counter '\GPU Adapter Memory(*)\Dedicated Usage','\GPU Adapter Memory(*)\Shared Usage' -SampleInterval 10 -MaxSamples 6
+
+Timestamp                 CounterSamples                                                                                      
+---------                 --------------                                                                                      
+2026/10/13 10:47:38       \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\dedicated usage :           
+                          4227072                                                                                             
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\dedicated usage :           
+                          554065920                                                                                           
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\dedicated usage :           
+                          0                                                                                                   
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\shared usage :              
+                          262144                                                                                              
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\shared usage :              
+                          95440896                                                                                            
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\shared usage :              
+                          8192                                                                                                
+                                                                                                                              
+                                                                                                                              
+2026/10/13 10:47:48       \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\dedicated usage :           
+                          4227072                                                                                             
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\dedicated usage :           
+                          554065920                                                                                           
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\dedicated usage :           
+                          0                                                                                                   
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\shared usage :              
+                          262144                                                                                              
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\shared usage :              
+                          95199232                                                                                            
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\shared usage :              
+                          8192                                                                                                
+                                                                                                                              
+                                                                                                                              
+2026/10/13 10:47:58       \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\dedicated usage :           
+                          4227072                                                                                             
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\dedicated usage :           
+                          554065920                                                                                           
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\dedicated usage :           
+                          0                                                                                                   
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\shared usage :              
+                          262144                                                                                              
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\shared usage :              
+                          95150080                                                                                            
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\shared usage :              
+                          8192                                                                                                
+                                                                                                                              
+                                                                                                                              
+2026/10/13 10:48:08       \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\dedicated usage :           
+                          4227072                                                                                             
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\dedicated usage :           
+                          554065920                                                                                           
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\dedicated usage :           
+                          0                                                                                                   
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\shared usage :              
+                          262144                                                                                              
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\shared usage :              
+                          95150080                                                                                            
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\shared usage :              
+                          8192                                                                                                
+                                                                                                                              
+                                                                                                                              
+2026/10/13 10:48:18       \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\dedicated usage :           
+                          4227072                                                                                             
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\dedicated usage :           
+                          554065920                                                                                           
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\dedicated usage :           
+                          0                                                                                                   
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\shared usage :              
+                          262144                                                                                              
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\shared usage :              
+                          95150080                                                                                            
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\shared usage :              
+                          8192                                                                                                
+                                                                                                                              
+                                                                                                                              
+2026/10/13 10:48:28       \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\dedicated usage :           
+                          4227072                                                                                             
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\dedicated usage :           
+                          554065920                                                                                           
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\dedicated usage :           
+                          0                                                                                                   
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x000114dd_phys_0)\shared usage :              
+                          262144                                                                                              
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001252b_phys_0)\shared usage :              
+                          95424512                                                                                            
+                                                                                                                              
+                          \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001358d_phys_0)\shared usage :              
+                          8192                                                                                                
+                                                                                                                              
+                                                                                                                              
+
+
+
+
+PS> nvidia-smi --query-gpu=memory.total,memory.used,memory.free --format=csv
+memory.total [MiB], memory.used [MiB], memory.free [MiB]
+24576 MiB, 0 MiB, 24326 MiB
+12288 MiB, 523 MiB, 11564 MiB
+
+
+PS> (after: git checkout -b cline/gf59cdmh --track origin/cline/gf59cdmh)
+PS> git status --short
+?? .env.bench
+?? .env.hf
+?? .env.long
+?? docker-compose.override.local.yml
+?? docs/decode-collapse-2026-09-22.md
+?? docs/handoff-2026-09-09.md
+?? docs/handoff-crash-proof-b2.md
+?? docs/model-prep-remediation-plan.md
+?? docs/patch-investigation/
+?? docs/project-investigation.md
+?? docs/quant-train-strategy.md
+?? docs/quantization-investigation.md
+?? docs/report-pr139-dstyle-int8-comment.md
+?? docs/report-ultimaterex-swift-uncensored-recipe.md
+?? docs/reverification-2026-09-17.md
+?? docs/self-improvement-loop.md
+?? evals/
+?? prepare/logs/
+PS> git log --oneline -1
+b9c2220 docs: experiment list and GPU-agent brief for the 3090 box
+PS> git rev-parse --abbrev-ref HEAD
+cline/gf59cdmh
+PS> git status -sb --untracked-files=no
+## cline/gf59cdmh...origin/cline/gf59cdmh
+PS> git ls-files --eol single-user/start_qwen.sh docker/entrypoint.sh
+i/lf    w/lf    attr/text=auto eol=lf 	docker/entrypoint.sh
+i/lf    w/lf    attr/text=auto eol=lf 	single-user/start_qwen.sh
