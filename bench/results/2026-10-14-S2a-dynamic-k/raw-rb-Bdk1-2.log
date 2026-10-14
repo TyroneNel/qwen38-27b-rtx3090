@@ -1,0 +1,12 @@
+# start 2026-10-14T11:41:54Z
+# Wed Oct 14 11:41:54 UTC 2026 mode=single server=127.0.0.1:18020
+ROW cohort C1 real prompts T=default | e2e=103.85 tok/s | decode(C/meanTPOT)=107.3 | tok/step=3.10 | meanTTFT=207.51 ms
+ROW cohort C2 real prompts T=default | e2e=157.44 tok/s | decode(C/meanTPOT)=179.9 | tok/step=3.19 | meanTTFT=326.79 ms
+ROW cohort C4 real prompts T=default | e2e=257.46 tok/s | decode(C/meanTPOT)=280.1 | tok/step=2.73 | meanTTFT=449.24 ms
+ROW cohort C8 real prompts T=default | e2e=240.97 tok/s | decode(C/meanTPOT)=385.0 | tok/step=2.70 | meanTTFT=2826.04 ms
+ROW cohort C1 real prompts T=0 | e2e=111.28 tok/s | decode(C/meanTPOT)=115.6 | tok/step=3.34 | meanTTFT=223.42 ms
+ROW cohort C2 real prompts T=0 | e2e=170.39 tok/s | decode(C/meanTPOT)=196.7 | tok/step=3.43 | meanTTFT=313.28 ms
+ROW cohort C4 real prompts T=0 | e2e=257.75 tok/s | decode(C/meanTPOT)=295.9 | tok/step=2.87 | meanTTFT=451.42 ms
+ROW cohort C8 real prompts T=0 | e2e=257.61 tok/s | decode(C/meanTPOT)=396.8 | tok/step=2.76 | meanTTFT=2673.23 ms
+# raw logs in /tmp/rb-Bdk1-2
+# end 2026-10-14T11:50:13Z exit=0

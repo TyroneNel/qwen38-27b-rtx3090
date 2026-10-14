@@ -5,7 +5,9 @@
 #                                   literal raw prompt x2 reps, then workload_accept.py gsm8k at 512 new tokens.
 #   s3.sh b <label> <first> [wacc]  S3b: one boot of 2026-10-14-S3b-effort/.env.A; GSM8K n=200 thinking on at both
 #                                   efforts, <first> (xhigh|low) first; with "wacc", then teacher-forced tok/step for
-#                                   both on each arm's own frozen targets (deterministic, so one boot carries it).
+#                                   both on each arm's own frozen targets (deterministic, so one boot carries it) and
+#                                   IFBench (299 prompts, docs/quality.md protocol) once per effort, scored by the
+#                                   pinned checkout's run_eval.py (ifbench_setup.sh installs it inside the container).
 #                                   reasoning_effort is a request field, not a boot knob, so the interleave is by
 #                                   order inside the boot and across two boots.
 # After every step a spill flagged by spillwatch.sh ends the boot at once (exit 3).
@@ -42,6 +44,19 @@ else
       eff=""; [ "$e" = low ] && eff="--effort low"
       bash $T/arm.sh exec $D wacc-$e-$label "cd /app && venv/bin/python /tmp/workload_accept.py $label-$e --targets /tmp/targets-$e --think 1 $eff --tasks gsm8k,code,chat"; chk
       cpout /tmp/targets-$e $D/targets-$e-$label
+    done
+  fi
+  if [ "$wacc" = wacc ]; then   # the same boot carries IFBench, once per effort, in the same order as GSM8K
+    bash $T/arm.sh cpin $D $label $T/ifbench_setup.sh
+    bash $T/arm.sh cpin $D $label $T/ifbench_gen.py
+    bash $T/arm.sh exec $D ifbench-setup-$label "bash /tmp/ifbench_setup.sh"; chk
+    IFD=/tmp/IFBench/ifbench/data/IFBench_test.jsonl
+    for e in $first $second; do
+      eff=""; [ "$e" = low ] && eff="--effort low"
+      bash $T/arm.sh exec $D ifbench-gen-$e-$label "cd /app && venv/bin/python /tmp/ifbench_gen.py $label-$e --data $IFD --out /tmp/ifb-$e $eff --max-tokens 16384"; chk
+      bash $T/arm.sh exec $D ifbench-eval-$e-$label "cd /tmp/IFBench && NLTK_DATA=/tmp/nltk_data /tmp/ifb/bin/python -m run_eval --input_data=$IFD --input_response_data=/tmp/ifb-$e.jsonl --output_dir=/tmp/ifb-eval-$e"
+      cpout /tmp/ifb-$e-full.json $D/raw-ifbench-$e-$label.json
+      cpout /tmp/ifb-eval-$e $D/raw-ifbench-eval-$e-$label
     done
   fi
 fi

@@ -8,6 +8,7 @@ set -u
 cd "$(git rev-parse --show-toplevel)"
 T=bench/results/2026-10-14-batch2-tools
 C=bench/results/2026-10-14-S2c-cohort-gate
+dir=$1; label=$2; env=$3; extra=${4:-}
 fin() { bash $T/arm.sh down $dir $label; bash $T/memsum.sh $dir $label; }
 # After every step: a spill flagged by spillwatch.sh ends the boot at once (exit 3); the caller re-runs the
 # session's boots with a smaller KV_MEM in BOTH arms' .env, so the pair stays byte-identical.

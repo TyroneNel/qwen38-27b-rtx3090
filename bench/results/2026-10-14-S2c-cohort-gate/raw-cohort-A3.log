@@ -1,0 +1,11 @@
+# start 2026-10-14T13:02:37Z
+# s2c-A3 model=qwen3.8-27b tokenizer=/app/models/Qwen3.8-27B-W4A16-AutoRound-fast conc=[8, 16] reps=3
+COHORT s2c-A3 C8 rep=1 prompts=8 decode(C/meanTPOT)=346.9 e2e=236.4 tok/step=3.36 meanTTFT=2803ms preempt=4 peak_running=7
+COHORT s2c-A3 C8 rep=2 prompts=8 decode(C/meanTPOT)=347.4 e2e=235.7 tok/step=3.36 meanTTFT=2909ms preempt=4 peak_running=7
+COHORT s2c-A3 C8 rep=3 prompts=8 decode(C/meanTPOT)=346.9 e2e=236.2 tok/step=3.36 meanTTFT=2810ms preempt=4 peak_running=7
+SPREAD s2c-A3 C8 decode min=346.9 max=347.4 spread=0.1% preempt_total=12
+COHORT s2c-A3 C16 rep=1 prompts=16 decode(C/meanTPOT)=664.5 e2e=253.9 tok/step=3.46 meanTTFT=16656ms preempt=11 peak_running=7
+COHORT s2c-A3 C16 rep=2 prompts=16 decode(C/meanTPOT)=708.3 e2e=262.1 tok/step=3.55 meanTTFT=16522ms preempt=9 peak_running=7
+COHORT s2c-A3 C16 rep=3 prompts=16 decode(C/meanTPOT)=694.7 e2e=252.8 tok/step=3.47 meanTTFT=16857ms preempt=10 peak_running=7
+SPREAD s2c-A3 C16 decode min=664.5 max=708.3 spread=6.6% preempt_total=30
+# end 2026-10-14T13:09:01Z exit=0

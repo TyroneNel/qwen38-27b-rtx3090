@@ -1,0 +1,2 @@
+2026-10-14T13:02:37Z [A3] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/cohort_gate.py single:/tmp/
+2026-10-14T13:02:37Z [cohort-A3] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/cohort_gate.py s2c-A3 --conc 8,16 --reps 3 --out-dir /tmp/cohort'

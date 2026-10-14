@@ -1,0 +1,1 @@
+2026-10-14T10:03:20Z [pre-cut] KV_MEM 5583457484 -> 5315022028 (-256 MiB) in every .env.* before the first boot. Reason: S1 timing boots peaked at 23,774 (A) / 23,868 (B) MiB dedicated, and the S1 quality boots spilled once dedicated reached 24,068-24,086 MiB, so B's base had ~200 MiB of margin; this session runs heavier or different shapes on it. Both arms carry the same value.

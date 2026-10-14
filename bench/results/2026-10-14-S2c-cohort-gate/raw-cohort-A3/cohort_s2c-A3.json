@@ -1,0 +1,74 @@
+[
+ {
+  "conc": 8,
+  "rep": 1,
+  "prompts": 8,
+  "decode": 346.92107545533395,
+  "mean_tpot_ms": 23.06,
+  "e2e": 236.39,
+  "ttft_ms": 2802.6,
+  "tok_per_step": 3.363007778738116,
+  "preempt": 4.0,
+  "peak_running": 7.0
+ },
+ {
+  "conc": 8,
+  "rep": 2,
+  "prompts": 8,
+  "decode": 347.3729917498914,
+  "mean_tpot_ms": 23.03,
+  "e2e": 235.71,
+  "ttft_ms": 2908.65,
+  "tok_per_step": 3.363007778738116,
+  "preempt": 4.0,
+  "peak_running": 7.0
+ },
+ {
+  "conc": 8,
+  "rep": 3,
+  "prompts": 8,
+  "decode": 346.92107545533395,
+  "mean_tpot_ms": 23.06,
+  "e2e": 236.25,
+  "ttft_ms": 2809.54,
+  "tok_per_step": 3.363007778738116,
+  "preempt": 4.0,
+  "peak_running": 7.0
+ },
+ {
+  "conc": 16,
+  "rep": 1,
+  "prompts": 16,
+  "decode": 664.4518272425249,
+  "mean_tpot_ms": 24.08,
+  "e2e": 253.86,
+  "ttft_ms": 16656.05,
+  "tok_per_step": 3.4635343618513326,
+  "preempt": 11.0,
+  "peak_running": 7.0
+ },
+ {
+  "conc": 16,
+  "rep": 2,
+  "prompts": 16,
+  "decode": 708.2779991146525,
+  "mean_tpot_ms": 22.59,
+  "e2e": 262.07,
+  "ttft_ms": 16521.65,
+  "tok_per_step": 3.5515759312320916,
+  "preempt": 9.0,
+  "peak_running": 7.0
+ },
+ {
+  "conc": 16,
+  "rep": 3,
+  "prompts": 16,
+  "decode": 694.7459834997828,
+  "mean_tpot_ms": 23.03,
+  "e2e": 252.78,
+  "ttft_ms": 16856.77,
+  "tok_per_step": 3.4656542056074766,
+  "preempt": 10.0,
+  "peak_running": 7.0
+ }
+]

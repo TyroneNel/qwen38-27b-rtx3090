@@ -1,0 +1,15 @@
+MODELS_DIR=G:/models
+VLLM_WSL2_ENABLE_PIN_MEMORY=1
+CUDA_VISIBLE_DEVICES=GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84
+NVIDIA_VISIBLE_DEVICES=GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84
+PREPARE=0
+VERIFY=0
+PORT=18020
+SPEC=dflash2
+PREFIX_CACHE=1
+CTX=fast
+DFLASH_TOKENS=7
+KV_MEM=5315022028
+MAX_LEN=65536
+MAX_SEQS=8
+EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head --speculative-config {"method":"dflash","model":"/app/models/Qwen3.8-27B-DFlash2-W4A16","num_speculative_tokens":7,"draft_sample_method":"probabilistic","num_speculative_tokens_per_batch_size":[[1,3,7],[4,512,3]]}'

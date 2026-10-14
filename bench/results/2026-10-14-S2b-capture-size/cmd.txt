@@ -1,0 +1,30 @@
+2026-10-14T12:15:05Z [Bcg1] cp bench/results/2026-10-14-S2b-capture-size/.env.B .env
+2026-10-14T12:15:05Z [Bcg1] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S2b-capture-size/mem-trace-Bcg1.csv
+2026-10-14T12:15:05Z [Bcg1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T12:20:17Z [Bcg1] healthy after 311 s
+2026-10-14T12:20:18Z [Bcg1] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T12:20:44Z [Bcg1] docker compose --profile single exec -T single env OUT=/tmp/rb-Bcg1-1 bash bench/run_benchmarks.sh single
+2026-10-14T12:29:16Z [Bcg1] docker compose --profile single exec -T single env OUT=/tmp/rb-Bcg1-2 bash bench/run_benchmarks.sh single
+2026-10-14T12:37:58Z [Bcg1] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 4,8 --json /tmp/ladder-Bcg1.json
+2026-10-14T12:40:10Z [Bcg1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
