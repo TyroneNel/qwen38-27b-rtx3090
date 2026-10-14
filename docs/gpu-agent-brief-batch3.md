@@ -5,14 +5,19 @@ rules live in [decode-speed-batch3.md](decode-speed-batch3.md), which you must r
 are in [../bench/results/2026-10-13-SUMMARY.md](../bench/results/2026-10-13-SUMMARY.md) and
 [../bench/results/2026-10-14-batch2-SUMMARY.md](../bench/results/2026-10-14-batch2-SUMMARY.md).
 
+Read in this order: the G7 section of [decode-speed-landscape.md](decode-speed-landscape.md) (why this test
+exists, and the numbers it has to explain), then [decode-speed-batch3.md](decode-speed-batch3.md) (the arms and
+the decision rules), then this file. The batch-1 brief carries a superseded banner; use this one.
+
 ## Role
 
 Same machine, same rules. Batch 2 showed that doubling the KV pool bought no seats: residency moved 5 → 6 and the
 N=8 aggregate came out lower. The launcher predicts residency from the verify block
 (`RESIDENT = KV_MEM / ((k+2) × 104988089)` → ~6 seats at k=7, ~10 at k=3), but batch 2's k=3 arm still read 5. Your
 job is to settle that with one discriminating test, report **Conclusion A or Conclusion B** explicitly, and test
-one independent lever (bf16 recurrent state) that may be worth a step-time win. Commit results and reports to
-`cline/gf59cdmh` and push.
+one independent lever (bf16 recurrent state) that may be worth a step-time win. The landscape page's G7 section
+carries the seat model and the batch-2 contradiction in full, and the backlog row 13 records this test — cite
+those numbers rather than re-deriving them. Commit results and reports to `cline/gf59cdmh` and push.
 
 ## The hard rules
 
@@ -121,8 +126,12 @@ Arms: A = `--mamba-ssm-cache-dtype float16` (shipped), B = `bfloat16`, k=7, int8
 - **Q3:** one boot each with `--enable-mamba-shared-prefix-checkpoint` and with `--mamba-block-size 8192`, A/B
   against the Q1-a boot. The finding is the **boot-log evidence**: quote the block-size and page-padding lines.
   A flag that changes none of them did not apply — that is the result.
-- **Q4:** from the image, report whether `vllm serve --help=all` exposes a ReplaySSM flag and whether any boot
-  line reports mamba blocks or state slots. If nothing does, say so; that is why the probe is the primary metric.
+- **Q4:** confirm the instrumentation, do not hunt for it. From the image, report whether
+  `vllm serve --help=all` exposes a ReplaySSM flag, and whether any boot line reports mamba blocks or state
+  slots. Batch 1 already established there is **no** ReplaySSM flag on this pin, and that the config field's
+  docstring restricts it to non-speculative decode — so its absence is expected: record it and move on rather
+  than looking for a way to enable it. If no boot line reports the state pool, say that plainly; it is why the
+  `Running:` probe is the primary metric, and a counter becomes a candidate patch.
 
 
 ## Step 5 — record and push (after Q1, and again after Q2)
