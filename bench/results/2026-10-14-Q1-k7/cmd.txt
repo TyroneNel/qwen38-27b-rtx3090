@@ -1,0 +1,33 @@
+2026-10-14T20:51:43Z [q1k7] cp bench/results/2026-10-14-Q1-k7/.env.q1k7 .env
+2026-10-14T20:51:43Z [q1k7] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q1-k7/mem-trace-q1k7.csv
+2026-10-14T20:51:43Z [q1k7] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T20:54:10Z [q1k7] healthy after 145 s
+2026-10-14T20:54:11Z [q1k7] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T20:54:20Z [q1k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k7 1
+2026-10-14T20:54:53Z [q1k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k7 2
+2026-10-14T20:55:19Z [q1k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k7 3
+2026-10-14T20:55:43Z [q1k7] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,2,4,8,16 --json /tmp/ladder-q1k7.json
+2026-10-14T21:02:37Z [q1k7] docker compose --profile single exec -T single env OUT=/tmp/rb-q1k7-1 bash bench/run_benchmarks.sh single
+2026-10-14T21:11:19Z [q1k7] docker compose --profile single exec -T single env OUT=/tmp/rb-q1k7-2 bash bench/run_benchmarks.sh single
+2026-10-14T21:19:58Z [q1k7] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

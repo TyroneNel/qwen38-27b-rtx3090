@@ -1,0 +1,6 @@
+# before boot 2026-10-14T22:32:07Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 24.90 W, 69, 210 MHz
+# after boot, before any request 2026-10-14T22:37:22Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23078 MiB, 1249 MiB, 250.00 W, 22.82 W, 58, 210 MHz

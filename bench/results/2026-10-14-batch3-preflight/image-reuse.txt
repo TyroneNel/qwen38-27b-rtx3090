@@ -1,0 +1,12 @@
+# Step 1, 2026-10-14T20:50Z
+$ git diff --stat f1a033e..HEAD -- . ':(exclude)docs' ':(exclude)bench/results'
+(nothing printed; exit=0)
+HEAD = 43563ba
+
+Nothing printed, so the batch-2 image is reused and not rebuilt.
+
+$ docker image inspect hyperqwen:exp-f1a033e --format '{{.Id}} {{.Created}}'
+sha256:c06b97c7c9eb801341616d1a7a301c963b4c189eeb7bd44d9a91ce77971a5e5b 2026-10-14T08:07:14.870406442Z
+
+The preflight's `docker images` also lists ghcr.io/syv-ai/hyperqwen:latest with the same image ID (c06b97c7c9eb):
+one image under two tags.

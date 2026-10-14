@@ -1,0 +1,35 @@
+2026-10-14T21:49:18Z [q1k1] cp bench/results/2026-10-14-Q1-k1/.env.q1k1 .env
+2026-10-14T21:49:18Z [q1k1] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q1-k1/mem-trace-q1k1.csv
+2026-10-14T21:49:19Z [q1k1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T21:54:20Z [q1k1] healthy after 300 s
+2026-10-14T21:54:21Z [q1k1] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T21:54:21Z [q1k1] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k1 1
+2026-10-14T21:54:45Z [q1k1] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k1 2
+2026-10-14T21:55:39Z [q1k1] wave 2 above was cut off when the driver's shell hit its 3600 s session limit (empty output, kept as raw-probe-q1k1-w2-interrupted.*); the boot stayed up and healthy, the sampler and spill guard kept running, and the steps resume from wave 2
+2026-10-14T21:55:39Z [q1k1] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k1 2
+2026-10-14T21:56:03Z [q1k1] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1k1 3
+2026-10-14T21:56:25Z [q1k1] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,2,4,8,16 --json /tmp/ladder-q1k1.json
+2026-10-14T22:02:00Z [q1k1] docker compose --profile single exec -T single env OUT=/tmp/rb-q1k1-1 bash bench/run_benchmarks.sh single
+2026-10-14T22:12:51Z [q1k1] docker compose --profile single exec -T single env OUT=/tmp/rb-q1k1-2 bash bench/run_benchmarks.sh single
+2026-10-14T22:23:41Z [q1k1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

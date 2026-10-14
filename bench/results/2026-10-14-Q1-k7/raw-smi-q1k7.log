@@ -1,0 +1,15 @@
+# before boot 2026-10-14T20:51:43Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 21.03 W, 45, 210 MHz
+# after boot, before any request 2026-10-14T20:54:10Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22962 MiB, 1365 MiB, 250.00 W, 22.56 W, 53, 210 MHz
+# after ladder q1k7 2026-10-14T21:02:37Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23796 MiB, 531 MiB, 250.00 W, 244.07 W, 80, 975 MHz
+# after bench q1k7-1 2026-10-14T21:11:19Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23804 MiB, 523 MiB, 250.00 W, 212.21 W, 80, 1470 MHz
+# after bench q1k7-2 2026-10-14T21:19:57Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23804 MiB, 523 MiB, 250.00 W, 213.96 W, 79, 1875 MHz

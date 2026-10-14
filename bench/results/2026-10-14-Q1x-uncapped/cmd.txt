@@ -1,0 +1,122 @@
+2026-10-14T22:24:13Z [q1xk7s16] cp bench/results/2026-10-14-Q1x-uncapped/.env.q1xk7s16 .env
+2026-10-14T22:24:13Z [q1xk7s16] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q1x-uncapped/mem-trace-q1xk7s16.csv
+2026-10-14T22:24:14Z [q1xk7s16] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T22:29:38Z [q1xk7s16] healthy after 324 s
+2026-10-14T22:29:38Z [q1xk7s16] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T22:29:38Z [q1xk7s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk7s16 1 --n 16
+2026-10-14T22:30:23Z [q1xk7s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk7s16 2 --n 16
+2026-10-14T22:31:10Z [q1xk7s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk7s16 3 --n 16
+2026-10-14T22:31:53Z [q1xk7s16] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T22:32:07Z [q1xk3s16] cp bench/results/2026-10-14-Q1x-uncapped/.env.q1xk3s16 .env
+2026-10-14T22:32:07Z [q1xk3s16] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q1x-uncapped/mem-trace-q1xk3s16.csv
+2026-10-14T22:32:07Z [q1xk3s16] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T22:37:22Z [q1xk3s16] healthy after 314 s
+2026-10-14T22:37:22Z [q1xk3s16] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T22:37:23Z [q1xk3s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk3s16 1 --n 16
+2026-10-14T22:38:04Z [q1xk3s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk3s16 2 --n 16
+2026-10-14T22:38:46Z [q1xk3s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk3s16 3 --n 16
+2026-10-14T22:39:27Z [q1xk3s16] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T22:39:44Z [q1xk1s24] cp bench/results/2026-10-14-Q1x-uncapped/.env.q1xk1s24 .env
+2026-10-14T22:39:44Z [q1xk1s24] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q1x-uncapped/mem-trace-q1xk1s24.csv
+2026-10-14T22:39:44Z [q1xk1s24] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T22:44:59Z [q1xk1s24] healthy after 314 s
+2026-10-14T22:45:00Z [q1xk1s24] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T22:45:00Z [q1xk1s24] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk1s24 1 --n 24
+2026-10-14T22:45:10Z [q1xk1s24] SPILL detected: 2026-10-15T00:44:06 and 2026-10-15T00:44:16 shared=122.2 MiB dedicated=21823.9 MiB floor=90.2 MiB; killing benchmark clients
+2026-10-14T22:45:13Z [q1xk1s24] skipped probe: SPILL q1xk1s24 2026-10-15T00:44:06 and 2026-10-15T00:44:16 shared=122.2 MiB dedicated=21823.9 MiB floor=90.2 MiB
+2026-10-14T22:45:13Z [q1xk1s24] skipped probe: SPILL q1xk1s24 2026-10-15T00:44:06 and 2026-10-15T00:44:16 shared=122.2 MiB dedicated=21823.9 MiB floor=90.2 MiB
+2026-10-14T22:45:13Z [q1xk1s24] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T22:45:53Z [q1xk1s24] not measured: Shared Usage rose 90.2 -> 122.2 MiB at 00:41:46 local (22:41:46Z), right after the engine's memory-profiling peak (dedicated 23,050 MiB), and stayed there; the guard flagged it once the boot was up and the probe was refused. MAX_SEQS=24 profiles a larger dummy batch than 16. k=1 is re-run at MAX_SEQS=16 (q1xk1s16), the same admission cap as q1xk3s16.
+2026-10-14T22:45:54Z [q1xk1s16] cp bench/results/2026-10-14-Q1x-uncapped/.env.q1xk1s16 .env
+2026-10-14T22:45:54Z [q1xk1s16] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q1x-uncapped/mem-trace-q1xk1s16.csv
+2026-10-14T22:45:54Z [q1xk1s16] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T22:51:11Z [q1xk1s16] healthy after 314 s
+2026-10-14T22:51:11Z [q1xk1s16] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T22:51:11Z [q1xk1s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk1s16 1 --n 16
+2026-10-14T22:51:48Z [q1xk1s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk1s16 2 --n 16
+2026-10-14T22:52:25Z [q1xk1s16] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1xk1s16 3 --n 16
+2026-10-14T22:53:02Z [q1xk1s16] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
