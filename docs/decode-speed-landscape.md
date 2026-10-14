@@ -63,6 +63,51 @@ And two things the list did not ask for, both machine-level:
   preemptions begin at N=8 in every arm. That is the real reason a K schedule keyed on batch size has to put
   its knee at 4, and it is why the C8 cohort rows carry a 37% within-boot spread and cannot settle an arm.
 
+## What the 3090 measured, batch 2 (2026-10-14)
+
+Same card, same rules. Raw logs: [bench/results/2026-10-14-batch2-SUMMARY.md](../bench/results/2026-10-14-batch2-SUMMARY.md).
+This batch tested the two proposals batch 1 left, and retracted one of its recommendations.
+
+| arm | outcome | number |
+|---|---|---|
+| S1 capacity gate (quality) | **pass** | GSM8K n=200 within one question (mean −0.3), perplexity within 0.07%, the ~60k needle retrieved by both |
+| S1 capacity gate (capacity) | **pass** | pool 116,440 vs 68,605 tokens (+69.7%), N=8 preemptions 23/23/23 → 1/1/2 (−94%), C1 a tie |
+| S2a dynamic K, knee at 4 | **pass — result** | N=4 aggregate **+9.2%** (above all three A boots), ms/pass 56.5 → 43.8, C1 +0.4%; reproduces batch 1's +8.0% |
+| S2b `CG=40` | **inconclusive, and re-characterised** | the +4.1% C1 is entirely a tokens/step shift (3.34 → 3.48) at *unchanged* step time (28.9 vs 28.7-29.1 ms) |
+| S2c C8 cohort | **now a measurement** | spread 0.1% on the int8 pool (362/363/372) — batch 1's 37% was a small-pool artefact |
+| S3a r0b0tlab protocol | **we are ahead** | 174.7 / 177.7 tok/s against their published 162.9, acceptance level (5.619 vs 5.657), at 250 W |
+| S3b `reasoning_effort=low` | **fail** | IFBench prompt-level strict 63.3% → 47.0% official, 79.4% → 57.4% on the prompts both answered |
+
+**Two proposals, neither applied** (an experiment batch does not flip a default):
+
+1. Make `TRITON_ATTN` + `int8_per_token_head` the `CTX=fast` default — the gate above is what batch 1 said it
+   needed before that could be argued.
+2. Ship the dynamic-K schedule `[[1,3,7],[4,512,3]]` on that base. There is no launcher knob for it; the recipe
+   is a second `--speculative-config` in `EXTRA_ARGS`, which batch 1 verified overrides the launcher's.
+
+**The counter-signal, which the proposals do not answer.** B is *still* pool-bound at N=8 (`run` 6, `kv%` ~100)
+and its N=8 ladder aggregate read lower than A's in all three pairs (165-188 against 216-222, tail rows). More KV
+tokens did not buy more resident requests, because **the recurrent-state pages are the binding limit, not the KV
+tokens** — the same run measured ~4 resident requests for xhigh IFBench's 7,136-token mean response, and a first
+attempt with 32 client threads preempted 1,017 times on the bf16 base. So the capacity win is real at C1 and on
+preemptions, and is *not* a batch-mode win. That promotes G7 below from a hypothesis to the top open lead.
+
+**Corrections this batch made to the pages above.** Batch 1's "C1 floor 0.0-0.1% within a boot" held on 5 of 6
+boots; one moved 2.2%, and the cross-boot floor is 3.2%, not the 2% this page claimed. And `CG=40` is not a
+speed knob at all: it changes greedy acceptance at unchanged step time, so it needs a teacher-forced check
+before it can be called anything.
+
+**Two machine-level findings worth their own line.**
+
+- **Perplexity measurement spills this box at the shipped pin.** Both first quality boots left the 84-92 MiB
+  Shared Usage floor at the perplexity step and stayed there — 156 MiB (bf16) and 410 MiB (int8). Timing boots,
+  which do not run it, never spilled. Any perplexity taken on WSL2 at the shipped pin is suspect until the trace
+  says otherwise; see [gotchas.md](gotchas.md) 60.
+- **`GPU KV cache size` falls with `max_model_len` at a fixed `KV_MEM`**: 27,714 tokens at 8,192 against 63,872
+  at 57,344, same 5,315,022,028 bytes. Not investigated, and it matters to anyone comparing a short-context row
+  (S3a's, for instance) against a long-context one.
+
+
 ## The comparables
 
 | repo | engine | why it matters here |
@@ -131,6 +176,12 @@ the attention backend; verify exactness on the quality battery.
 code 4.78, chat 3.50 tokens per step (196 / 157 / 106-118 tok/s C1). The drafter is not the deficit. The served
 template does accept `reasoning_effort` (omitted = `xhigh`) and `low` raises acceptance: code +21.9%, chat
 +14.8% free-run, gsm8k +5.2%; thinking itself costs 15.7-23.3% of tokens per step against thinking off.
+
+**Batch 2 retracted the `low` recommendation.** The acceptance gain is real (and bigger: +31.2% on code
+teacher-forced), but `low` costs instruction following — IFBench prompt-level strict fell from 63.3% to 47.0%
+over 300 prompts, and from 79.4% to 57.4% on the prompts both efforts answered, with 55 disagreements against 6.
+GSM8K is unaffected. Do not serve agentic traffic at `low`; the knob is a speed-for-instruction-following trade,
+not a free win.
 
 Published DFlash2 acceptance for this model (`z-lab/Qwen3.8-27B-DFlash2`, SGLang, H200, block 8, `xhigh`,
 temp 1.0/top-p 0.95/top-k 20): **5.46 GSM8K, 5.28 MATH-500, 4.79 MBPP, 4.39 HumanEval, 4.10 MT-Bench**;
@@ -229,6 +280,13 @@ the page; the point of the experiment is to find out whether the W4A16-Marlin pa
 back, before committing to a second quantization path.
 
 ### G7. Recurrent-state residency is what ends speculation at concurrency
+
+**Measured 2026-10-14: this is now the top open lead.** Once the KV pool was doubled, the pool was still the
+binding constraint at N=8 — `run` 6, `kv%` ~100, and a *lower* aggregate than the small-pool arm (165-188 vs
+216-222, tail rows). The limit is the recurrent-state pages, not the KV tokens: ~4 resident requests for a
+7,136-token mean response, and 1,017 preemptions when 32 client threads were pointed at a 4-request server.
+Every concurrency number in this repo is downstream of this, and no arm has yet attacked it directly.
+
 
 Three independent measurements land on the same mechanism:
 

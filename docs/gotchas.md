@@ -1481,3 +1481,17 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     (upstream #51787; the series' `vllm-pr61050-lru-running-prefix` keeps the
     first chunks, `docs/vllm-0.31.md` has the numbers), so size it above
     what it holds.
+60. **Perplexity is the one measurement that spills this box at the shipped
+    pin.** `prompt_logprobs` is a prefill-time cost the decode path never pays,
+    and on Docker Desktop/WSL2 it is enough on its own to push the working set
+    over the card. Measured 2026-10-14 on the reference 3090 at 250 W: both
+    quality boots left the loaded-engine Shared Usage floor (84-92 MiB) at the
+    perplexity step and stayed there — 156 MiB with the shipped
+    `FLASH_ATTN` + bf16 KV, 410 MiB with `TRITON_ATTN` + `int8_per_token_head`.
+    The timing boots in the same session, which do not run it, never spilled.
+    So take the Shared Usage trace with any perplexity number, and treat a
+    perplexity figure from a WSL2 or container boot as suspect until the trace
+    says the floor held. This is the same shortfall reached through a different
+    door as `bench/quality_battery.py`'s "run with `GPU_UTIL=0.93` for
+    headroom" note; gotcha 53 has the mechanism.
+

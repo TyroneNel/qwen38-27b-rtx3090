@@ -73,8 +73,17 @@ W4A16 requant — on math and code this stack accepts 1.37-1.66× more per step.
 
 That also makes GSM8K the row to compare against other engines with, because that is the row they publish. The
 one same-card competitor row above (r0b0tlab, 162.9 tok/s, acceptance 5.66) is GSM8K greedy with 512 new tokens
-at ctx 8192, so it is not yet like-for-like against these numbers — a protocol-matched run is scheduled in
-[batch 2](decode-speed-batch2.md#session-3--a-publishable-comparison-and-the-effort-gate-about-60-minutes).
+at ctx 8192. Re-run 2026-10-14 at **their** protocol — their raw prompt, their metric definition, GSM8K
+greedy, 512 new tokens, ctx 8192, C1 — this stack reads **174.7 / 177.7 tok/s against their published 162.9,
+at level acceptance (5.619 against 5.657)**, on a card verified at 250 W. Their power limit is unpublished, so
+the row says that rather than assuming a match. Their prompt leaves the think block open, so our own
+chat-template variant of the same run reads higher (190.9-199.9) and is **not** like-for-like — do not quote it
+as one. Raw logs: [bench/results/2026-10-14-S3a-r0b0tlab/](../bench/results/2026-10-14-S3a-r0b0tlab/report.md).
+
+One caveat on that ctx-8192 arm: at a fixed `KV_MEM` the engine reports far fewer KV tokens at a shorter
+`max_model_len` (27,714 at 8,192 against 63,872 at 57,344, same bytes), so the short-context row runs on a small
+pool. It is a single-stream row, so that does not invalidate it — but do not compare its capacity to a
+long-context row's.
 
 
 ## Quality
