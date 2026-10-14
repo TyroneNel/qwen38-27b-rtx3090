@@ -1,0 +1,2 @@
+$ docker image inspect hyperqwen:exp-f1a033e --format {{.Id}} {{.Size}} {{.Created}} {{json .RepoTags}}
+sha256:c06b97c7c9eb801341616d1a7a301c963b4c189eeb7bd44d9a91ce77971a5e5b 15234047676 2026-10-14T08:07:14.870406442Z ["hyperqwen:exp-f1a033e","ghcr.io/syv-ai/hyperqwen:latest"]

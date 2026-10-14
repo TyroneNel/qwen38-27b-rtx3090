@@ -1,0 +1,20 @@
+$ git diff --stat e7fb509..HEAD -- . ':(exclude)docs' ':(exclude)bench/results'
+(exit=0, end of output)
+
+$ git log --oneline e7fb509..HEAD
+f1a033e docs: batch 2 experiment plan, agent prompt, and per-workload single-stream table
+97c452e docs: fold the 2026-10-13 3090 results into the landscape page
+5bc9d14 exp: align E6 verdict text (2026-10-13)
+3ff82cd exp: correct E6 interface.py claim, E4 row labels and FlashInfer timing in the summary (2026-10-13)
+b29033f exp: 3090 decode-speed summary, arms E1-E6 plus E7 finding (250W, 2026-10-13)
+cdb3fdd exp: E5 cudagraph capture size and E6 mamba block size (250W, 2026-10-13)
+7d08597 exp: E7 draft-head quantisation not applicable on the DFlash2 checkpoint (2026-10-13)
+29ed91f exp: E4 reasoning effort low vs xhigh default (250W, 2026-10-13)
+ccd190e exp: E2 backend x KV dtype and E3 acceptance by workload (250W, 2026-10-13)
+d6f2f08 exp: E2 arms B, C, D raw results (250W, 2026-10-13)
+ec2ecf0 exp: E1 dynamic K, A-B-A and report (250W, 2026-10-13)
+755011c exp: E1 arms A, B, B2 raw results, image and tools (250W, 2026-10-13)
+
+$ docker image inspect hyperqwen:exp-e7fb509 --format {{.Id}} {{json .RepoTags}} {{.Created}}
+
+Error response from daemon: No such image: hyperqwen:exp-e7fb509

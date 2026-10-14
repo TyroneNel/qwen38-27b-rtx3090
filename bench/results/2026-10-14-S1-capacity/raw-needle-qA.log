@@ -1,0 +1,5 @@
+# start 2026-10-14T08:19:03Z
+context ~60000 tokens, needle at 90% depth
+elapsed 70.9s, answer: 'ZXCVBNM12345'
+RETRIEVED
+# end 2026-10-14T08:20:14Z exit=0

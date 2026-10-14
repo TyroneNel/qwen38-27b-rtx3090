@@ -1,0 +1,142 @@
+# batch 2 preflight, 2026-10-14T07:25:03Z, PowerShell on the host
+
+PS> git fetch origin; git status -sb; git log --oneline -1
+## cline/gf59cdmh...origin/cline/gf59cdmh
+?? .env.bench
+?? .env.hf
+?? .env.long
+?? docker-compose.override.local.yml
+?? docs/decode-collapse-2026-09-22.md
+?? docs/handoff-2026-09-09.md
+?? docs/handoff-crash-proof-b2.md
+?? docs/model-prep-remediation-plan.md
+?? docs/patch-investigation/
+?? docs/project-investigation.md
+?? docs/quant-train-strategy.md
+?? docs/quantization-investigation.md
+?? docs/report-pr139-dstyle-int8-comment.md
+?? docs/report-ultimaterex-swift-uncensored-recipe.md
+?? docs/reverification-2026-09-17.md
+?? docs/self-improvement-loop.md
+?? evals/
+?? prepare/logs/
+f1a033e docs: batch 2 experiment plan, agent prompt, and per-workload single-stream table
+
+
+PS> git rev-parse HEAD; git rev-parse --abbrev-ref HEAD
+f1a033e2eacd452f9221ff02814462f5f9745b67
+cline/gf59cdmh
+
+
+PS> git config core.autocrlf
+false
+
+
+PS> git config user.name; git config user.email
+TyroneNel
+71038642+TyroneNel@users.noreply.github.com
+
+
+PS> git remote -v
+origin	https://github.com/TyroneNel/qwen38-27b-rtx3090 (fetch)
+origin	https://github.com/TyroneNel/qwen38-27b-rtx3090 (push)
+upstream	https://github.com/syv-ai/qwen38-27b-rtx3090 (fetch)
+upstream	https://github.com/syv-ai/qwen38-27b-rtx3090 (push)
+
+
+PS> git config --get-all remote.upstream.pushurl; "exit=$LASTEXITCODE"
+exit=1
+
+
+PS> nvidia-smi --query-gpu=index,name,memory.total,power.limit,power.default_limit --format=csv
+index, name, memory.total [MiB], power.limit [W], power.default_limit [W]
+0, NVIDIA GeForce RTX 3090, 24576 MiB, 250.00 W, 350.00 W
+1, NVIDIA GeForce RTX 3080 Ti, 12288 MiB, 350.00 W, 350.00 W
+
+
+PS> nvidia-smi --query-gpu=index,uuid,display_active,memory.used,memory.free,driver_version --format=csv
+index, uuid, display_active, memory.used [MiB], memory.free [MiB], driver_version
+0, GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84, Disabled, 0 MiB, 24326 MiB, 610.88
+1, GPU-c190f571-609f-24a9-d678-207c2d0ac6fa, Enabled, 524 MiB, 11563 MiB, 610.88
+
+
+PS> docker version --format "{{.Server.Version}}"
+29.8.2
+
+
+PS> docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | Select-String hyperqwen
+
+
+PS> docker ps --format "{{.Names}} {{.Status}}"
+
+
+PS> Get-ChildItem G:\models | Select-Object Name
+
+Name                                   
+----                                   
+hf-download                            
+hf-upload                              
+mpf                                    
+Orca-Qwen3.8-27B-Uncensored-W4A16      
+Orca-Qwen3.8-27B-Uncensored-W4A16-fast 
+OrcaSAQ-2-27B                          
+quality-data                           
+Qwen3.8-27B-DFlash2-W4A16              
+Qwen3.8-27B-W4A16-AutoRound            
+Qwen3.8-27B-W4A16-AutoRound-fast       
+Swift-Qwen3.8-27B-Uncensored-W4A16     
+Swift-Qwen3.8-27B-Uncensored-W4A16-fast
+.env.hf                                
+.prepare.lock                          
+
+
+
+
+PS> Get-PSDrive G | Select-Object Name,Used,Free
+
+Name         Used         Free
+----         ----         ----
+G    319061676032 181028331520
+
+
+
+
+PS> Get-Counter '\GPU Adapter Memory(*)\Dedicated Usage','\GPU Adapter Memory(*)\Shared Usage' -SampleInterval 10 -MaxSamples 6 | ForEach-Object { $_.CounterSamples | ForEach-Object { '{0} {1} {2:N2} MiB' -f $_.Timestamp.ToString('s'), $_.Path, ($_.CookedValue/1MB) } }
+2026-10-14T09:25:14 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\dedicated usage 4.03 MiB
+2026-10-14T09:25:14 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\dedicated usage 529.67 MiB
+2026-10-14T09:25:14 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\dedicated usage 0.00 MiB
+2026-10-14T09:25:14 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\shared usage 0.25 MiB
+2026-10-14T09:25:14 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\shared usage 104.20 MiB
+2026-10-14T09:25:14 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\shared usage 0.01 MiB
+2026-10-14T09:25:24 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\dedicated usage 4.03 MiB
+2026-10-14T09:25:24 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\dedicated usage 529.67 MiB
+2026-10-14T09:25:24 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\dedicated usage 0.00 MiB
+2026-10-14T09:25:24 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\shared usage 0.25 MiB
+2026-10-14T09:25:24 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\shared usage 103.97 MiB
+2026-10-14T09:25:24 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\shared usage 0.01 MiB
+2026-10-14T09:25:34 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\dedicated usage 4.03 MiB
+2026-10-14T09:25:34 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\dedicated usage 529.67 MiB
+2026-10-14T09:25:34 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\dedicated usage 0.00 MiB
+2026-10-14T09:25:34 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\shared usage 0.25 MiB
+2026-10-14T09:25:34 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\shared usage 103.97 MiB
+2026-10-14T09:25:34 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\shared usage 0.01 MiB
+2026-10-14T09:25:44 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\dedicated usage 4.03 MiB
+2026-10-14T09:25:44 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\dedicated usage 529.67 MiB
+2026-10-14T09:25:44 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\dedicated usage 0.00 MiB
+2026-10-14T09:25:44 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\shared usage 0.25 MiB
+2026-10-14T09:25:44 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\shared usage 103.97 MiB
+2026-10-14T09:25:44 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\shared usage 0.01 MiB
+2026-10-14T09:25:54 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\dedicated usage 4.03 MiB
+2026-10-14T09:25:54 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\dedicated usage 529.67 MiB
+2026-10-14T09:25:54 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\dedicated usage 0.00 MiB
+2026-10-14T09:25:54 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\shared usage 0.25 MiB
+2026-10-14T09:25:54 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\shared usage 103.97 MiB
+2026-10-14T09:25:54 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\shared usage 0.01 MiB
+2026-10-14T09:26:05 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\dedicated usage 4.03 MiB
+2026-10-14T09:26:05 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\dedicated usage 529.67 MiB
+2026-10-14T09:26:05 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\dedicated usage 0.00 MiB
+2026-10-14T09:26:05 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00011456_phys_0)\shared usage 0.25 MiB
+2026-10-14T09:26:05 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x00012457_phys_0)\shared usage 103.74 MiB
+2026-10-14T09:26:05 \\desktop-9i9qfak\gpu adapter memory(luid_0x00000000_0x0001362c_phys_0)\shared usage 0.01 MiB
+
+

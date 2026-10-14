@@ -1,0 +1,4 @@
+# start 2026-10-14T08:38:03Z
+GSMEFFORT s1-qB2 think=False effort=<template default> n=200 correct=191 acc=0.955 truncated=7 mean_completion_tokens=378 max_tokens=768 186s
+WRONG [[12, "90", "13", "length"], [45, "7.", "104", "length"], [62, "50", "25000", "length"], [85, "48", "44", "stop"], [93, "36.3636", "36", "length"], [119, "5", "95200", "length"], [153, "3.", "48", "length"], [182, "10", "23", "length"], [184, "100", "25", "stop"]]
+# end 2026-10-14T08:41:10Z exit=0

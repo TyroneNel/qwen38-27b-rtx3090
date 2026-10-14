@@ -1,0 +1,11 @@
+image tag: hyperqwen:exp-f1a033e (also ghcr.io/syv-ai/hyperqwen:latest, same ID; built locally by `docker compose build single`, not pulled)
+image ID: sha256:c06b97c7c9eb801341616d1a7a301c963b4c189eeb7bd44d9a91ce77971a5e5b (raw-image-inspect.log)
+commit built from: f1a033e (HEAD of cline/gf59cdmh at build time)
+why rebuilt: Step 1's diff printed nothing (raw-reuse-check.log), so the code under test is unchanged since
+  batch 1's image, but `docker image inspect hyperqwen:exp-e7fb509` returned "No such image" and
+  `docker images` lists no hyperqwen image at all; ghcr.io/syv-ai/hyperqwen:sha-{b9c2220,e7fb509,f1a033e}
+  answer "manifest unknown". The batch 1 image (sha256:01b36e7b...) cannot be reused, so this is a rebuild of
+  the same tree. Its pip and apt layers were resolved again on 2026-10-14; the vLLM version it contains is
+  recorded per boot below, not assumed to equal batch 1's.
+build: build.log, 2050 s apt (the NVIDIA apt repo stalled on cuda-nvcc-13-0), 494 s pip, 299 s export.
+boot class: container (Docker Desktop 29.8.2, WSL2 backend), compile cache in the pre-existing named volume hyperqwen_qwen-cache
