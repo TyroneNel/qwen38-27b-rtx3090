@@ -1,0 +1,3 @@
+vllm:num_preemptions_total{engine="0",model_name="qwen3.8-27b"} 1017.0
+vllm:request_success_total{engine="0",finished_reason="stop",model_name="qwen3.8-27b"} 529.0
+vllm:request_success_total{engine="0",finished_reason="length",model_name="qwen3.8-27b"} 64.0

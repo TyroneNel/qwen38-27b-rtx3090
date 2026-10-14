@@ -1,0 +1,4 @@
+# start 2026-10-14T14:44:59Z
+GSMEFFORT b2-low think=True effort=low n=200 correct=194 acc=0.970 truncated=0 mean_completion_tokens=356 max_tokens=16384 177s
+WRONG [[85, "48", "44", "stop"], [87, "10080", "9360", "stop"], [93, "36.36", "36", "stop"], [119, "99076.92", "95200", "stop"], [161, "17", "32", "stop"], [184, "100", "25", "stop"]]
+# end 2026-10-14T14:47:57Z exit=0

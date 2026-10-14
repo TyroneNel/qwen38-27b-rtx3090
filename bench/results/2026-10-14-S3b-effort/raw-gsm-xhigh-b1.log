@@ -1,0 +1,4 @@
+# start 2026-10-14T13:27:55Z
+GSMEFFORT b1-xhigh think=True effort=<template default> n=200 correct=194 acc=0.970 truncated=1 mean_completion_tokens=767 max_tokens=16384 551s
+WRONG [[12, "12", "13", "stop"], [85, null, "44", "length"], [93, "400", "36", "stop"], [119, "99076.92", "95200", "stop"], [161, "17", "32", "stop"], [184, "100", "25", "stop"]]
+# end 2026-10-14T13:37:06Z exit=0

@@ -1,0 +1,9 @@
+xhigh: truncated (finish=length)=63 empty content=63 (empty and finish=stop: 2)
+low: truncated (finish=length)=17 empty content=34 (empty and finish=stop: 17)
+prompts=300 empty in both=20 shared (non-empty in both)=223
+IFBPAIR strict xhigh prompt-level raw=190/300=0.6333 answered=190/237=0.8017 shared=177/223=0.7937 | instruction-level shared=202/248=0.8145
+IFBPAIR strict low   prompt-level raw=141/300=0.4700 answered=141/266=0.5301 shared=128/223=0.5740 | instruction-level shared=153/248=0.6169
+IFBPAIR strict shared-set disagreements: xhigh-only pass=55 low-only pass=6
+IFBPAIR loose  xhigh prompt-level raw=208/300=0.6933 answered=208/237=0.8776 shared=195/223=0.8744 | instruction-level shared=220/248=0.8871
+IFBPAIR loose  low   prompt-level raw=168/300=0.5600 answered=168/266=0.6316 shared=153/223=0.6861 | instruction-level shared=178/248=0.7177
+IFBPAIR loose  shared-set disagreements: xhigh-only pass=52 low-only pass=10

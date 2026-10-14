@@ -1,0 +1,9 @@
+# start 2026-10-14T18:04:28Z
+/tmp/ifb/lib/python3.12/site-packages/nltk/downloader.py:1076: UserWarning: NLTK will not authorize the non-private download directory '/tmp/nltk_data': it (or an ancestor) is world- or group-writable, so another local user could plant files there. Choose a private location such as ~/nltk_data.
+  for msg in self.incr_download(info_or_id, download_dir, force):
+IFBench 1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d installed: Version: 0.2.0
+-rw-rw-r-- 1 root root 421499 Sep  9 10:10 IFBench_test.jsonl
+-rw-rw-r-- 1 root root 621872 Sep  9 10:10 sample_output.jsonl
+-rw-rw-r-- 1 root root 421502 Sep  9 10:10 IFBench_test.jsonl
+299 /tmp/IFBench/ifbench/data/IFBench_test.jsonl
+# end 2026-10-14T18:05:11Z exit=0

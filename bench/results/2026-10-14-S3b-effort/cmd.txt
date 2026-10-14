@@ -1,0 +1,170 @@
+2026-10-14T13:22:23Z [b1] cp bench/results/2026-10-14-S3b-effort/.env.A .env
+2026-10-14T13:22:23Z [b1] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S3b-effort/mem-trace-b1.csv
+2026-10-14T13:22:23Z [b1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T13:27:28Z [b1] healthy after 304 s
+2026-10-14T13:27:28Z [b1] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T13:27:54Z [b1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/gsm_effort.py single:/tmp/
+2026-10-14T13:27:55Z [b1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/workload_accept.py single:/tmp/
+2026-10-14T13:27:55Z [gsm-xhigh-b1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/gsm_effort.py b1-xhigh --think 1  --n 200 --max-tokens 16384'
+2026-10-14T13:37:07Z [gsm-low-b1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/gsm_effort.py b1-low --think 1 --effort low --n 200 --max-tokens 16384'
+2026-10-14T13:40:15Z [wacc-xhigh-b1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py b1-xhigh --targets /tmp/targets-xhigh --think 1  --tasks gsm8k,code,chat'
+2026-10-14T13:42:01Z [wacc-low-b1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py b1-low --targets /tmp/targets-low --think 1 --effort low --tasks gsm8k,code,chat'
+2026-10-14T13:43:21Z [b1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_setup.sh single:/tmp/
+2026-10-14T13:43:21Z [b1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_gen.py single:/tmp/
+2026-10-14T13:43:22Z [ifbench-setup-b1] docker compose --profile single exec -T single bash -lc 'bash /tmp/ifbench_setup.sh'
+2026-10-14T13:44:06Z [ifbench-gen-xhigh-b1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py b1-xhigh --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-xhigh  --max-tokens 16384'
+2026-10-14T14:40:09Z [b1] IFBench xhigh generation aborted by hand after ~55 min: ~80/299 done, KV pool 97% full, 4 running / 28 waiting, 994 preemptions on this boot (vllm:num_preemptions_total). Decision (owner): re-run IFBench on the int8 base with client concurrency matched to the pool. GSM8K and acceptance from this boot stand.
+2026-10-14T14:40:10Z [b1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T14:42:13Z [b2] cp bench/results/2026-10-14-S3b-effort/.env.A .env
+2026-10-14T14:42:13Z [b2] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S3b-effort/mem-trace-b2.csv
+2026-10-14T14:42:13Z [b2] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T14:44:32Z [b2] healthy after 137 s
+2026-10-14T14:44:32Z [b2] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T14:44:59Z [b2] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/gsm_effort.py single:/tmp/
+2026-10-14T14:44:59Z [b2] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/workload_accept.py single:/tmp/
+2026-10-14T14:44:59Z [gsm-low-b2] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/gsm_effort.py b2-low --think 1 --effort low --n 200 --max-tokens 16384'
+2026-10-14T14:47:58Z [gsm-xhigh-b2] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/gsm_effort.py b2-xhigh --think 1  --n 200 --max-tokens 16384'
+2026-10-14T14:56:01Z [b2] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T14:56:15Z [i1] cp bench/results/2026-10-14-S3b-effort/.env.I .env
+2026-10-14T14:56:15Z [i1] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S3b-effort/mem-trace-i1.csv
+2026-10-14T14:56:15Z [i1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T14:58:35Z [i1] healthy after 139 s
+2026-10-14T14:58:35Z [i1] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T14:59:02Z [i1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_setup.sh single:/tmp/
+2026-10-14T14:59:02Z [i1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_gen.py single:/tmp/
+2026-10-14T14:59:02Z [ifbench-setup-i1] docker compose --profile single exec -T single bash -lc 'bash /tmp/ifbench_setup.sh'
+2026-10-14T14:59:42Z [ifbench-gen-xhigh-i1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py i1-xhigh --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-xhigh  --max-tokens 16384 --conc 4'
+2026-10-14T17:21:52Z [ifbench-eval-xhigh-i1] docker compose --profile single exec -T single bash -lc 'cd /tmp/IFBench && NLTK_DATA=/tmp/nltk_data /tmp/ifb/bin/python -m run_eval --input_data=/tmp/IFBench/ifbench/data/IFBench_test.jsonl --input_response_data=/tmp/ifb-xhigh.jsonl --output_dir=/tmp/ifb-eval-xhigh'
+2026-10-14T17:21:55Z [ifbench-gen-low-i1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py i1-low --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-low --effort low --max-tokens 16384 --conc 4'
+2026-10-14T17:41:45Z [i1] SPILL detected: 2026-10-14T16:56:48 shared=84.2 MiB dedicated=15223.7 MiB floor=0.0 MiB; killing benchmark clients
+2026-10-14T17:41:46Z [i1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T17:41:59Z [autofit] boot i1 spilled (SPILL i1 2026-10-14T16:56:48 shared=84.2 MiB dedicated=15223.7 MiB floor=0.0 MiB); KV_MEM 5315022028 -> 5046586572 in every .env.* of: bench/results/2026-10-14-S3b-effort
+2026-10-14T17:41:59Z [i1] cp bench/results/2026-10-14-S3b-effort/.env.I .env
+2026-10-14T17:41:59Z [i1] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S3b-effort/mem-trace-i1.csv
+2026-10-14T17:42:00Z [i1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T17:44:12Z [i1] healthy after 131 s
+2026-10-14T17:44:13Z [i1] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T17:44:38Z [i1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_setup.sh single:/tmp/
+2026-10-14T17:44:38Z [i1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_gen.py single:/tmp/
+2026-10-14T17:44:38Z [ifbench-setup-i1] docker compose --profile single exec -T single bash -lc 'bash /tmp/ifbench_setup.sh'
+2026-10-14T17:45:20Z [ifbench-gen-xhigh-i1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py i1-xhigh --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-xhigh  --max-tokens 16384 --conc 4'
+2026-10-14T18:00:52Z [i1x] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T18:00:52Z [i1] the false spill flag killed the IFBench low generation at ~17:41Z; autofit then rebooted (logs renamed *-i1-reboot*) and restarted xhigh from scratch, stopped by hand at ~18:01Z. The completed xhigh run (generation 14:59:42Z-17:21:52Z, eval 17:21:55Z) is kept: raw-ifbench-xhigh-i1.json, raw-ifbench-eval-xhigh-i1/, raw-ifbench-eval-xhigh-i1.log, raw-ifbench-metrics-xhigh-i1.log. Its generation log raw-ifbench-gen-xhigh-i1.log was truncated by the restarted run; its summary line, read from the file at 17:27Z before that, was: IFBGEN i1-xhigh effort=<template default> n=300 truncated=63 empty=63 mean_completion_tokens=7136 max_tokens=16384 8530s
+2026-10-14T18:01:59Z [i2] cp bench/results/2026-10-14-S3b-effort/.env.I .env
+2026-10-14T18:01:59Z [i2] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S3b-effort/mem-trace-i2.csv
+2026-10-14T18:02:00Z [i2] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T18:04:02Z [i2] healthy after 121 s
+2026-10-14T18:04:02Z [i2] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T18:04:27Z [i2] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_setup.sh single:/tmp/
+2026-10-14T18:04:28Z [i2] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/ifbench_gen.py single:/tmp/
+2026-10-14T18:04:28Z [ifbench-setup-i2] docker compose --profile single exec -T single bash -lc 'bash /tmp/ifbench_setup.sh'
+2026-10-14T18:05:11Z [ifbench-gen-low-i2] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py i2-low --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-low --effort low --max-tokens 16384 --conc 4'
+2026-10-14T19:21:42Z [ifbench-eval-low-i2] docker compose --profile single exec -T single bash -lc 'cd /tmp/IFBench && NLTK_DATA=/tmp/nltk_data /tmp/ifb/bin/python -m run_eval --input_data=/tmp/IFBench/ifbench/data/IFBench_test.jsonl --input_response_data=/tmp/ifb-low.jsonl --output_dir=/tmp/ifb-eval-low'
+2026-10-14T19:21:46Z [i2] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-14T19:22:49Z [correction] The 17:41Z false spill was a read race, not a counter glitch: memsum.sh over the complete i1 trace (mem.txt, 988 samples) finds no 0 MiB Shared Usage sample under a loaded engine (floor 84.2 MiB, max 92.2 MiB). spillwatch.sh read the CSV while the sampler had written a timestamp's dedicated row but not yet its shared row, so that timestamp's shared value was missing and counted as 0. The fix (ignore shared <= 1 MiB; two consecutive samples) covers this case.
+2026-10-14T19:24:19Z [i1] the second (rebooted) i1 boot's counter sampler and spill guard kept running after that boot was stopped by hand (its stop file is per label, and the boot was brought down under the label i1x). Stopped at this time; the trace it kept writing after mem-trace-i1-reboot.csv was set aside duplicated the i2 period, and was deleted. Every other trace is intact.

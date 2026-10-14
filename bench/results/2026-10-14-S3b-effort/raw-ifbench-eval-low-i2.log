@@ -1,0 +1,150 @@
+# start 2026-10-14T19:21:42Z
+I1014 19:21:42.445530 131729427530496 run_eval.py:57] Generating eval_results_strict...
+I1014 19:21:42.907835 131729427530496 run_eval.py:63] Accuracy: 0.470000
+I1014 19:21:42.913655 131729427530496 run_eval.py:77] Generated: /tmp/ifb-eval-low/ifb-low-eval_results_strict.jsonl
+================================================================
+/tmp/ifb-eval-low/ifb-low-eval_results_strict.jsonl Accuracy Scores:
+prompt-level: 0.47
+instruction-level: 0.5
+
+count 0.7846153846153846
+custom 0.45454545454545453
+format 0.5
+ratio 0.4090909090909091
+repeat 0.2222222222222222
+sentence 0.4642857142857143
+words 0.38202247191011235
+
+count:conjunctions 1.0
+count:keywords_multiple 0.4
+count:numbers 0.875
+count:person_names 1.0
+count:pronouns 1.0
+count:punctuation 0.3333333333333333
+count:unique_word_count 1.0
+count:word_count_range 0.8181818181818182
+count:words_japanese 0.2
+custom:character_reverse 1.0
+custom:csv_city 0.0
+custom:csv_quotes 0.0
+custom:csv_special_character 0.0
+custom:date_format_list 0.0
+custom:european_capitals_sort 0.0
+custom:mcq_count_length 0.0
+custom:multiples 1.0
+custom:reverse_newline 1.0
+custom:sentence_alphabet 1.0
+custom:word_reverse 1.0
+format:emoji 0.7777777777777778
+format:line_indent 0.1111111111111111
+format:list 0.5555555555555556
+format:newline 0.5
+format:no_bullets_bullets 0.0
+format:no_whitespace 0.0
+format:options 0.0
+format:output_template 1.0
+format:parentheses 0.875
+format:quote_unquote 0.8
+format:quotes 0.5
+format:sub-bullets 0.5
+format:thesis 0.7777777777777778
+format:title_case 0.25
+ratio:overlap 0.0
+ratio:sentence_balance 0.2857142857142857
+ratio:sentence_type 0.3333333333333333
+ratio:sentence_words 0.42857142857142855
+ratio:stop_words 0.9166666666666666
+repeat:repeat_change 0.0
+repeat:repeat_simple 0.5
+repeat:repeat_span 0.25
+sentence:alliteration_increment 0.2
+sentence:increment 0.25
+sentence:keyword 0.6666666666666666
+words:alphabet 0.3333333333333333
+words:consonants 0.13333333333333333
+words:keywords_specific_position 0.75
+words:last_first 0.4
+words:no_consecutive 0.5
+words:odd_even_syllables 0.1111111111111111
+words:palindrome 0.5714285714285714
+words:paragraph_last_first 0.3333333333333333
+words:prime_lengths 0.8
+words:repeats 0.6
+words:start_verb 0.16666666666666666
+words:vowel 0.3
+words:words_position 1.0
+I1014 19:21:42.914365 131729427530496 run_eval.py:57] Generating eval_results_loose...
+I1014 19:21:45.252759 131729427530496 run_eval.py:63] Accuracy: 0.560000
+I1014 19:21:45.258267 131729427530496 run_eval.py:77] Generated: /tmp/ifb-eval-low/ifb-low-eval_results_loose.jsonl
+================================================================
+/tmp/ifb-eval-low/ifb-low-eval_results_loose.jsonl Accuracy Scores:
+prompt-level: 0.56
+instruction-level: 0.5813953488372093
+
+count 0.7846153846153846
+custom 0.5454545454545454
+format 0.7448979591836735
+ratio 0.4318181818181818
+repeat 0.2222222222222222
+sentence 0.5
+words 0.39325842696629215
+
+count:conjunctions 1.0
+count:keywords_multiple 0.4
+count:numbers 0.875
+count:person_names 1.0
+count:pronouns 1.0
+count:punctuation 0.3333333333333333
+count:unique_word_count 1.0
+count:word_count_range 0.8181818181818182
+count:words_japanese 0.2
+custom:character_reverse 1.0
+custom:csv_city 0.0
+custom:csv_quotes 1.0
+custom:csv_special_character 0.0
+custom:date_format_list 0.0
+custom:european_capitals_sort 0.0
+custom:mcq_count_length 0.0
+custom:multiples 1.0
+custom:reverse_newline 1.0
+custom:sentence_alphabet 1.0
+custom:word_reverse 1.0
+format:emoji 0.7777777777777778
+format:line_indent 1.0
+format:list 0.5555555555555556
+format:newline 0.5
+format:no_bullets_bullets 0.8
+format:no_whitespace 0.75
+format:options 0.5
+format:output_template 1.0
+format:parentheses 0.875
+format:quote_unquote 0.8
+format:quotes 0.5
+format:sub-bullets 1.0
+format:thesis 0.7777777777777778
+format:title_case 0.25
+ratio:overlap 0.0
+ratio:sentence_balance 0.2857142857142857
+ratio:sentence_type 0.3333333333333333
+ratio:sentence_words 0.5714285714285714
+ratio:stop_words 0.9166666666666666
+repeat:repeat_change 0.0
+repeat:repeat_simple 0.5
+repeat:repeat_span 0.25
+sentence:alliteration_increment 0.4
+sentence:increment 0.25
+sentence:keyword 0.6666666666666666
+words:alphabet 0.3333333333333333
+words:consonants 0.13333333333333333
+words:keywords_specific_position 0.75
+words:last_first 0.4
+words:no_consecutive 0.5
+words:odd_even_syllables 0.1111111111111111
+words:palindrome 0.5714285714285714
+words:paragraph_last_first 0.5
+words:prime_lengths 0.8
+words:repeats 0.6
+words:start_verb 0.16666666666666666
+words:vowel 0.3
+words:words_position 1.0
+# end 2026-10-14T19:21:45Z exit=0

@@ -1,0 +1,9 @@
+# start 2026-10-14T13:42:02Z
+# b1-low think=True effort=low max_tokens=1024 chunk=128
+WACC b1-low gsm8k CAPTURED n=174 -> /tmp/targets-low/gsm8k.json
+WACC b1-low gsm8k  prompt=127 target=174 chunks=2/2 steps=33 tok/step=5.424 accept=0.632 freerun_tok/step=5.273 decode_c1=185.2/185.2 tok/s firstbad=None
+WACC b1-low code CAPTURED n=1024 -> /tmp/targets-low/code.json
+WACC b1-low code   prompt=126 target=1024 chunks=8/8 steps=217 tok/step=4.770 accept=0.539 freerun_tok/step=4.835 decode_c1=169.9/139.8 tok/s firstbad=None
+WACC b1-low chat CAPTURED n=1024 -> /tmp/targets-low/chat.json
+WACC b1-low chat   prompt=77 target=1024 chunks=4/8 steps=155 tok/step=3.316 accept=0.331 freerun_tok/step=3.084 decode_c1=95.7/108.9 tok/s firstbad=217
+# end 2026-10-14T13:43:21Z exit=0

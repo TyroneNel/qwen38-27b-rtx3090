@@ -1,0 +1,8 @@
+image tag: hyperqwen:exp-f1a033e (= ghcr.io/syv-ai/hyperqwen:latest, same ID; local build, see ../2026-10-14-batch2-image/image.txt)
+image ID (every boot, raw-image-<label>.log): sha256:c06b97c7c9eb801341616d1a7a301c963b4c189eeb7bd44d9a91ce77971a5e5b
+commit built from: f1a033e
+engine: vLLM 0.31.0 ("Initializing a V1 LLM engine (v0.31.0)" in every raw-boot-<label>.log of this session)
+boot class: container (Docker Desktop 29.8.2, WSL2 backend), compile cache in the named volume hyperqwen_qwen-cache
+GPU: RTX 3090 GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84 pinned in CUDA_VISIBLE_DEVICES and NVIDIA_VISIBLE_DEVICES
+  (raw-cmdline-<label>.log; nvidia-smi -L inside the container still lists both cards, as in batch 1),
+  power.limit 250.00 W in every raw-smi-<label>.log

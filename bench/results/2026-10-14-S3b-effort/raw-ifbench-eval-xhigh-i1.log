@@ -1,0 +1,150 @@
+# start 2026-10-14T17:21:52Z
+I1014 17:21:53.298087 125834388341504 run_eval.py:57] Generating eval_results_strict...
+I1014 17:21:53.678426 125834388341504 run_eval.py:63] Accuracy: 0.633333
+I1014 17:21:53.683490 125834388341504 run_eval.py:77] Generated: /tmp/ifb-eval-xhigh/ifb-xhigh-eval_results_strict.jsonl
+================================================================
+/tmp/ifb-eval-xhigh/ifb-xhigh-eval_results_strict.jsonl Accuracy Scores:
+prompt-level: 0.6333333333333333
+instruction-level: 0.627906976744186
+
+count 0.8923076923076924
+custom 0.45454545454545453
+format 0.6428571428571429
+ratio 0.5227272727272727
+repeat 0.7777777777777778
+sentence 0.6428571428571429
+words 0.47191011235955055
+
+count:conjunctions 1.0
+count:keywords_multiple 0.6
+count:numbers 1.0
+count:person_names 1.0
+count:pronouns 0.875
+count:punctuation 0.8333333333333334
+count:unique_word_count 0.8888888888888888
+count:word_count_range 0.8181818181818182
+count:words_japanese 1.0
+custom:character_reverse 1.0
+custom:csv_city 0.0
+custom:csv_quotes 0.0
+custom:csv_special_character 0.0
+custom:date_format_list 0.0
+custom:european_capitals_sort 0.0
+custom:mcq_count_length 0.0
+custom:multiples 1.0
+custom:reverse_newline 1.0
+custom:sentence_alphabet 1.0
+custom:word_reverse 1.0
+format:emoji 0.8888888888888888
+format:line_indent 0.2222222222222222
+format:list 0.6666666666666666
+format:newline 0.8333333333333334
+format:no_bullets_bullets 0.0
+format:no_whitespace 0.0
+format:options 0.0
+format:output_template 1.0
+format:parentheses 0.875
+format:quote_unquote 0.8
+format:quotes 0.625
+format:sub-bullets 1.0
+format:thesis 0.8888888888888888
+format:title_case 0.5
+ratio:overlap 0.0
+ratio:sentence_balance 0.5714285714285714
+ratio:sentence_type 0.8333333333333334
+ratio:sentence_words 0.2857142857142857
+ratio:stop_words 1.0
+repeat:repeat_change 1.0
+repeat:repeat_simple 0.5
+repeat:repeat_span 0.75
+sentence:alliteration_increment 0.6
+sentence:increment 0.625
+sentence:keyword 0.6666666666666666
+words:alphabet 0.0
+words:consonants 0.06666666666666667
+words:keywords_specific_position 0.75
+words:last_first 0.4
+words:no_consecutive 0.875
+words:odd_even_syllables 0.0
+words:palindrome 0.7142857142857143
+words:paragraph_last_first 1.0
+words:prime_lengths 1.0
+words:repeats 0.8
+words:start_verb 0.16666666666666666
+words:vowel 0.5
+words:words_position 1.0
+I1014 17:21:53.684227 125834388341504 run_eval.py:57] Generating eval_results_loose...
+I1014 17:21:55.554069 125834388341504 run_eval.py:63] Accuracy: 0.693333
+I1014 17:21:55.559157 125834388341504 run_eval.py:77] Generated: /tmp/ifb-eval-xhigh/ifb-xhigh-eval_results_loose.jsonl
+================================================================
+/tmp/ifb-eval-xhigh/ifb-xhigh-eval_results_loose.jsonl Accuracy Scores:
+prompt-level: 0.6933333333333334
+instruction-level: 0.6802325581395349
+
+count 0.8923076923076924
+custom 0.7272727272727273
+format 0.7755102040816326
+ratio 0.5454545454545454
+repeat 0.7777777777777778
+sentence 0.6428571428571429
+words 0.48314606741573035
+
+count:conjunctions 1.0
+count:keywords_multiple 0.6
+count:numbers 1.0
+count:person_names 1.0
+count:pronouns 0.875
+count:punctuation 0.8333333333333334
+count:unique_word_count 0.8888888888888888
+count:word_count_range 0.8181818181818182
+count:words_japanese 1.0
+custom:character_reverse 1.0
+custom:csv_city 1.0
+custom:csv_quotes 1.0
+custom:csv_special_character 1.0
+custom:date_format_list 0.0
+custom:european_capitals_sort 0.0
+custom:mcq_count_length 0.0
+custom:multiples 1.0
+custom:reverse_newline 1.0
+custom:sentence_alphabet 1.0
+custom:word_reverse 1.0
+format:emoji 0.8888888888888888
+format:line_indent 0.2222222222222222
+format:list 0.6666666666666666
+format:newline 0.8333333333333334
+format:no_bullets_bullets 1.0
+format:no_whitespace 1.0
+format:options 0.6666666666666666
+format:output_template 1.0
+format:parentheses 0.875
+format:quote_unquote 0.8
+format:quotes 0.625
+format:sub-bullets 1.0
+format:thesis 0.8888888888888888
+format:title_case 0.5
+ratio:overlap 0.08333333333333333
+ratio:sentence_balance 0.5714285714285714
+ratio:sentence_type 0.8333333333333334
+ratio:sentence_words 0.2857142857142857
+ratio:stop_words 1.0
+repeat:repeat_change 1.0
+repeat:repeat_simple 0.5
+repeat:repeat_span 0.75
+sentence:alliteration_increment 0.6
+sentence:increment 0.625
+sentence:keyword 0.6666666666666666
+words:alphabet 0.0
+words:consonants 0.06666666666666667
+words:keywords_specific_position 0.75
+words:last_first 0.4
+words:no_consecutive 0.875
+words:odd_even_syllables 0.0
+words:palindrome 0.7142857142857143
+words:paragraph_last_first 1.0
+words:prime_lengths 1.0
+words:repeats 0.8
+words:start_verb 0.16666666666666666
+words:vowel 0.6
+words:words_position 1.0
+# end 2026-10-14T17:21:55Z exit=0

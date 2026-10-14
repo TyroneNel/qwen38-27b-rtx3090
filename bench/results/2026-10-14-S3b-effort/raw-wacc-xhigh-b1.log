@@ -1,0 +1,9 @@
+# start 2026-10-14T13:40:15Z
+# b1-xhigh think=True effort=<template default> max_tokens=1024 chunk=128
+WACC b1-xhigh gsm8k CAPTURED n=372 -> /tmp/targets-xhigh/gsm8k.json
+WACC b1-xhigh gsm8k  prompt=139 target=372 chunks=1/3 steps=24 tok/step=5.292 accept=0.613 freerun_tok/step=4.650 decode_c1=158.5/158.6 tok/s firstbad=134
+WACC b1-xhigh code CAPTURED n=1024 -> /tmp/targets-xhigh/code.json
+WACC b1-xhigh code   prompt=138 target=1024 chunks=4/8 steps=140 tok/step=3.636 accept=0.377 freerun_tok/step=3.444 decode_c1=118.3/111.2 tok/s firstbad=458
+WACC b1-xhigh chat CAPTURED n=1024 -> /tmp/targets-xhigh/chat.json
+WACC b1-xhigh chat   prompt=89 target=1024 chunks=2/8 steps=89 tok/step=2.854 accept=0.265 freerun_tok/step=2.611 decode_c1=85.8/91.1 tok/s firstbad=253
+# end 2026-10-14T13:42:01Z exit=0

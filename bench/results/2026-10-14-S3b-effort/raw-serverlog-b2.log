@@ -1,0 +1,1109 @@
+single-1  | entrypoint: first-boot stages: [1/3] docker/prepare.sh [2/3] verify.sh --no-server [3/3] start_qwen.sh (single)
+single-1  | entrypoint: stage 1 is minutes on first boot (download + requantize), seconds once prepared
+single-1  | entrypoint: use log timestamps as the elapsed timer; total first boot can exceed 30 min
+single-1  | [effective-config] MODE=single
+single-1  | [effective-config] CTX=fast SPEC=dflash2
+single-1  | [effective-config] MODEL=/app/models/Qwen3.8-27B-W4A16-AutoRound-fast PORT=18020
+single-1  | [effective-config] MAX_LEN=57344 MAX_SEQS=8
+single-1  | [effective-config] VLLM_API_KEY=unset api_key.txt=absent
+single-1  | [start_qwen] note: the pinned pool holds about 5 resident requests at DFLASH_TOKENS=7 (state pages), fewer with long prompts; MAX_SEQS=8 admits more than that and the rest queue.
+single-1  | WSL detected: PYTORCH_CUDA_ALLOC_CONF=expandable_segments:False (VMM breaks Marlin repack under the paravirt driver; set it explicitly to override)
+single-1  | WARNING: no API key: this container listens on 0.0.0.0, so whatever the published port reaches is open. Set VLLM_API_KEY (make keygen) or publish the port on 127.0.0.1 only.
+single-1  | (MainProcess pid=1) WARNING 10-14 14:42:28 [cuda.py:1074] Detected different devices in the system: NVIDIA GeForce RTX 3090, NVIDIA GeForce RTX 3080 Ti. Please make sure to set `CUDA_DEVICE_ORDER=PCI_BUS_ID` to avoid unexpected behavior.
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:347] 
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:347]        █     █     █▄   ▄█
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:347]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.31.0
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:347]   █▄█▀ █     █     █     █  model   /app/models/Qwen3.8-27B-W4A16-AutoRound-fast
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:347]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:347] 
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'port': 18020, 'model': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'max_model_len': 57344, 'served_model_name': ['qwen3.8-27b'], 'attention_backend': 'FLASH_ATTN', 'reasoning_parser': 'qwen3', 'gpu_memory_utilization': 0.93, 'kv_cache_memory_bytes': 5315022028, 'kv_cache_dtype': 'bfloat16', 'enable_prefix_caching': True, 'prefix_cache_retention_interval': None, 'mamba_ssm_cache_dtype': 'float16', 'mamba_cache_mode': 'align', 'language_model_only': True, 'max_num_batched_tokens': 2048, 'max_num_seqs': 8, 'async_scheduling': True, 'speculative_config': {'method': 'dflash', 'model': '/app/models/Qwen3.8-27B-DFlash2-W4A16', 'num_speculative_tokens': 7, 'draft_sample_method': 'probabilistic'}, 'compilation_config': {'mode': None, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['+rms_norm', '+silu_and_mul'], 'ir_enable_torch_wrap': None, 'splitting_ops': None, 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': None, 'compile_ranges_endpoints': None, 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': None, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': None, 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': None, 'pass_config': {}, 'max_cudagraph_capture_size': 64, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': None, 'static_all_moe_layers': []}}
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [model.py:699] Resolved architecture: Qwen3_5ForConditionalGeneration
+single-1  | (APIServer pid=1) INFO 10-14 14:42:28 [model.py:2109] Using max model len 57344
+single-1  | [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [model.py:917] All limits of multimodal modalities supported by the model are set to 0, running in text-only mode.
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [model.py:974] Disabled mm_prefix attention mode because multimodal inputs are configuration-disabled. Attention backends without mm_prefix support may now be selected.
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [model.py:699] Resolved architecture: DFlash2DraftModel
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [model.py:2109] Using max model len 262144
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [speculative.py:1663] Overriding draft model max model len from 262144 to 57344
+single-1  | (APIServer pid=1) WARNING 10-14 14:42:31 [config.py:837] Qwen3.5 model specifies mamba_ssm_dtype='float32' in its config, but --mamba-ssm-cache-dtype='float16' was passed. Using the user-specified value.
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [kernel.py:408] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native'])
+single-1  | (APIServer pid=1) WARNING 10-14 14:42:31 [vllm.py:2372] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+single-1  | (APIServer pid=1) INFO 10-14 14:42:31 [compilation.py:331] Enabled custom fusions: norm_quant, act_quant
+single-1  | (EngineCore pid=138) WARNING 10-14 14:42:43 [cuda.py:1074] Detected different devices in the system: NVIDIA GeForce RTX 3090, NVIDIA GeForce RTX 3080 Ti. Please make sure to set `CUDA_DEVICE_ORDER=PCI_BUS_ID` to avoid unexpected behavior.
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:43 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=57344, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=compressed-tensors, quantization_config=None, enforce_eager=False, aux_output_config=AuxOutputConfig(enable_return_routed_experts=False, max_bytes=None), kv_cache_dtype=bfloat16, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, per_request_spec_decode_metrics='none', kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=qwen3.8-27b, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['+rms_norm', '+silu_and_mul', 'none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::qwen4_exp_ple_short_conv', 'vllm::qwen4_exp_qsa_with_output', 'vllm::linear_attention', 'vllm::qwen_gdn_attention_core', 'vllm::qwen_gdn_attention_core_fused_norm_packed', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 64, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_jit_warmup=True, moe_backend='auto', sparse_indexer_topk_backend='auto', linear_backend='auto', linear_backend_per_quant=None)
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:44 [parallel_state.py:1825] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_c4ce16e869b94af48e318e9fff0783a6 backend=nccl
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:44 [parallel_state.py:2269] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, ETP rank 0, EP rank N/A, EPLB rank N/A
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:44 [gpu_worker.py:479] Using V2 Model Runner
+single-1  | [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:44 [speculator.py:399] DFlash2 lookup-augmented drafting on (k=7 nmin=6 nmax=12 nstrong=6 agree=0 nmin_tail=4 longmin=6 search=1073741824)
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:44 [model_runner.py:378] Loading model from scratch...
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [cuda.py:651] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [mm_encoder_attention.py:372] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [__init__.py:870] Using MarlinLinearKernel for mixed-precision linear
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [compressed_tensors_wNa16.py:138] Using MarlinLinearKernel for CompressedTensorsWNA16
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [qwen_gdn_linear_attn.py:177] Using Triton/FLA GDN prefill kernel (requested=auto, head_k_dim=128).
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [qwen_gdn_linear_attn.py:523] Falling back to the Triton GDN decode path: the fused CUDA kernel requires a BF16 GDN model with K=V=128, SiLU or sigmoid gating, non-interleaved GQA layout, BF16 convolution cache, BF16 or FP32 recurrent state, and a GPU with compute capability 8.0+
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [qwen_gdn_linear_attn.py:533] GDN decode kernel: triton
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [cuda.py:532] Using AttentionBackendEnum.FLASH_ATTN backend.
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:46 [flash_attn.py:1167] Using FlashAttention version 2
+single-1  | (EngineCore pid=138) WARNING 10-14 14:42:47 [compilation.py:1350] Op 'rms_norm' not present in model, enabling with '+rms_norm' has no effect
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:47 [weight_utils.py:1063] Filesystem type for checkpoints: 9P. Checkpoint size: 14.71 GiB. Available RAM: 18.88 GiB.
+single-1  | (EngineCore pid=138) INFO 10-14 14:42:47 [weight_utils.py:1086] Auto-prefetch is disabled because the filesystem (9P) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+single-1  | Loading safetensors checkpoint shards:   0% Completed | 0/8 [00:00<?, ?it/s]
+single-1  | Loading safetensors checkpoint shards:  12% Completed | 1/8 [00:15<01:46, 15.15s/it]
+single-1  | Loading safetensors checkpoint shards:  25% Completed | 2/8 [00:34<01:44, 17.34s/it]
+single-1  | Loading safetensors checkpoint shards:  38% Completed | 3/8 [00:51<01:26, 17.35s/it]
+single-1  | Loading safetensors checkpoint shards:  50% Completed | 4/8 [01:09<01:09, 17.48s/it]
+single-1  | Loading safetensors checkpoint shards:  62% Completed | 5/8 [01:09<00:33, 11.29s/it]
+single-1  | Loading safetensors checkpoint shards:  75% Completed | 6/8 [01:15<00:19,  9.65s/it]
+single-1  | Loading safetensors checkpoint shards:  88% Completed | 7/8 [01:19<00:07,  7.54s/it]
+single-1  | Loading safetensors checkpoint shards: 100% Completed | 8/8 [01:19<00:00,  9.88s/it]
+single-1  | 
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:07 [default_loader.py:484] Loading weights took 76.06 seconds
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:07 [eagle3_utils.py:27] Using Eagle3 auxiliary layers from config: (6, 20, 34, 48, 62)
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:07 [kernel.py:408] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native'])
+single-1  | (EngineCore pid=138) WARNING 10-14 14:44:07 [vllm.py:2372] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:07 [compilation.py:331] Enabled custom fusions: norm_quant, act_quant
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:07 [cuda.py:592] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:07 [weight_utils.py:1063] Filesystem type for checkpoints: 9P. Checkpoint size: 1.19 GiB. Available RAM: 19.00 GiB.
+single-1  | Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+single-1  | Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00, 12.21it/s]
+single-1  | 
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [default_loader.py:484] Loading weights took 6.89 seconds
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [model_runner.py:410] Model loading took 15.33 GiB memory and 87.539415 seconds
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [topk_topp_sampler.py:96] FlashInfer top-p/top-k sampling disabled via VLLM_USE_FLASHINFER_SAMPLER=0.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [torch_utils.py:290] Reducing Torch threads from 8 to 1 for serving. Set OMP_NUM_THREADS in the external environment to override.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [interface.py:1006] Setting attention block size to 448 tokens to ensure that attention page size is >= mamba page size.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [interface.py:1030] Padding mamba page size by 3.23% to ensure that mamba page size and attention page size are exactly equal.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:16 [utils.py:343] Using LBNHC KV cache layout.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:19 [caching.py:342] reconstructed serializable fn from standalone compile artifacts. num_artifacts=22 num_submods=65
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:19 [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/9e0e9c12c0ef54050f6652afea369e4ddc072976071938b67bc7fd58a92bf4c5/rank_0_0/model
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:19 [monitor.py:53] torch.compile took 0.71 s in total
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [monitor.py:81] Initial profiling/warmup run took 2.43 s
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [caching.py:342] reconstructed serializable fn from standalone compile artifacts. num_artifacts=3 num_submods=6
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/95680dbcefe8aa0d12556bbe31b48dc066504c77fe7e6cfb47b1c23264a70a28/rank_0_0/model
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [monitor.py:53] torch.compile took 0.12 s in total
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [monitor.py:81] Initial profiling/warmup run took 0.02 s
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [logits_processor.py:44] VLLM_USE_FLASHINFER_SAMPLER=0; vocab-parallel top-k uses torch.topk, at roughly half the speed.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [caching.py:342] reconstructed serializable fn from standalone compile artifacts. num_artifacts=1 num_submods=1
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/9414b1cfc914afa0f8416afe1e61facd3704e510e90c365bb1c8f15763ce5bc7/rank_0_0/model
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [monitor.py:53] torch.compile took 0.03 s in total
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:21 [monitor.py:81] Initial profiling/warmup run took 0.00 s
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.95 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of KV cache memory size. If OOM'ed, check the difference of initial free memory between the current run and the previous run where kv_cache_memory_bytes is suggested and update it correspondingly.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [kv_cache_utils.py:1634] Sliding-window bucket(s) are the smallest; using group_size 8 (pads the sliding-window group instead of the full-attention/mamba layers)
+single-1  | (EngineCore pid=138) WARNING 10-14 14:44:22 [kv_cache_utils.py:1769] Add 3 padding layers, may waste at most 60.00% KV cache memory
+single-1  | (EngineCore pid=138) WARNING 10-14 14:44:22 [kv_cache_utils.py:2449] Speculative decoding (method=dflash) is enabled but no KV cache group could be identified as the draft model's.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [kv_cache_utils.py:2659] GPU KV cache size: 63,872 tokens, Maximum concurrency for 57,344 tokens per request: 1.11x
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [kernel_warmup.py:230] JIT kernel warmup starting.
+single-1  | JIT kernel warmup (132 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (132 compile keys):  75%|███████▌  | 3/4 [00:00<00:00, 10.25kernel/s, _DecoratedTritonJitKernel (72 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00, 11.20kernel/s, _DecoratedTritonJitKernel (24 keys)]
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [kernel_warmup.py:243] JIT kernel warmup finished in 0.42s.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [qwen_triton_warmup.py:294] Warming up Qwen GDN Triton kernels for model_type=qwen3_5_text.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [qwen_vl_triton_warmup.py:98] Warmed M-RoPE Triton kernels.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [mamba_triton_warmup.py:42] Warmed Mamba batch_memcpy_kernel.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:22 [kernel_warmup.py:190] Warmed rejection-sampler kernels (k=7, draft_logits=True)
+single-1  | Capturing CUDA graphs (PIECEWISE):   0%|          | 0/11 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   9%|▉         | 1/11 [00:00<00:03,  2.87it/s]Capturing CUDA graphs (PIECEWISE):  18%|█▊        | 2/11 [00:00<00:03,  2.82it/s]Capturing CUDA graphs (PIECEWISE):  27%|██▋       | 3/11 [00:01<00:02,  2.85it/s]Capturing CUDA graphs (PIECEWISE):  36%|███▋      | 4/11 [00:01<00:02,  2.88it/s]Capturing CUDA graphs (PIECEWISE):  45%|████▌     | 5/11 [00:01<00:02,  2.92it/s]Capturing CUDA graphs (PIECEWISE):  55%|█████▍    | 6/11 [00:02<00:01,  2.97it/s]Capturing CUDA graphs (PIECEWISE):  64%|██████▎   | 7/11 [00:02<00:01,  3.00it/s]Capturing CUDA graphs (PIECEWISE):  73%|███████▎  | 8/11 [00:02<00:00,  3.76it/s]Capturing CUDA graphs (PIECEWISE):  82%|████████▏ | 9/11 [00:02<00:00,  4.57it/s]Capturing CUDA graphs (PIECEWISE):  91%|█████████ | 10/11 [00:02<00:00,  5.35it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 11/11 [00:02<00:00,  6.03it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 11/11 [00:02<00:00,  3.86it/s]
+single-1  | Capturing CUDA graphs (FULL):   0%|          | 0/8 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):  12%|█▎        | 1/8 [00:00<00:00,  7.99it/s]Capturing CUDA graphs (FULL):  25%|██▌       | 2/8 [00:00<00:00,  8.15it/s]Capturing CUDA graphs (FULL):  38%|███▊      | 3/8 [00:00<00:00,  8.28it/s]Capturing CUDA graphs (FULL):  50%|█████     | 4/8 [00:00<00:00,  8.17it/s]Capturing CUDA graphs (FULL):  62%|██████▎   | 5/8 [00:00<00:00,  8.25it/s]Capturing CUDA graphs (FULL):  75%|███████▌  | 6/8 [00:00<00:00,  8.32it/s]Capturing CUDA graphs (FULL):  88%|████████▊ | 7/8 [00:00<00:00,  8.33it/s]Capturing CUDA graphs (FULL): 100%|██████████| 8/8 [00:00<00:00,  8.42it/s]Capturing CUDA graphs (FULL): 100%|██████████| 8/8 [00:00<00:00,  8.31it/s]
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:28 [speculator.py:182] Capturing model for DFlash2 speculator...
+single-1  | Capturing dflash2 CUDA graphs (FULL):   0%|          | 0/8 [00:00<?, ?it/s]Capturing dflash2 CUDA graphs (FULL):  75%|███████▌  | 6/8 [00:00<00:00, 51.23it/s]Capturing dflash2 CUDA graphs (FULL): 100%|██████████| 8/8 [00:00<00:00, 53.73it/s]
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:28 [model_runner.py:1102] Graph capturing finished in 4 secs, took 0.13 GiB (driver free-memory delta 0.32 GiB)
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:29 [jit_monitor.py:84] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:29 [core.py:435] init engine (profile, create kv cache, warmup model) took 12.89 s (compilation: 0.87 s)
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:29 [kv_cache_utils.py:772] kv cache group sizes [448, 448, 448, 448, 448, 448, 448, 448, 448]
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:29 [kv_cache_utils.py:773] kv lcm block sizes 448
+single-1  | (EngineCore pid=138) INFO 10-14 14:44:29 [kernel.py:408] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native'])
+single-1  | (APIServer pid=1) INFO 10-14 14:44:29 [entry.py:132] Supported tasks: ['generate']
+single-1  | (APIServer pid=1) INFO 10-14 14:44:29 [factories.py:76] Scale-out endpoints are disabled. Set --enable-scale-out to enable them.
+single-1  | (APIServer pid=1) INFO 10-14 14:44:29 [parser_manager.py:35] "auto" tool choice has been enabled.
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [hf.py:646] Detected the chat template content format to be 'openai'. You can set `--chat-template-content-format` to override this.
+single-1  | (APIServer pid=1) WARNING 10-14 14:44:31 [model.py:1850] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 1.0, 'top_k': 20, 'top_p': 0.95}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+single-1  | (APIServer pid=1) WARNING 10-14 14:44:31 [serving.py:221] The chat template requires system-first ordering, so inline system messages in /v1/messages requests (e.g. Claude Code's per-turn reminders) are merged into the leading system prompt. Each new one changes the prompt prefix, so the rest of the conversation misses the prefix cache. Pass a --chat-template that accepts non-leading system messages to avoid this.
+single-1  | (APIServer pid=1) WARNING 10-14 14:44:31 [serving.py:221] The chat template requires system-first ordering, so inline system messages in /v1/messages requests (e.g. Claude Code's per-turn reminders) are merged into the leading system prompt. Each new one changes the prompt prefix, so the rest of the conversation misses the prefix cache. Pass a --chat-template that accepts non-leading system messages to avoid this.
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [entry.py:136] Starting vLLM server on http://0.0.0.0:18020
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:60] Available routes are:
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /openapi.json, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /docs, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /docs/oauth2-redirect, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /redoc, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /api/status, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /api/experimental/model-recommendations, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /api/show, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /load, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /version, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /kv_event_sources, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /health, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /metrics, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /tokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /detokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/tokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/detokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/models, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /ping, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /ping, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /invocations, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/chat/completions, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/chat/completions/batch, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/responses, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/responses/{response_id}, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/responses/{response_id}/cancel, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/completions, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/messages, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /v1/messages/count_tokens, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /generative_scoring, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /scale_elastic_ep, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 14:44:31 [launcher.py:69] Route: /is_scaling_elastic_ep, Methods: POST
+single-1  | INFO:     Started server process [1]
+single-1  | INFO:     Waiting for application startup.
+single-1  | INFO:     Application startup complete.
+single-1  | INFO:     172.20.0.1:37920 - "GET /health HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33886 - "GET /health HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:45:03 [loggers.py:320] Engine 000: Avg prompt throughput: 81.8 tokens/s, Avg generation throughput: 91.2 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 98.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:45:03 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.11, Accepted throughput: 23.66 tokens/s, Drafted throughput: 32.38 tokens/s, Accepted: 757 tokens, Drafted: 1036 tokens, Per-position acceptance rate: 0.946, 0.858, 0.770, 0.723, 0.669, 0.595, 0.554, Avg Draft acceptance rate: 73.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:03 [scheduler.py:2198] Request finished: req chatcmpl-90a54d9f2aa94668-be85611c finish_reason=stop prompt_tokens=95 generated_tokens=162 elapsed_s=3.10
+single-1  | INFO:     127.0.0.1:40224 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:40456 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:05 [scheduler.py:2198] Request finished: req chatcmpl-b8ad7c82a0cfcec8-b3679ce7 finish_reason=stop prompt_tokens=123 generated_tokens=263 elapsed_s=4.36
+single-1  | INFO:     127.0.0.1:40222 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) WARNING 10-14 14:45:05 [jit_monitor.py:140] Triton kernel JIT compilation during inference: _gather_draft_sampled_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:05 [scheduler.py:2198] Request finished: req chatcmpl-a84144635c99fa96-8f402abb finish_reason=stop prompt_tokens=99 generated_tokens=304 elapsed_s=4.94
+single-1  | INFO:     127.0.0.1:40200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:05 [scheduler.py:2198] Request finished: req chatcmpl-a61790ded11412bf-b77fe1cb finish_reason=stop prompt_tokens=118 generated_tokens=332 elapsed_s=5.15
+single-1  | INFO:     127.0.0.1:40238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:06 [scheduler.py:2198] Request finished: req chatcmpl-8f391ebe87c856fe-8f8f3655 finish_reason=stop prompt_tokens=99 generated_tokens=337 elapsed_s=5.46
+single-1  | INFO:     127.0.0.1:40206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:06 [scheduler.py:2198] Request finished: req chatcmpl-96e65036f8601c98-9f9a20bd finish_reason=stop prompt_tokens=120 generated_tokens=335 elapsed_s=5.69
+single-1  | INFO:     127.0.0.1:40186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:07 [scheduler.py:2198] Request finished: req chatcmpl-9c18a450e24f1410-a6618c46 finish_reason=stop prompt_tokens=101 generated_tokens=228 elapsed_s=6.43
+single-1  | INFO:     127.0.0.1:40254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:08 [scheduler.py:2198] Request finished: req chatcmpl-bbb597b4ad75e2d5-9dbbbef0 finish_reason=stop prompt_tokens=164 generated_tokens=461 elapsed_s=7.81
+single-1  | INFO:     127.0.0.1:40226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:08 [scheduler.py:2198] Request finished: req chatcmpl-ad22fc286be71b9e-999b1fe0 finish_reason=stop prompt_tokens=125 generated_tokens=227 elapsed_s=8.11
+single-1  | INFO:     127.0.0.1:40258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:09 [scheduler.py:2198] Request finished: req chatcmpl-ad3d9eefd9e18fe4-b6f78952 finish_reason=stop prompt_tokens=120 generated_tokens=243 elapsed_s=8.91
+single-1  | INFO:     127.0.0.1:40262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:11 [scheduler.py:2198] Request finished: req chatcmpl-b6ff2308a6bae1b1-b0d03d2e finish_reason=stop prompt_tokens=129 generated_tokens=332 elapsed_s=10.94
+single-1  | INFO:     127.0.0.1:40296 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:12 [scheduler.py:2198] Request finished: req chatcmpl-a726d96b28f37e69-86d41264 finish_reason=stop prompt_tokens=154 generated_tokens=410 elapsed_s=11.70
+single-1  | INFO:     127.0.0.1:40276 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:12 [scheduler.py:2198] Request finished: req chatcmpl-b4d6b3d2ef316cde-8e041860 finish_reason=stop prompt_tokens=113 generated_tokens=265 elapsed_s=11.82
+single-1  | INFO:     127.0.0.1:40306 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:45:13 [loggers.py:320] Engine 000: Avg prompt throughput: 142.2 tokens/s, Avg generation throughput: 442.2 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 87.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:45:13 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.95, Accepted throughput: 367.46 tokens/s, Drafted throughput: 520.05 tokens/s, Accepted: 3675 tokens, Drafted: 5201 tokens, Per-position acceptance rate: 0.911, 0.837, 0.766, 0.692, 0.641, 0.579, 0.521, Avg Draft acceptance rate: 70.7%
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:13 [scheduler.py:2198] Request finished: req chatcmpl-8e5efea41be52c80-95ae11e0 finish_reason=stop prompt_tokens=123 generated_tokens=470 elapsed_s=12.69
+single-1  | INFO:     127.0.0.1:40282 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:16 [scheduler.py:2198] Request finished: req chatcmpl-869d37b65bd4630e-a2d7a3c6 finish_reason=stop prompt_tokens=112 generated_tokens=304 elapsed_s=15.31
+single-1  | INFO:     127.0.0.1:40312 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:16 [scheduler.py:2198] Request finished: req chatcmpl-afca293c19696602-afc901eb finish_reason=stop prompt_tokens=86 generated_tokens=178 elapsed_s=15.61
+single-1  | INFO:     127.0.0.1:40324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:16 [scheduler.py:2198] Request finished: req chatcmpl-98b50c9981335f7e-92233341 finish_reason=stop prompt_tokens=115 generated_tokens=509 elapsed_s=15.90
+single-1  | INFO:     127.0.0.1:40298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:18 [scheduler.py:2198] Request finished: req chatcmpl-a540d261938074ee-beea6d95 finish_reason=stop prompt_tokens=110 generated_tokens=212 elapsed_s=17.33
+single-1  | INFO:     127.0.0.1:40334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:20 [scheduler.py:2198] Request finished: req chatcmpl-9989c97edc687754-844f9226 finish_reason=stop prompt_tokens=171 generated_tokens=256 elapsed_s=19.40
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:20 [scheduler.py:2198] Request finished: req chatcmpl-9e738111812cc2a8-96d4f058 finish_reason=stop prompt_tokens=125 generated_tokens=228 elapsed_s=19.40
+single-1  | INFO:     127.0.0.1:40350 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:40358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:21 [scheduler.py:2198] Request finished: req chatcmpl-849699042496efb1-b8cedcec finish_reason=stop prompt_tokens=117 generated_tokens=508 elapsed_s=20.75
+single-1  | INFO:     127.0.0.1:40332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:22 [scheduler.py:2198] Request finished: req chatcmpl-8abdcf8e6a802b09-a39410c6 finish_reason=stop prompt_tokens=130 generated_tokens=419 elapsed_s=21.36
+single-1  | INFO:     127.0.0.1:40344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:23 [scheduler.py:2198] Request finished: req chatcmpl-a51b8e7e2246a3e5-a520d296 finish_reason=stop prompt_tokens=89 generated_tokens=253 elapsed_s=22.22
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:23 [scheduler.py:2198] Request finished: req chatcmpl-978afe2c745f9dbb-b4d82506 finish_reason=stop prompt_tokens=100 generated_tokens=194 elapsed_s=22.21
+single-1  | INFO:     127.0.0.1:40382 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:40386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:24 [scheduler.py:2198] Request finished: req chatcmpl-af0a721de9996393-bbcec4b9 finish_reason=stop prompt_tokens=118 generated_tokens=536 elapsed_s=23.19
+single-1  | INFO:     127.0.0.1:40374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:24 [scheduler.py:2198] Request finished: req chatcmpl-ad42b03fe3771b67-b0e317f0 finish_reason=stop prompt_tokens=127 generated_tokens=967 elapsed_s=23.42
+single-1  | INFO:     127.0.0.1:40264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:45:24 [loggers.py:320] Engine 000: Avg prompt throughput: 166.3 tokens/s, Avg generation throughput: 418.7 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 98.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:45:24 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.53, Accepted throughput: 342.72 tokens/s, Drafted throughput: 529.92 tokens/s, Accepted: 3427 tokens, Drafted: 5299 tokens, Per-position acceptance rate: 0.894, 0.789, 0.704, 0.620, 0.556, 0.513, 0.452, Avg Draft acceptance rate: 64.7%
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:25 [scheduler.py:2198] Request finished: req chatcmpl-95d766370874b4fc-892f3509 finish_reason=stop prompt_tokens=106 generated_tokens=247 elapsed_s=24.95
+single-1  | INFO:     127.0.0.1:40390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:26 [scheduler.py:2198] Request finished: req chatcmpl-877c8b8da4a22766-96ddde9c finish_reason=stop prompt_tokens=117 generated_tokens=294 elapsed_s=25.50
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:26 [scheduler.py:2198] Request finished: req chatcmpl-b77bf4c4aa4cc25a-9ba9c489 finish_reason=stop prompt_tokens=115 generated_tokens=230 elapsed_s=25.50
+single-1  | INFO:     127.0.0.1:40406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:40414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:27 [scheduler.py:2198] Request finished: req chatcmpl-93c88e582d66ab6b-9d1b47be finish_reason=stop prompt_tokens=101 generated_tokens=199 elapsed_s=23.63
+single-1  | INFO:     127.0.0.1:40454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:28 [scheduler.py:2198] Request finished: req chatcmpl-ab42d8fee5a65097-aeef0b1a finish_reason=stop prompt_tokens=129 generated_tokens=242 elapsed_s=27.24
+single-1  | INFO:     127.0.0.1:40442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:29 [scheduler.py:2198] Request finished: req chatcmpl-8fa315655592ae92-b566b757 finish_reason=stop prompt_tokens=125 generated_tokens=399 elapsed_s=28.28
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:29 [scheduler.py:2198] Request finished: req chatcmpl-887458599167f54b-b6ff7436 finish_reason=stop prompt_tokens=127 generated_tokens=355 elapsed_s=28.28
+single-1  | INFO:     127.0.0.1:40422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:40434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:29 [scheduler.py:2198] Request finished: req chatcmpl-9db9b4e0ad32fd1f-abe5406b finish_reason=stop prompt_tokens=112 generated_tokens=208 elapsed_s=23.99
+single-1  | INFO:     127.0.0.1:40476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:30 [scheduler.py:2198] Request finished: req chatcmpl-9bc3c9a69c2f83ca-a9ca6124 finish_reason=stop prompt_tokens=101 generated_tokens=234 elapsed_s=24.58
+single-1  | INFO:     127.0.0.1:40474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:31 [scheduler.py:2198] Request finished: req chatcmpl-8334d08bbea12342-a5867621 finish_reason=stop prompt_tokens=91 generated_tokens=341 elapsed_s=26.01
+single-1  | INFO:     127.0.0.1:40466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:32 [scheduler.py:2198] Request finished: req chatcmpl-9b37f6384f017f86-a1e42c4a finish_reason=stop prompt_tokens=102 generated_tokens=282 elapsed_s=25.81
+single-1  | INFO:     127.0.0.1:40492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:33 [scheduler.py:2198] Request finished: req chatcmpl-8516833e6cc86772-be240d81 finish_reason=stop prompt_tokens=104 generated_tokens=200 elapsed_s=24.17
+single-1  | INFO:     127.0.0.1:34172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:34 [scheduler.py:2198] Request finished: req chatcmpl-8be32dcc7fdbc54f-a52b8358 finish_reason=stop prompt_tokens=142 generated_tokens=199 elapsed_s=22.62
+single-1  | INFO:     127.0.0.1:34196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:45:34 [loggers.py:320] Engine 000: Avg prompt throughput: 145.7 tokens/s, Avg generation throughput: 434.0 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 88.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:45:34 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.90, Accepted throughput: 360.09 tokens/s, Drafted throughput: 514.48 tokens/s, Accepted: 3601 tokens, Drafted: 5145 tokens, Per-position acceptance rate: 0.932, 0.835, 0.763, 0.687, 0.622, 0.561, 0.499, Avg Draft acceptance rate: 70.0%
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:34 [scheduler.py:2198] Request finished: req chatcmpl-9f3620f8e1f000d7-8f2e5ef4 finish_reason=stop prompt_tokens=104 generated_tokens=328 elapsed_s=27.69
+single-1  | INFO:     127.0.0.1:40518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48656 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:36 [scheduler.py:2198] Request finished: req chatcmpl-9947014b128c7a85-b8c83bbf finish_reason=stop prompt_tokens=133 generated_tokens=514 elapsed_s=28.14
+single-1  | INFO:     127.0.0.1:40528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:37 [scheduler.py:2198] Request finished: req chatcmpl-8a30a31ebe4a066a-bb540130 finish_reason=stop prompt_tokens=123 generated_tokens=533 elapsed_s=30.61
+single-1  | INFO:     127.0.0.1:40506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:38 [scheduler.py:2198] Request finished: req chatcmpl-97b90789c2ddabce-9c04297f finish_reason=stop prompt_tokens=137 generated_tokens=396 elapsed_s=25.47
+single-1  | INFO:     127.0.0.1:34208 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:38 [scheduler.py:2198] Request finished: req chatcmpl-89e7c331a4da4da9-8fb8fcdb finish_reason=stop prompt_tokens=187 generated_tokens=506 elapsed_s=28.57
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:38 [scheduler.py:2198] Request finished: req chatcmpl-9ad24bd5963dbe24-939a81bf finish_reason=stop prompt_tokens=121 generated_tokens=477 elapsed_s=25.78
+single-1  | INFO:     127.0.0.1:34188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:39 [scheduler.py:2198] Request finished: req chatcmpl-96d29bd7a2306fbd-8ed55ba6 finish_reason=stop prompt_tokens=154 generated_tokens=361 elapsed_s=26.03
+single-1  | INFO:     127.0.0.1:34224 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:41 [scheduler.py:2198] Request finished: req chatcmpl-831e7bc3666506eb-8cca5ac2 finish_reason=stop prompt_tokens=103 generated_tokens=249 elapsed_s=23.61
+single-1  | INFO:     127.0.0.1:34262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:42 [scheduler.py:2198] Request finished: req chatcmpl-b3bdeae12bbfadd7-9b7c39c3 finish_reason=stop prompt_tokens=109 generated_tokens=215 elapsed_s=21.88
+single-1  | INFO:     127.0.0.1:34274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:42 [scheduler.py:2198] Request finished: req chatcmpl-aa3b569e587c87af-b266cca1 finish_reason=stop prompt_tokens=97 generated_tokens=228 elapsed_s=25.59
+single-1  | INFO:     127.0.0.1:34250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:42 [scheduler.py:2198] Request finished: req chatcmpl-94500277fc349fcf-97c41bb6 finish_reason=stop prompt_tokens=154 generated_tokens=353 elapsed_s=26.39
+single-1  | INFO:     127.0.0.1:34234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:43 [scheduler.py:2198] Request finished: req chatcmpl-9d5b1e5af0e7160a-898caccb finish_reason=stop prompt_tokens=97 generated_tokens=249 elapsed_s=22.69
+single-1  | INFO:     127.0.0.1:34272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:43 [scheduler.py:2198] Request finished: req chatcmpl-9b67f635f878e2b3-940b4317 finish_reason=stop prompt_tokens=110 generated_tokens=410 elapsed_s=27.10
+single-1  | INFO:     127.0.0.1:34248 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:45:44 [loggers.py:320] Engine 000: Avg prompt throughput: 174.3 tokens/s, Avg generation throughput: 424.3 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 98.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:45:44 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.08, Accepted throughput: 354.09 tokens/s, Drafted throughput: 487.89 tokens/s, Accepted: 3541 tokens, Drafted: 4879 tokens, Per-position acceptance rate: 0.945, 0.861, 0.782, 0.704, 0.648, 0.603, 0.537, Avg Draft acceptance rate: 72.6%
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:45 [scheduler.py:2198] Request finished: req chatcmpl-acb338e9f4c98065-a0499777 finish_reason=stop prompt_tokens=122 generated_tokens=312 elapsed_s=23.81
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:45 [scheduler.py:2198] Request finished: req chatcmpl-92440f9f853cce57-a8226973 finish_reason=stop prompt_tokens=110 generated_tokens=194 elapsed_s=22.33
+single-1  | INFO:     127.0.0.1:48348 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:47 [scheduler.py:2198] Request finished: req chatcmpl-8c00a245dd8425d3-bd5d052e finish_reason=stop prompt_tokens=105 generated_tokens=197 elapsed_s=23.46
+single-1  | INFO:     127.0.0.1:48382 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:49 [scheduler.py:2198] Request finished: req chatcmpl-b3a97f6c62015540-b263f658 finish_reason=stop prompt_tokens=160 generated_tokens=322 elapsed_s=26.85
+single-1  | INFO:     127.0.0.1:48358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:49 [scheduler.py:2198] Request finished: req chatcmpl-83b8f77ad905ff10-8721316b finish_reason=stop prompt_tokens=92 generated_tokens=171 elapsed_s=23.29
+single-1  | INFO:     127.0.0.1:48400 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:50 [scheduler.py:2198] Request finished: req chatcmpl-810fccc643861ccd-bea63ff5 finish_reason=stop prompt_tokens=137 generated_tokens=369 elapsed_s=26.07
+single-1  | INFO:     127.0.0.1:48394 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:50 [scheduler.py:2198] Request finished: req chatcmpl-8738203b8fc0864c-9982cf8d finish_reason=stop prompt_tokens=144 generated_tokens=329 elapsed_s=25.08
+single-1  | INFO:     127.0.0.1:48398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:51 [scheduler.py:2198] Request finished: req chatcmpl-82d36480921de2fc-ab129d7d finish_reason=stop prompt_tokens=141 generated_tokens=430 elapsed_s=28.33
+single-1  | INFO:     127.0.0.1:48362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:51 [scheduler.py:2198] Request finished: req chatcmpl-8fe79b5601712cfa-9b46e085 finish_reason=stop prompt_tokens=98 generated_tokens=318 elapsed_s=25.54
+single-1  | INFO:     127.0.0.1:48402 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:53 [scheduler.py:2198] Request finished: req chatcmpl-899e911a4d350dde-9e279c6f finish_reason=stop prompt_tokens=122 generated_tokens=302 elapsed_s=25.49
+single-1  | INFO:     127.0.0.1:48416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:55 [scheduler.py:2198] Request finished: req chatcmpl-82451c3fc542e814-ba0fad83 finish_reason=stop prompt_tokens=153 generated_tokens=267 elapsed_s=25.88
+single-1  | INFO:     127.0.0.1:48448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:55 [scheduler.py:2198] Request finished: req chatcmpl-b881b027138d2755-b15d41f7 finish_reason=stop prompt_tokens=114 generated_tokens=243 elapsed_s=24.26
+single-1  | INFO:     127.0.0.1:48596 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:56 [scheduler.py:2198] Request finished: req chatcmpl-91f3e30024d2a369-9d597050 finish_reason=stop prompt_tokens=107 generated_tokens=274 elapsed_s=26.05
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:56 [scheduler.py:2198] Request finished: req chatcmpl-9058ea54ab4d819f-a0359e96 finish_reason=stop prompt_tokens=118 generated_tokens=280 elapsed_s=25.72
+single-1  | INFO:     127.0.0.1:48462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:45:56 [loggers.py:320] Engine 000: Avg prompt throughput: 159.7 tokens/s, Avg generation throughput: 406.8 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 99.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:45:56 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.82, Accepted throughput: 336.58 tokens/s, Drafted throughput: 488.57 tokens/s, Accepted: 3366 tokens, Drafted: 4886 tokens, Per-position acceptance rate: 0.915, 0.827, 0.746, 0.676, 0.609, 0.556, 0.493, Avg Draft acceptance rate: 68.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:56 [scheduler.py:2198] Request finished: req chatcmpl-a8a2b2861504acc2-9b6900f7 finish_reason=stop prompt_tokens=97 generated_tokens=221 elapsed_s=24.63
+single-1  | INFO:     127.0.0.1:48608 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:58 [scheduler.py:2198] Request finished: req chatcmpl-9f8947f49023fb19-b536228e finish_reason=stop prompt_tokens=104 generated_tokens=155 elapsed_s=23.03
+single-1  | INFO:     127.0.0.1:48644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:58 [scheduler.py:2198] Request finished: req chatcmpl-b2305db0f0b6c4fb-8b498b6f finish_reason=stop prompt_tokens=129 generated_tokens=475 elapsed_s=29.15
+single-1  | INFO:     127.0.0.1:48434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:58 [scheduler.py:2198] Request finished: req chatcmpl-bba2eaff9f9765b6-8cc183c9 finish_reason=stop prompt_tokens=112 generated_tokens=235 elapsed_s=25.64
+single-1  | INFO:     127.0.0.1:48624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:45:59 [scheduler.py:2198] Request finished: req chatcmpl-91ce22285d5b8493-adac4fe2 finish_reason=stop prompt_tokens=110 generated_tokens=191 elapsed_s=22.78
+single-1  | INFO:     127.0.0.1:48660 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:01 [scheduler.py:2198] Request finished: req chatcmpl-8a196149c6a72207-93050a79 finish_reason=stop prompt_tokens=113 generated_tokens=398 elapsed_s=27.36
+single-1  | INFO:     127.0.0.1:48628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:03 [scheduler.py:2198] Request finished: req chatcmpl-becf969899a0cb6d-bb11fea0 finish_reason=stop prompt_tokens=105 generated_tokens=385 elapsed_s=26.08
+single-1  | INFO:     127.0.0.1:48668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:03 [scheduler.py:2198] Request finished: req chatcmpl-8ebde363d72e4953-bf7649de finish_reason=stop prompt_tokens=183 generated_tokens=375 elapsed_s=25.44
+single-1  | INFO:     127.0.0.1:48680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:04 [scheduler.py:2198] Request finished: req chatcmpl-830c5800be4761ea-b6c91711 finish_reason=stop prompt_tokens=126 generated_tokens=424 elapsed_s=25.77
+single-1  | INFO:     127.0.0.1:48690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:04 [scheduler.py:2198] Request finished: req chatcmpl-a9e1c00fda700a11-ae0fc8c9 finish_reason=stop prompt_tokens=105 generated_tokens=316 elapsed_s=25.26
+single-1  | INFO:     127.0.0.1:48718 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:05 [scheduler.py:2198] Request finished: req chatcmpl-9c74b8bf5c3c1891-84d4e4f9 finish_reason=stop prompt_tokens=146 generated_tokens=467 elapsed_s=26.69
+single-1  | INFO:     127.0.0.1:48704 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:06 [scheduler.py:2198] Request finished: req chatcmpl-8433d5c7121d4186-af87cb42 finish_reason=stop prompt_tokens=108 generated_tokens=200 elapsed_s=24.16
+single-1  | (APIServer pid=1) INFO 10-14 14:46:06 [loggers.py:320] Engine 000: Avg prompt throughput: 118.0 tokens/s, Avg generation throughput: 450.5 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 86.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:46:06 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.95, Accepted throughput: 374.59 tokens/s, Drafted throughput: 529.89 tokens/s, Accepted: 3746 tokens, Drafted: 5299 tokens, Per-position acceptance rate: 0.905, 0.820, 0.764, 0.692, 0.641, 0.592, 0.535, Avg Draft acceptance rate: 70.7%
+single-1  | INFO:     127.0.0.1:42666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:35184 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:07 [scheduler.py:2198] Request finished: req chatcmpl-907caeae44e9ae28-8c9a4998 finish_reason=stop prompt_tokens=90 generated_tokens=216 elapsed_s=24.42
+single-1  | INFO:     127.0.0.1:42686 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:07 [scheduler.py:2198] Request finished: req chatcmpl-88b95cc9151df236-9ce64bc5 finish_reason=stop prompt_tokens=119 generated_tokens=228 elapsed_s=25.05
+single-1  | INFO:     127.0.0.1:42682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:08 [scheduler.py:2198] Request finished: req chatcmpl-bcff1376cc6c4d9d-87ac0f01 finish_reason=stop prompt_tokens=103 generated_tokens=403 elapsed_s=26.39
+single-1  | INFO:     127.0.0.1:42652 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:08 [scheduler.py:2198] Request finished: req chatcmpl-aa560d6983a88809-a79ab85b finish_reason=stop prompt_tokens=95 generated_tokens=294 elapsed_s=26.11
+single-1  | INFO:     127.0.0.1:42668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:09 [scheduler.py:2198] Request finished: req chatcmpl-81cc03a2fe829b20-b728ce20 finish_reason=stop prompt_tokens=92 generated_tokens=191 elapsed_s=25.49
+single-1  | INFO:     127.0.0.1:42698 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:10 [scheduler.py:2198] Request finished: req chatcmpl-bed1e5c00fb6ebd1-9a1cbb68 finish_reason=stop prompt_tokens=128 generated_tokens=1317 elapsed_s=42.40
+single-1  | INFO:     127.0.0.1:48422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:11 [scheduler.py:2198] Request finished: req chatcmpl-a046570793271e77-8399f065 finish_reason=stop prompt_tokens=148 generated_tokens=230 elapsed_s=24.01
+single-1  | INFO:     127.0.0.1:42718 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:11 [scheduler.py:2198] Request finished: req chatcmpl-8f1f5327368ecf53-8285c6ff finish_reason=stop prompt_tokens=84 generated_tokens=301 elapsed_s=26.29
+single-1  | INFO:     127.0.0.1:42712 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:13 [scheduler.py:2198] Request finished: req chatcmpl-96f22e37356c2ef2-9b7d45cc finish_reason=stop prompt_tokens=143 generated_tokens=367 elapsed_s=27.90
+single-1  | INFO:     127.0.0.1:42716 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:14 [scheduler.py:2198] Request finished: req chatcmpl-a46ed5ef71cde67e-99dcd2cf finish_reason=stop prompt_tokens=146 generated_tokens=259 elapsed_s=23.74
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:14 [scheduler.py:2198] Request finished: req chatcmpl-9e264c58dfd5fb18-a5e530a7 finish_reason=stop prompt_tokens=96 generated_tokens=186 elapsed_s=23.23
+single-1  | INFO:     127.0.0.1:42742 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:14 [scheduler.py:2198] Request finished: req chatcmpl-bca235040588e131-83c6bc11 finish_reason=stop prompt_tokens=110 generated_tokens=228 elapsed_s=24.59
+single-1  | INFO:     127.0.0.1:42740 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:15 [scheduler.py:2198] Request finished: req chatcmpl-9988769091be2dec-a15a1553 finish_reason=stop prompt_tokens=98 generated_tokens=430 elapsed_s=26.23
+single-1  | INFO:     127.0.0.1:42734 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:46:16 [loggers.py:320] Engine 000: Avg prompt throughput: 173.0 tokens/s, Avg generation throughput: 396.3 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 99.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:46:16 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.80, Accepted throughput: 327.28 tokens/s, Drafted throughput: 477.37 tokens/s, Accepted: 3273 tokens, Drafted: 4774 tokens, Per-position acceptance rate: 0.916, 0.818, 0.745, 0.670, 0.598, 0.547, 0.504, Avg Draft acceptance rate: 68.6%
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:16 [scheduler.py:2198] Request finished: req chatcmpl-ae79e73e821c9964-b33672cd finish_reason=stop prompt_tokens=111 generated_tokens=269 elapsed_s=24.70
+single-1  | INFO:     127.0.0.1:33976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:19 [scheduler.py:2198] Request finished: req chatcmpl-aafd5f81c6d4e1ec-97c567c7 finish_reason=stop prompt_tokens=92 generated_tokens=149 elapsed_s=23.78
+single-1  | INFO:     127.0.0.1:34002 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:20 [scheduler.py:2198] Request finished: req chatcmpl-9dd4fcefdb0c87bc-8a8153c5 finish_reason=stop prompt_tokens=102 generated_tokens=295 elapsed_s=25.23
+single-1  | INFO:     127.0.0.1:33998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:22 [scheduler.py:2198] Request finished: req chatcmpl-83a2315121a47143-8f0e0957 finish_reason=stop prompt_tokens=111 generated_tokens=428 elapsed_s=27.37
+single-1  | INFO:     127.0.0.1:33988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:22 [scheduler.py:2198] Request finished: req chatcmpl-950b3c2c7f8a8273-a09b94ef finish_reason=stop prompt_tokens=114 generated_tokens=330 elapsed_s=26.74
+single-1  | INFO:     127.0.0.1:34008 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:23 [scheduler.py:2198] Request finished: req chatcmpl-878fbd88a714dfa4-a686f5c1 finish_reason=stop prompt_tokens=156 generated_tokens=360 elapsed_s=27.24
+single-1  | INFO:     127.0.0.1:34022 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:25 [scheduler.py:2198] Request finished: req chatcmpl-abf470dcfa811676-b1463f86 finish_reason=stop prompt_tokens=137 generated_tokens=293 elapsed_s=27.08
+single-1  | INFO:     127.0.0.1:34046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:26 [scheduler.py:2198] Request finished: req chatcmpl-8cbb87ed0ee45fc3-b5831ff9 finish_reason=stop prompt_tokens=155 generated_tokens=350 elapsed_s=28.40
+single-1  | INFO:     127.0.0.1:34038 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:27 [scheduler.py:2198] Request finished: req chatcmpl-a6c69d302ed9f87a-902c29e3 finish_reason=stop prompt_tokens=142 generated_tokens=546 elapsed_s=29.85
+single-1  | INFO:     127.0.0.1:34036 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:46:27 [loggers.py:320] Engine 000: Avg prompt throughput: 94.7 tokens/s, Avg generation throughput: 430.0 tokens/s, Running: 5 reqs, Waiting: 26 reqs, GPU KV cache usage: 74.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:46:27 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.49, Accepted throughput: 351.59 tokens/s, Drafted throughput: 548.09 tokens/s, Accepted: 3516 tokens, Drafted: 5481 tokens, Per-position acceptance rate: 0.889, 0.787, 0.696, 0.628, 0.561, 0.492, 0.438, Avg Draft acceptance rate: 64.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:29 [scheduler.py:2198] Request finished: req chatcmpl-9f93cfce02a06c1d-a9c4c731 finish_reason=stop prompt_tokens=90 generated_tokens=134 elapsed_s=25.83
+single-1  | INFO:     127.0.0.1:35136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:30 [scheduler.py:2198] Request finished: req chatcmpl-92ecab66f22c556b-8a344ac1 finish_reason=stop prompt_tokens=125 generated_tokens=438 elapsed_s=30.59
+single-1  | INFO:     127.0.0.1:34054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:30 [scheduler.py:2198] Request finished: req chatcmpl-bfa67479018d2a83-8b839357 finish_reason=stop prompt_tokens=124 generated_tokens=377 elapsed_s=28.84
+single-1  | INFO:     127.0.0.1:34064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:30 [scheduler.py:2198] Request finished: req chatcmpl-a6383bbb0f26d770-8e4e4847 finish_reason=stop prompt_tokens=108 generated_tokens=288 elapsed_s=27.84
+single-1  | INFO:     127.0.0.1:35130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:34 [scheduler.py:2198] Request finished: req chatcmpl-9a233dd689635fd0-ba5fa05a finish_reason=stop prompt_tokens=121 generated_tokens=279 elapsed_s=27.83
+single-1  | INFO:     127.0.0.1:35178 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:34 [scheduler.py:2198] Request finished: req chatcmpl-b87e5b839d7505a4-96a0d7e2 finish_reason=stop prompt_tokens=104 generated_tokens=418 elapsed_s=30.41
+single-1  | INFO:     127.0.0.1:35150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:34 [scheduler.py:2198] Request finished: req chatcmpl-be66dbb8c7ab5e74-9ab4afac finish_reason=stop prompt_tokens=144 generated_tokens=1269 elapsed_s=41.95
+single-1  | INFO:     127.0.0.1:33982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:35 [scheduler.py:2198] Request finished: req chatcmpl-8aef1fdf365cf103-9bd035f8 finish_reason=stop prompt_tokens=175 generated_tokens=407 elapsed_s=30.84
+single-1  | INFO:     127.0.0.1:35158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:37 [scheduler.py:2198] Request finished: req chatcmpl-bba8712784544eec-b1b47d19 finish_reason=stop prompt_tokens=147 generated_tokens=215 elapsed_s=29.74
+single-1  | INFO:     127.0.0.1:35190 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:37 [scheduler.py:2198] Request finished: req chatcmpl-b12a9e98a8ed2e06-83c52106 finish_reason=stop prompt_tokens=140 generated_tokens=491 elapsed_s=32.74
+single-1  | INFO:     127.0.0.1:35172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:46:37 [loggers.py:320] Engine 000: Avg prompt throughput: 126.0 tokens/s, Avg generation throughput: 433.0 tokens/s, Running: 5 reqs, Waiting: 26 reqs, GPU KV cache usage: 75.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:46:37 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.61, Accepted throughput: 355.81 tokens/s, Drafted throughput: 540.41 tokens/s, Accepted: 3558 tokens, Drafted: 5404 tokens, Per-position acceptance rate: 0.904, 0.802, 0.718, 0.636, 0.575, 0.518, 0.456, Avg Draft acceptance rate: 65.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:38 [scheduler.py:2198] Request finished: req chatcmpl-b8694c18e35f7c41-aa83a6cd finish_reason=stop prompt_tokens=90 generated_tokens=149 elapsed_s=29.62
+single-1  | INFO:     127.0.0.1:35220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:38 [scheduler.py:2198] Request finished: req chatcmpl-ae634796ade54350-8360bf76 finish_reason=stop prompt_tokens=122 generated_tokens=262 elapsed_s=30.33
+single-1  | INFO:     127.0.0.1:35204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:35648 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:39 [scheduler.py:2198] Request finished: req chatcmpl-9a0400c184639b3f-b1804829 finish_reason=stop prompt_tokens=139 generated_tokens=1794 elapsed_s=50.47
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:39 [scheduler.py:2198] Request finished: req chatcmpl-ab1bfe7b0b07db70-b9d466b1 finish_reason=stop prompt_tokens=130 generated_tokens=379 elapsed_s=31.95
+single-1  | INFO:     127.0.0.1:42732 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:35202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:41 [scheduler.py:2198] Request finished: req chatcmpl-b5606f7a91275ce5-8fb03650 finish_reason=stop prompt_tokens=90 generated_tokens=181 elapsed_s=29.50
+single-1  | INFO:     127.0.0.1:35254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:42 [scheduler.py:2198] Request finished: req chatcmpl-9c7f993ca93d0659-a70fde10 finish_reason=stop prompt_tokens=141 generated_tokens=327 elapsed_s=33.19
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:42 [scheduler.py:2198] Request finished: req chatcmpl-b97868c5ee3043fe-be87434c finish_reason=stop prompt_tokens=112 generated_tokens=270 elapsed_s=30.70
+single-1  | INFO:     127.0.0.1:35232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:35250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:43 [scheduler.py:2198] Request finished: req chatcmpl-a9d9522505c3a464-89964c57 finish_reason=stop prompt_tokens=101 generated_tokens=226 elapsed_s=29.07
+single-1  | INFO:     127.0.0.1:42804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:43 [scheduler.py:2198] Request finished: req chatcmpl-9cd89e8a72a0bc10-b2351579 finish_reason=stop prompt_tokens=133 generated_tokens=251 elapsed_s=30.60
+single-1  | INFO:     127.0.0.1:42792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:45 [scheduler.py:2198] Request finished: req chatcmpl-a921916893a0e56f-8a0b5ed8 finish_reason=stop prompt_tokens=113 generated_tokens=264 elapsed_s=30.36
+single-1  | INFO:     127.0.0.1:42830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:46 [scheduler.py:2198] Request finished: req chatcmpl-abbfbb8eab4a4352-a21da310 finish_reason=stop prompt_tokens=153 generated_tokens=512 elapsed_s=35.46
+single-1  | INFO:     127.0.0.1:35234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:47 [scheduler.py:2198] Request finished: req chatcmpl-bc5a8a8baff7218e-a1aab091 finish_reason=stop prompt_tokens=97 generated_tokens=320 elapsed_s=31.08
+single-1  | INFO:     127.0.0.1:42858 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:46:47 [loggers.py:320] Engine 000: Avg prompt throughput: 157.4 tokens/s, Avg generation throughput: 418.4 tokens/s, Running: 5 reqs, Waiting: 26 reqs, GPU KV cache usage: 72.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:46:47 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.10, Accepted throughput: 349.41 tokens/s, Drafted throughput: 479.51 tokens/s, Accepted: 3494 tokens, Drafted: 4795 tokens, Per-position acceptance rate: 0.934, 0.850, 0.790, 0.728, 0.664, 0.599, 0.536, Avg Draft acceptance rate: 72.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:48 [scheduler.py:2198] Request finished: req chatcmpl-94565dcb471a07ce-a73b656b finish_reason=stop prompt_tokens=109 generated_tokens=176 elapsed_s=25.85
+single-1  | INFO:     127.0.0.1:42876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:48 [scheduler.py:2198] Request finished: req chatcmpl-bd1ffb455e8dece3-bea14c5d finish_reason=stop prompt_tokens=121 generated_tokens=411 elapsed_s=32.71
+single-1  | INFO:     127.0.0.1:42844 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:50 [scheduler.py:2198] Request finished: req chatcmpl-8dd25775b2035c10-88bafab8 finish_reason=stop prompt_tokens=95 generated_tokens=149 elapsed_s=27.73
+single-1  | INFO:     127.0.0.1:42888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:51 [scheduler.py:2198] Request finished: req chatcmpl-930f91db6a6345f2-831763d7 finish_reason=stop prompt_tokens=130 generated_tokens=376 elapsed_s=31.47
+single-1  | INFO:     127.0.0.1:42860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:52 [scheduler.py:2198] Request finished: req chatcmpl-b286cff4bae603b0-96657db8 finish_reason=stop prompt_tokens=177 generated_tokens=336 elapsed_s=31.51
+single-1  | INFO:     127.0.0.1:42868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:53 [scheduler.py:2198] Request finished: req chatcmpl-906a1b160da8d631-84dd5244 finish_reason=stop prompt_tokens=94 generated_tokens=152 elapsed_s=25.72
+single-1  | INFO:     127.0.0.1:53178 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:53 [scheduler.py:2198] Request finished: req chatcmpl-bcf59159f6e8c5da-add9a07b finish_reason=stop prompt_tokens=114 generated_tokens=246 elapsed_s=27.11
+single-1  | INFO:     127.0.0.1:53172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:55 [scheduler.py:2198] Request finished: req chatcmpl-a9cdd2e1eedbed59-9d3f3892 finish_reason=stop prompt_tokens=106 generated_tokens=148 elapsed_s=24.94
+single-1  | INFO:     127.0.0.1:53196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:55 [scheduler.py:2198] Request finished: req chatcmpl-baf24b1640032c62-9f72907e finish_reason=stop prompt_tokens=145 generated_tokens=432 elapsed_s=31.77
+single-1  | INFO:     127.0.0.1:53164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:55 [scheduler.py:2198] Request finished: req chatcmpl-a48261b563f0dab5-b7c9b6a2 finish_reason=stop prompt_tokens=88 generated_tokens=147 elapsed_s=25.25
+single-1  | INFO:     127.0.0.1:53204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:56 [scheduler.py:2198] Request finished: req chatcmpl-bcfe5e7ce82ea49e-b1835687 finish_reason=stop prompt_tokens=123 generated_tokens=412 elapsed_s=30.70
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:56 [scheduler.py:2198] Request finished: req chatcmpl-8e09bc672fd36e48-8194f9bb finish_reason=stop prompt_tokens=118 generated_tokens=298 elapsed_s=27.10
+single-1  | INFO:     127.0.0.1:53166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:57 [scheduler.py:2198] Request finished: req chatcmpl-964c5303073366ce-9486f84b finish_reason=stop prompt_tokens=104 generated_tokens=146 elapsed_s=23.78
+single-1  | INFO:     127.0.0.1:35562 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:46:58 [scheduler.py:2198] Request finished: req chatcmpl-bf0fbe544a8bf63c-ab936dc6 finish_reason=stop prompt_tokens=106 generated_tokens=260 elapsed_s=27.77
+single-1  | INFO:     127.0.0.1:53206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:46:59 [loggers.py:320] Engine 000: Avg prompt throughput: 157.1 tokens/s, Avg generation throughput: 423.2 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 86.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:46:59 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.95, Accepted throughput: 351.78 tokens/s, Drafted throughput: 496.97 tokens/s, Accepted: 3518 tokens, Drafted: 4970 tokens, Per-position acceptance rate: 0.930, 0.842, 0.772, 0.700, 0.635, 0.572, 0.504, Avg Draft acceptance rate: 70.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:00 [scheduler.py:2198] Request finished: req chatcmpl-9553a0d3a780f4a6-bffd31b9 finish_reason=stop prompt_tokens=135 generated_tokens=375 elapsed_s=25.82
+single-1  | INFO:     127.0.0.1:35578 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:01 [scheduler.py:2198] Request finished: req chatcmpl-845a8012aef2f2b9-8825a82c finish_reason=stop prompt_tokens=99 generated_tokens=264 elapsed_s=23.93
+single-1  | INFO:     127.0.0.1:35606 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:01 [scheduler.py:2198] Request finished: req chatcmpl-b8d5f8fa2a4d1193-a14f1263 finish_reason=stop prompt_tokens=133 generated_tokens=398 elapsed_s=26.75
+single-1  | INFO:     127.0.0.1:35588 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:03 [scheduler.py:2198] Request finished: req chatcmpl-a4e63919ab96aa20-b7c4389f finish_reason=stop prompt_tokens=106 generated_tokens=226 elapsed_s=25.49
+single-1  | INFO:     127.0.0.1:35626 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:04 [scheduler.py:2198] Request finished: req chatcmpl-9e8a0eeb69c44f65-ae489a69 finish_reason=stop prompt_tokens=106 generated_tokens=571 elapsed_s=28.29
+single-1  | INFO:     127.0.0.1:35602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:04 [scheduler.py:2198] Request finished: req chatcmpl-9a3a21655e7a20d3-a14542a2 finish_reason=stop prompt_tokens=100 generated_tokens=452 elapsed_s=26.41
+single-1  | INFO:     127.0.0.1:35610 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:05 [scheduler.py:2198] Request finished: req chatcmpl-ab0890138ce59fef-973e897d finish_reason=stop prompt_tokens=117 generated_tokens=357 elapsed_s=27.18
+single-1  | INFO:     127.0.0.1:35642 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:06 [scheduler.py:2198] Request finished: req chatcmpl-aca6a2cd3d4ba418-a824e3b6 finish_reason=stop prompt_tokens=108 generated_tokens=378 elapsed_s=27.07
+single-1  | INFO:     127.0.0.1:35664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:07 [scheduler.py:2198] Request finished: req chatcmpl-bc303be5c225a576-94b87167 finish_reason=stop prompt_tokens=142 generated_tokens=255 elapsed_s=26.17
+single-1  | INFO:     127.0.0.1:35682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:08 [scheduler.py:2198] Request finished: req chatcmpl-ad296d49d95bd9cb-aa1f92c7 finish_reason=stop prompt_tokens=193 generated_tokens=352 elapsed_s=28.94
+single-1  | INFO:     127.0.0.1:35670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:08 [scheduler.py:2198] Request finished: req chatcmpl-b43ead79c06014e1-bd385cff finish_reason=stop prompt_tokens=127 generated_tokens=211 elapsed_s=26.44
+single-1  | INFO:     127.0.0.1:35698 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:47:09 [loggers.py:320] Engine 000: Avg prompt throughput: 148.4 tokens/s, Avg generation throughput: 433.1 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 88.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:47:09 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.71, Accepted throughput: 356.98 tokens/s, Drafted throughput: 530.56 tokens/s, Accepted: 3570 tokens, Drafted: 5306 tokens, Per-position acceptance rate: 0.910, 0.827, 0.739, 0.664, 0.590, 0.511, 0.470, Avg Draft acceptance rate: 67.3%
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:10 [scheduler.py:2198] Request finished: req chatcmpl-82af8ec448c12dc9-870332b7 finish_reason=stop prompt_tokens=101 generated_tokens=231 elapsed_s=26.41
+single-1  | INFO:     127.0.0.1:57438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37236 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:11 [scheduler.py:2198] Request finished: req chatcmpl-ab74e3c3e14c0861-bd08560a finish_reason=stop prompt_tokens=101 generated_tokens=239 elapsed_s=25.51
+single-1  | INFO:     127.0.0.1:57460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:11 [scheduler.py:2198] Request finished: req chatcmpl-aeb76241ada61f64-93b290ea finish_reason=stop prompt_tokens=185 generated_tokens=519 elapsed_s=29.44
+single-1  | INFO:     127.0.0.1:35686 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:12 [scheduler.py:2198] Request finished: req chatcmpl-9d8c00ea7224eb75-a2f25f00 finish_reason=stop prompt_tokens=151 generated_tokens=293 elapsed_s=27.09
+single-1  | INFO:     127.0.0.1:57454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:14 [scheduler.py:2198] Request finished: req chatcmpl-92d14311a3e3eff3-90d7887b finish_reason=stop prompt_tokens=153 generated_tokens=453 elapsed_s=30.09
+single-1  | INFO:     127.0.0.1:57450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:15 [scheduler.py:2198] Request finished: req chatcmpl-ab88ae7b4f602fde-b6e35949 finish_reason=stop prompt_tokens=134 generated_tokens=271 elapsed_s=25.08
+single-1  | INFO:     127.0.0.1:57514 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:16 [scheduler.py:2198] Request finished: req chatcmpl-818ee5d462568485-83a960e5 finish_reason=stop prompt_tokens=131 generated_tokens=336 elapsed_s=27.78
+single-1  | INFO:     127.0.0.1:57492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:16 [scheduler.py:2198] Request finished: req chatcmpl-adea81cb69b99180-b83cda46 finish_reason=stop prompt_tokens=133 generated_tokens=412 elapsed_s=28.16
+single-1  | INFO:     127.0.0.1:57508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:18 [scheduler.py:2198] Request finished: req chatcmpl-9bfbbf966c3a9ec8-94327e85 finish_reason=stop prompt_tokens=111 generated_tokens=206 elapsed_s=25.84
+single-1  | INFO:     127.0.0.1:57536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:18 [scheduler.py:2198] Request finished: req chatcmpl-bfd37d9d6d610fa6-b3ae1b65 finish_reason=stop prompt_tokens=115 generated_tokens=123 elapsed_s=24.54
+single-1  | INFO:     127.0.0.1:57546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:47:19 [loggers.py:320] Engine 000: Avg prompt throughput: 130.3 tokens/s, Avg generation throughput: 439.8 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 90.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:47:19 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.79, Accepted throughput: 363.76 tokens/s, Drafted throughput: 531.94 tokens/s, Accepted: 3638 tokens, Drafted: 5320 tokens, Per-position acceptance rate: 0.903, 0.824, 0.733, 0.661, 0.604, 0.564, 0.499, Avg Draft acceptance rate: 68.4%
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:19 [scheduler.py:2198] Request finished: req chatcmpl-948ca58c6cd5db48-8199958a finish_reason=stop prompt_tokens=119 generated_tokens=249 elapsed_s=26.22
+single-1  | INFO:     127.0.0.1:57544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:22 [scheduler.py:2198] Request finished: req chatcmpl-9af33d09e71af75a-8ea5652f finish_reason=stop prompt_tokens=163 generated_tokens=817 elapsed_s=34.83
+single-1  | INFO:     127.0.0.1:57476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:24 [scheduler.py:2198] Request finished: req chatcmpl-93c6d114dacc49fd-a4261ff1 finish_reason=stop prompt_tokens=116 generated_tokens=301 elapsed_s=29.05
+single-1  | INFO:     127.0.0.1:42020 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:26 [scheduler.py:2198] Request finished: req chatcmpl-a9133e189e813306-9a8bc5c4 finish_reason=stop prompt_tokens=132 generated_tokens=499 elapsed_s=31.33
+single-1  | INFO:     127.0.0.1:42002 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:26 [scheduler.py:2198] Request finished: req chatcmpl-a7da9ac929b9323b-a1a40d38 finish_reason=stop prompt_tokens=102 generated_tokens=538 elapsed_s=31.00
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:26 [scheduler.py:2198] Request finished: req chatcmpl-8febe87c5b801660-b44b4df0 finish_reason=stop prompt_tokens=128 generated_tokens=273 elapsed_s=30.17
+single-1  | INFO:     127.0.0.1:42004 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42036 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:27 [scheduler.py:2198] Request finished: req chatcmpl-bf6539447431b1bd-88ae384f finish_reason=stop prompt_tokens=163 generated_tokens=827 elapsed_s=36.37
+single-1  | INFO:     127.0.0.1:57526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:29 [scheduler.py:2198] Request finished: req chatcmpl-ac1a5841ca62c43e-abde770e finish_reason=stop prompt_tokens=177 generated_tokens=317 elapsed_s=32.53
+single-1  | INFO:     127.0.0.1:42046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:29 [scheduler.py:2198] Request finished: req chatcmpl-a4a4fc42d6699fd3-a92779c6 finish_reason=stop prompt_tokens=87 generated_tokens=182 elapsed_s=29.12
+single-1  | INFO:     127.0.0.1:42080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:29 [scheduler.py:2198] Request finished: req chatcmpl-943a0e9b8ee60064-90a67aa2 finish_reason=stop prompt_tokens=120 generated_tokens=218 elapsed_s=31.74
+single-1  | INFO:     127.0.0.1:42054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:47:31 [loggers.py:320] Engine 000: Avg prompt throughput: 116.2 tokens/s, Avg generation throughput: 426.7 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 91.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:47:31 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.57, Accepted throughput: 349.97 tokens/s, Drafted throughput: 536.16 tokens/s, Accepted: 3500 tokens, Drafted: 5362 tokens, Per-position acceptance rate: 0.907, 0.809, 0.713, 0.624, 0.565, 0.505, 0.445, Avg Draft acceptance rate: 65.3%
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:31 [scheduler.py:2198] Request finished: req chatcmpl-b7fbc154b8b35a32-829021ba finish_reason=stop prompt_tokens=91 generated_tokens=269 elapsed_s=30.01
+single-1  | INFO:     127.0.0.1:42092 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:32 [scheduler.py:2198] Request finished: req chatcmpl-b251f62d00371a5a-aa53105c finish_reason=stop prompt_tokens=90 generated_tokens=398 elapsed_s=33.26
+single-1  | INFO:     127.0.0.1:42070 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:32 [scheduler.py:2198] Request finished: req chatcmpl-88c41e255e7b62e6-87024362 finish_reason=stop prompt_tokens=116 generated_tokens=204 elapsed_s=28.59
+single-1  | INFO:     127.0.0.1:42112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:32 [scheduler.py:2198] Request finished: req chatcmpl-81af48a18ee06b07-83fd90f9 finish_reason=stop prompt_tokens=115 generated_tokens=231 elapsed_s=30.95
+single-1  | INFO:     127.0.0.1:42102 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:34 [scheduler.py:2198] Request finished: req chatcmpl-a70f6c6a4c02bb76-ac8094e1 finish_reason=stop prompt_tokens=122 generated_tokens=374 elapsed_s=30.30
+single-1  | INFO:     127.0.0.1:42122 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:35 [scheduler.py:2198] Request finished: req chatcmpl-8ba6132b0d044081-a024c4ed finish_reason=stop prompt_tokens=105 generated_tokens=201 elapsed_s=27.82
+single-1  | INFO:     127.0.0.1:37210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:36 [scheduler.py:2198] Request finished: req chatcmpl-b759ccd4d84839cc-90ed8032 finish_reason=stop prompt_tokens=138 generated_tokens=352 elapsed_s=31.99
+single-1  | INFO:     127.0.0.1:42136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:36 [scheduler.py:2198] Request finished: req chatcmpl-a88338cdea94203c-9094052f finish_reason=stop prompt_tokens=159 generated_tokens=312 elapsed_s=30.73
+single-1  | INFO:     127.0.0.1:37184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:36 [scheduler.py:2198] Request finished: req chatcmpl-bbb48f0c6ece5211-89ffc17e finish_reason=stop prompt_tokens=125 generated_tokens=346 elapsed_s=30.19
+single-1  | INFO:     127.0.0.1:37196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:37 [scheduler.py:2198] Request finished: req chatcmpl-a56db5130447d981-8c2a08ef finish_reason=stop prompt_tokens=143 generated_tokens=3432 elapsed_s=82.53
+single-1  | INFO:     127.0.0.1:42802 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:39 [scheduler.py:2198] Request finished: req chatcmpl-be63ad08a737dfab-aef872b2 finish_reason=stop prompt_tokens=103 generated_tokens=196 elapsed_s=29.39
+single-1  | INFO:     127.0.0.1:37232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:39 [scheduler.py:2198] Request finished: req chatcmpl-808c1d10a98b3d37-84d7c769 finish_reason=stop prompt_tokens=102 generated_tokens=313 elapsed_s=31.10
+single-1  | INFO:     127.0.0.1:37230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:47:41 [loggers.py:320] Engine 000: Avg prompt throughput: 164.0 tokens/s, Avg generation throughput: 415.2 tokens/s, Running: 7 reqs, Waiting: 14 reqs, GPU KV cache usage: 99.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:47:41 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.10, Accepted throughput: 346.61 tokens/s, Drafted throughput: 476.01 tokens/s, Accepted: 3466 tokens, Drafted: 4760 tokens, Per-position acceptance rate: 0.919, 0.849, 0.781, 0.709, 0.666, 0.613, 0.560, Avg Draft acceptance rate: 72.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:41 [scheduler.py:2198] Request finished: req chatcmpl-b6a6ba817b9e2a06-ba9fd8ba finish_reason=stop prompt_tokens=109 generated_tokens=277 elapsed_s=29.70
+single-1  | INFO:     127.0.0.1:37252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:41 [scheduler.py:2198] Request finished: req chatcmpl-838eb86596d50ef4-a0ff1437 finish_reason=stop prompt_tokens=153 generated_tokens=480 elapsed_s=33.41
+single-1  | INFO:     127.0.0.1:37220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:39498 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:42 [scheduler.py:2198] Request finished: req chatcmpl-b0ac21c4d4b81079-bdac3391 finish_reason=stop prompt_tokens=100 generated_tokens=137 elapsed_s=26.07
+single-1  | INFO:     127.0.0.1:56968 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:44 [scheduler.py:2198] Request finished: req chatcmpl-81d8113416171899-8e79552e finish_reason=stop prompt_tokens=96 generated_tokens=533 elapsed_s=32.43
+single-1  | INFO:     127.0.0.1:37280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:45 [scheduler.py:2198] Request finished: req chatcmpl-984ddfbfb4f71857-af8e821f finish_reason=stop prompt_tokens=194 generated_tokens=510 elapsed_s=31.36
+single-1  | INFO:     127.0.0.1:37284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:46 [scheduler.py:2198] Request finished: req chatcmpl-87f9259dfda7e008-96a04952 finish_reason=stop prompt_tokens=100 generated_tokens=327 elapsed_s=28.61
+single-1  | INFO:     127.0.0.1:56988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:47 [scheduler.py:2198] Request finished: req chatcmpl-a6e0265eeba80e11-910aca7d finish_reason=stop prompt_tokens=176 generated_tokens=525 elapsed_s=31.04
+single-1  | INFO:     127.0.0.1:56976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:48 [scheduler.py:2198] Request finished: req chatcmpl-881f590c026d6b5c-b9568859 finish_reason=stop prompt_tokens=155 generated_tokens=712 elapsed_s=36.83
+single-1  | INFO:     127.0.0.1:37266 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:49 [scheduler.py:2198] Request finished: req chatcmpl-b0a371b300a40b29-bcf74d70 finish_reason=stop prompt_tokens=89 generated_tokens=177 elapsed_s=26.55
+single-1  | INFO:     127.0.0.1:57018 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:49 [scheduler.py:2198] Request finished: req chatcmpl-addef693cd154bcc-93f39795 finish_reason=stop prompt_tokens=129 generated_tokens=362 elapsed_s=31.45
+single-1  | INFO:     127.0.0.1:57000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:50 [scheduler.py:2198] Request finished: req chatcmpl-82de133807bdb7d5-9850c99b finish_reason=stop prompt_tokens=128 generated_tokens=319 elapsed_s=30.36
+single-1  | INFO:     127.0.0.1:57006 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:50 [scheduler.py:2198] Request finished: req chatcmpl-80f15f0c399cb22a-b3e25f4b finish_reason=stop prompt_tokens=101 generated_tokens=799 elapsed_s=35.29
+single-1  | INFO:     127.0.0.1:56960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:47:51 [loggers.py:320] Engine 000: Avg prompt throughput: 131.7 tokens/s, Avg generation throughput: 423.7 tokens/s, Running: 5 reqs, Waiting: 4 reqs, GPU KV cache usage: 70.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:47:51 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.90, Accepted throughput: 351.50 tokens/s, Drafted throughput: 502.60 tokens/s, Accepted: 3515 tokens, Drafted: 5026 tokens, Per-position acceptance rate: 0.925, 0.841, 0.770, 0.691, 0.623, 0.552, 0.494, Avg Draft acceptance rate: 69.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:51 [scheduler.py:2198] Request finished: req chatcmpl-93c67d32ef821f71-99b90e8e finish_reason=stop prompt_tokens=97 generated_tokens=203 elapsed_s=26.68
+single-1  | INFO:     127.0.0.1:57034 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:54 [scheduler.py:2198] Request finished: req chatcmpl-a03d084a00d91bdc-a2b76c52 finish_reason=stop prompt_tokens=101 generated_tokens=197 elapsed_s=27.72
+single-1  | INFO:     127.0.0.1:51198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:54 [scheduler.py:2198] Request finished: req chatcmpl-ae28cec8089fc81c-aab6c4e7 finish_reason=stop prompt_tokens=100 generated_tokens=173 elapsed_s=27.18
+single-1  | INFO:     127.0.0.1:51202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:55 [scheduler.py:2198] Request finished: req chatcmpl-9b74ec9f362e531a-926d140e finish_reason=stop prompt_tokens=101 generated_tokens=178 elapsed_s=26.24
+single-1  | INFO:     127.0.0.1:51212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:56 [scheduler.py:2198] Request finished: req chatcmpl-9b81e0e1002a6fe0-b4d4f39d finish_reason=stop prompt_tokens=181 generated_tokens=385 elapsed_s=29.58
+single-1  | INFO:     127.0.0.1:51196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:56 [scheduler.py:2198] Request finished: req chatcmpl-8365712b77c324de-bd5d7013 finish_reason=stop prompt_tokens=112 generated_tokens=267 elapsed_s=26.95
+single-1  | INFO:     127.0.0.1:51228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:56 [scheduler.py:2198] Request finished: req chatcmpl-88a1486315ecc2db-8060361e finish_reason=stop prompt_tokens=115 generated_tokens=365 elapsed_s=30.11
+single-1  | INFO:     127.0.0.1:57040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:57 [scheduler.py:2198] Request finished: req chatcmpl-ad5fd8c17b013e56-926d20bd finish_reason=stop prompt_tokens=136 generated_tokens=424 elapsed_s=27.89
+single-1  | INFO:     127.0.0.1:51230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:47:57 [scheduler.py:2198] Request finished: req chatcmpl-826b24130ad83046-96baf36d finish_reason=stop prompt_tokens=138 generated_tokens=383 elapsed_s=26.65
+single-1  | INFO:     127.0.0.1:51246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:02 [scheduler.py:2198] Request finished: req chatcmpl-9a4071bb2fffd1f6-8fa6f4ff finish_reason=stop prompt_tokens=122 generated_tokens=163 elapsed_s=3.39
+single-1  | INFO:     127.0.0.1:37150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:48:02 [loggers.py:320] Engine 000: Avg prompt throughput: 135.7 tokens/s, Avg generation throughput: 320.9 tokens/s, Running: 7 reqs, Waiting: 24 reqs, GPU KV cache usage: 98.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:48:02 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.75, Accepted throughput: 264.79 tokens/s, Drafted throughput: 389.89 tokens/s, Accepted: 2648 tokens, Drafted: 3899 tokens, Per-position acceptance rate: 0.892, 0.828, 0.734, 0.677, 0.607, 0.540, 0.476, Avg Draft acceptance rate: 67.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:02 [scheduler.py:2198] Request finished: req chatcmpl-b25e7948956bc8a4-aea2c6f9 finish_reason=stop prompt_tokens=127 generated_tokens=178 elapsed_s=3.76
+single-1  | INFO:     127.0.0.1:37156 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:03 [scheduler.py:2198] Request finished: req chatcmpl-9afd49e066afc217-8ce9459d finish_reason=stop prompt_tokens=107 generated_tokens=182 elapsed_s=4.45
+single-1  | INFO:     127.0.0.1:37126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:03 [scheduler.py:2198] Request finished: req chatcmpl-9a257efb29d90e46-b1c51e3e finish_reason=stop prompt_tokens=132 generated_tokens=245 elapsed_s=4.79
+single-1  | INFO:     127.0.0.1:37118 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:04 [scheduler.py:2198] Request finished: req chatcmpl-a4b3210632e7717c-939ec41c finish_reason=stop prompt_tokens=183 generated_tokens=254 elapsed_s=5.06
+single-1  | INFO:     127.0.0.1:37144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:04 [scheduler.py:2198] Request finished: req chatcmpl-8af6bc20748e335f-bba4b26b finish_reason=stop prompt_tokens=124 generated_tokens=272 elapsed_s=5.28
+single-1  | INFO:     127.0.0.1:37140 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:06 [scheduler.py:2198] Request finished: req chatcmpl-9bf7b94d2af5e9bc-b2133c65 finish_reason=stop prompt_tokens=137 generated_tokens=159 elapsed_s=7.97
+single-1  | INFO:     127.0.0.1:37186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:07 [scheduler.py:2198] Request finished: req chatcmpl-b5cebedef3c7e23e-9f2a7c18 finish_reason=stop prompt_tokens=132 generated_tokens=242 elapsed_s=8.37
+single-1  | INFO:     127.0.0.1:37166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:07 [scheduler.py:2198] Request finished: req chatcmpl-a5e6c06be14d943b-a9dacff4 finish_reason=stop prompt_tokens=141 generated_tokens=237 elapsed_s=8.70
+single-1  | INFO:     127.0.0.1:37174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:08 [scheduler.py:2198] Request finished: req chatcmpl-8f3ceddb6e44214d-b7881350 finish_reason=stop prompt_tokens=130 generated_tokens=202 elapsed_s=9.07
+single-1  | INFO:     127.0.0.1:37178 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:09 [scheduler.py:2198] Request finished: req chatcmpl-95bf2aba9a55fe97-a65d9291 finish_reason=stop prompt_tokens=129 generated_tokens=152 elapsed_s=10.69
+single-1  | INFO:     127.0.0.1:37198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:09 [scheduler.py:2198] Request finished: req chatcmpl-bccba206103a8f47-85f46b62 finish_reason=stop prompt_tokens=176 generated_tokens=565 elapsed_s=11.06
+single-1  | INFO:     127.0.0.1:37136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:10 [scheduler.py:2198] Request finished: req chatcmpl-b377f38f230e1a98-a34cad57 finish_reason=stop prompt_tokens=127 generated_tokens=364 elapsed_s=11.86
+single-1  | INFO:     127.0.0.1:37192 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:11 [scheduler.py:2198] Request finished: req chatcmpl-b5f513854e85b6bf-96bdcbd3 finish_reason=stop prompt_tokens=137 generated_tokens=221 elapsed_s=12.28
+single-1  | INFO:     127.0.0.1:37210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:11 [scheduler.py:2198] Request finished: req chatcmpl-842d3c20baa37aab-856922cd finish_reason=stop prompt_tokens=111 generated_tokens=246 elapsed_s=12.89
+single-1  | INFO:     127.0.0.1:37200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:12 [scheduler.py:2198] Request finished: req chatcmpl-94c39ac6dccafbe2-b66b2d16 finish_reason=stop prompt_tokens=130 generated_tokens=544 elapsed_s=13.17
+single-1  | INFO:     127.0.0.1:37158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:48:12 [loggers.py:320] Engine 000: Avg prompt throughput: 203.5 tokens/s, Avg generation throughput: 351.7 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 98.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:48:12 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.49, Accepted throughput: 287.19 tokens/s, Drafted throughput: 447.28 tokens/s, Accepted: 2872 tokens, Drafted: 4473 tokens, Per-position acceptance rate: 0.897, 0.808, 0.714, 0.612, 0.559, 0.487, 0.419, Avg Draft acceptance rate: 64.2%
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:12 [scheduler.py:2198] Request finished: req chatcmpl-a5325c7479faaab9-a1d3136e finish_reason=stop prompt_tokens=112 generated_tokens=110 elapsed_s=13.55
+single-1  | INFO:     127.0.0.1:37228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:57080 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:13 [scheduler.py:2198] Request finished: req chatcmpl-a0caacff270b0894-a95e99e5 finish_reason=stop prompt_tokens=98 generated_tokens=129 elapsed_s=14.90
+single-1  | INFO:     127.0.0.1:37250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:14 [scheduler.py:2198] Request finished: req chatcmpl-934ea19dfd1f93f2-9899b63b finish_reason=stop prompt_tokens=141 generated_tokens=260 elapsed_s=15.86
+single-1  | INFO:     127.0.0.1:37220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:15 [scheduler.py:2198] Request finished: req chatcmpl-9d7331483130e5f5-8efabb15 finish_reason=stop prompt_tokens=101 generated_tokens=146 elapsed_s=16.13
+single-1  | INFO:     127.0.0.1:37270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:16 [scheduler.py:2198] Request finished: req chatcmpl-be15440864ec97e6-a8dd2322 finish_reason=stop prompt_tokens=118 generated_tokens=268 elapsed_s=17.16
+single-1  | INFO:     127.0.0.1:37242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:17 [scheduler.py:2198] Request finished: req chatcmpl-8e8e704b4db66924-b74be07c finish_reason=stop prompt_tokens=135 generated_tokens=297 elapsed_s=18.56
+single-1  | INFO:     127.0.0.1:37274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:18 [scheduler.py:2198] Request finished: req chatcmpl-8beb8db6857a62af-a3bfb11e finish_reason=stop prompt_tokens=113 generated_tokens=175 elapsed_s=19.22
+single-1  | INFO:     127.0.0.1:37306 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:19 [scheduler.py:2198] Request finished: req chatcmpl-acc24965a7af3896-9d758e78 finish_reason=stop prompt_tokens=166 generated_tokens=399 elapsed_s=20.29
+single-1  | INFO:     127.0.0.1:37256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:20 [scheduler.py:2198] Request finished: req chatcmpl-ad4db1aab54fe7a7-9d111513 finish_reason=stop prompt_tokens=139 generated_tokens=247 elapsed_s=21.39
+single-1  | INFO:     127.0.0.1:37318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:48:22 [loggers.py:320] Engine 000: Avg prompt throughput: 104.3 tokens/s, Avg generation throughput: 375.7 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 87.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:48:22 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.07, Accepted throughput: 301.38 tokens/s, Drafted throughput: 518.67 tokens/s, Accepted: 3014 tokens, Drafted: 5187 tokens, Per-position acceptance rate: 0.860, 0.738, 0.646, 0.559, 0.486, 0.426, 0.352, Avg Draft acceptance rate: 58.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:22 [scheduler.py:2198] Request finished: req chatcmpl-9aae5cf54a00ee65-9367b5da finish_reason=stop prompt_tokens=111 generated_tokens=252 elapsed_s=23.93
+single-1  | INFO:     127.0.0.1:37344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:24 [scheduler.py:2198] Request finished: req chatcmpl-9a5048a7e14668c3-89f67e28 finish_reason=stop prompt_tokens=142 generated_tokens=547 elapsed_s=25.20
+single-1  | INFO:     127.0.0.1:37292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:27 [scheduler.py:2198] Request finished: req chatcmpl-8dfd8c18d19df900-95bbfb54 finish_reason=stop prompt_tokens=113 generated_tokens=163 elapsed_s=24.95
+single-1  | INFO:     127.0.0.1:37362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:28 [scheduler.py:2198] Request finished: req chatcmpl-9a2c351bb615322d-a9793952 finish_reason=stop prompt_tokens=137 generated_tokens=316 elapsed_s=29.63
+single-1  | INFO:     127.0.0.1:37354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:30 [scheduler.py:2198] Request finished: req chatcmpl-8848b019132ba102-b22cb93f finish_reason=stop prompt_tokens=103 generated_tokens=262 elapsed_s=27.69
+single-1  | INFO:     127.0.0.1:37370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:30 [scheduler.py:2198] Request finished: req chatcmpl-a7ac9e871333fdb2-9b561239 finish_reason=stop prompt_tokens=135 generated_tokens=731 elapsed_s=31.62
+single-1  | INFO:     127.0.0.1:37330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:31 [scheduler.py:2198] Request finished: req chatcmpl-9a59772de1a7cbf2-8d398b51 finish_reason=stop prompt_tokens=113 generated_tokens=173 elapsed_s=27.92
+single-1  | INFO:     127.0.0.1:37376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:33 [scheduler.py:2198] Request finished: req chatcmpl-9bb829509a336ed9-a24eba85 finish_reason=stop prompt_tokens=114 generated_tokens=185 elapsed_s=29.46
+single-1  | INFO:     127.0.0.1:37392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:33 [scheduler.py:2198] Request finished: req chatcmpl-bc4365275f60fda5-b8d993ed finish_reason=stop prompt_tokens=124 generated_tokens=219 elapsed_s=30.08
+single-1  | INFO:     127.0.0.1:37378 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:48:34 [loggers.py:320] Engine 000: Avg prompt throughput: 110.0 tokens/s, Avg generation throughput: 371.6 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 88.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:48:34 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.76, Accepted throughput: 293.50 tokens/s, Drafted throughput: 546.00 tokens/s, Accepted: 2935 tokens, Drafted: 5460 tokens, Per-position acceptance rate: 0.837, 0.706, 0.597, 0.512, 0.445, 0.367, 0.299, Avg Draft acceptance rate: 53.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:37 [scheduler.py:2198] Request finished: req chatcmpl-b21255fc7d32ecfa-8ca3df03 finish_reason=stop prompt_tokens=125 generated_tokens=1320 elapsed_s=38.20
+single-1  | INFO:     127.0.0.1:37252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:41 [scheduler.py:2198] Request finished: req chatcmpl-b2a1da315a60cade-b401ad4b finish_reason=stop prompt_tokens=116 generated_tokens=487 elapsed_s=34.30
+single-1  | INFO:     127.0.0.1:37398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:48:44 [loggers.py:320] Engine 000: Avg prompt throughput: 31.5 tokens/s, Avg generation throughput: 367.4 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 94.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:48:44 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.30, Accepted throughput: 281.99 tokens/s, Drafted throughput: 597.77 tokens/s, Accepted: 2820 tokens, Drafted: 5978 tokens, Per-position acceptance rate: 0.817, 0.649, 0.515, 0.437, 0.362, 0.285, 0.238, Avg Draft acceptance rate: 47.2%
+single-1  | INFO:     127.0.0.1:35356 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:45 [scheduler.py:2198] Request finished: req chatcmpl-a72d373f3e497073-988c21a8 finish_reason=stop prompt_tokens=145 generated_tokens=851 elapsed_s=38.32
+single-1  | INFO:     127.0.0.1:37408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:48 [scheduler.py:2198] Request finished: req chatcmpl-a666fd494b1042da-b07283f7 finish_reason=stop prompt_tokens=154 generated_tokens=201 elapsed_s=38.70
+single-1  | INFO:     127.0.0.1:57018 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:49 [scheduler.py:2198] Request finished: req chatcmpl-b499b1c488e9faeb-83ae0f2d finish_reason=stop prompt_tokens=139 generated_tokens=1538 elapsed_s=50.51
+single-1  | INFO:     127.0.0.1:37342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:51 [scheduler.py:2198] Request finished: req chatcmpl-abdcab412f444ccd-ade5561c finish_reason=stop prompt_tokens=133 generated_tokens=234 elapsed_s=41.98
+single-1  | INFO:     127.0.0.1:57024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:48:54 [loggers.py:320] Engine 000: Avg prompt throughput: 60.2 tokens/s, Avg generation throughput: 371.7 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 95.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:48:54 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.53, Accepted throughput: 289.68 tokens/s, Drafted throughput: 573.96 tokens/s, Accepted: 2897 tokens, Drafted: 5740 tokens, Per-position acceptance rate: 0.823, 0.680, 0.584, 0.484, 0.383, 0.318, 0.260, Avg Draft acceptance rate: 50.5%
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:56 [scheduler.py:2198] Request finished: req chatcmpl-af7def70c14a1ecb-a857e083 finish_reason=stop prompt_tokens=149 generated_tokens=388 elapsed_s=45.92
+single-1  | INFO:     127.0.0.1:57030 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:59 [scheduler.py:2198] Request finished: req chatcmpl-a69a273a465af8d7-9e60384b finish_reason=stop prompt_tokens=129 generated_tokens=2450 elapsed_s=60.12
+single-1  | INFO:     127.0.0.1:37288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:48:59 [scheduler.py:2198] Request finished: req chatcmpl-b83dcbc841e442b0-9259195e finish_reason=stop prompt_tokens=199 generated_tokens=1040 elapsed_s=51.77
+single-1  | INFO:     127.0.0.1:37430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:01 [scheduler.py:2198] Request finished: req chatcmpl-ac42257f417161ac-bf3cd72f finish_reason=stop prompt_tokens=109 generated_tokens=95 elapsed_s=49.07
+single-1  | INFO:     127.0.0.1:57068 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:01 [scheduler.py:2198] Request finished: req chatcmpl-a541df44238fdd52-b5adca9a finish_reason=stop prompt_tokens=116 generated_tokens=1375 elapsed_s=54.14
+single-1  | INFO:     127.0.0.1:37414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:02 [scheduler.py:2198] Request finished: req chatcmpl-95a2f0b7e131a43e-be0ae105 finish_reason=stop prompt_tokens=166 generated_tokens=412 elapsed_s=50.92
+single-1  | INFO:     127.0.0.1:57048 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:03 [scheduler.py:2198] Request finished: req chatcmpl-b4732b83cea31555-ba212692 finish_reason=stop prompt_tokens=115 generated_tokens=140 elapsed_s=50.04
+single-1  | INFO:     127.0.0.1:57094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:04 [scheduler.py:2198] Request finished: req chatcmpl-8c60ed049616b763-9d225c9f finish_reason=stop prompt_tokens=109 generated_tokens=172 elapsed_s=49.90
+single-1  | INFO:     127.0.0.1:57100 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:05 [scheduler.py:2198] Request finished: req chatcmpl-8a1185bdffbbc8ca-98835523 finish_reason=stop prompt_tokens=122 generated_tokens=462 elapsed_s=53.22
+single-1  | INFO:     127.0.0.1:57054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:49:05 [loggers.py:320] Engine 000: Avg prompt throughput: 120.1 tokens/s, Avg generation throughput: 350.6 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 88.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:49:05 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.64, Accepted throughput: 274.90 tokens/s, Drafted throughput: 529.20 tokens/s, Accepted: 2749 tokens, Drafted: 5292 tokens, Per-position acceptance rate: 0.841, 0.714, 0.583, 0.479, 0.399, 0.341, 0.278, Avg Draft acceptance rate: 51.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:06 [scheduler.py:2198] Request finished: req chatcmpl-8dba1e40c79b5f0e-b3ab3be8 finish_reason=stop prompt_tokens=166 generated_tokens=715 elapsed_s=55.15
+single-1  | INFO:     127.0.0.1:57032 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:06 [scheduler.py:2198] Request finished: req chatcmpl-b86a8b48b5950a40-a3bf96cc finish_reason=stop prompt_tokens=121 generated_tokens=227 elapsed_s=51.46
+single-1  | INFO:     127.0.0.1:57112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:07 [scheduler.py:2198] Request finished: req chatcmpl-aa98cb23b5fc3d7d-852fd695 finish_reason=stop prompt_tokens=135 generated_tokens=2002 elapsed_s=63.08
+single-1  | INFO:     127.0.0.1:37396 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:08 [scheduler.py:2198] Request finished: req chatcmpl-8803998aaf4c703c-bc06ca6d finish_reason=stop prompt_tokens=134 generated_tokens=250 elapsed_s=52.42
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:08 [scheduler.py:2198] Request finished: req chatcmpl-9f6b47df131fee88-992aa4ae finish_reason=stop prompt_tokens=122 generated_tokens=131 elapsed_s=49.27
+single-1  | INFO:     127.0.0.1:57116 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:51270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:09 [scheduler.py:2198] Request finished: req chatcmpl-a374500c51f312a5-bff29f58 finish_reason=stop prompt_tokens=117 generated_tokens=119 elapsed_s=48.67
+single-1  | INFO:     127.0.0.1:51286 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:09 [scheduler.py:2198] Request finished: req chatcmpl-bd5ce23a499c50c2-88945ee1 finish_reason=stop prompt_tokens=172 generated_tokens=264 elapsed_s=51.80
+single-1  | INFO:     127.0.0.1:57120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:11 [scheduler.py:2198] Request finished: req chatcmpl-960a50d478a49d5e-92c25a1f finish_reason=stop prompt_tokens=104 generated_tokens=110 elapsed_s=43.83
+single-1  | INFO:     127.0.0.1:51310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:12 [scheduler.py:2198] Request finished: req chatcmpl-a4f9d09382ec71cb-a1c80a29 finish_reason=stop prompt_tokens=149 generated_tokens=259 elapsed_s=49.46
+single-1  | INFO:     127.0.0.1:51288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:14 [scheduler.py:2198] Request finished: req chatcmpl-855fca83a7765688-89ee7900 finish_reason=stop prompt_tokens=110 generated_tokens=312 elapsed_s=45.89
+single-1  | INFO:     127.0.0.1:51322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:15 [scheduler.py:2198] Request finished: req chatcmpl-956b2ab1ab4ba715-811498fd finish_reason=stop prompt_tokens=153 generated_tokens=536 elapsed_s=57.11
+single-1  | INFO:     127.0.0.1:51256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:49:15 [loggers.py:320] Engine 000: Avg prompt throughput: 145.7 tokens/s, Avg generation throughput: 361.4 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 87.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:49:15 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.20, Accepted throughput: 291.58 tokens/s, Drafted throughput: 485.77 tokens/s, Accepted: 2916 tokens, Drafted: 4858 tokens, Per-position acceptance rate: 0.883, 0.777, 0.663, 0.575, 0.500, 0.428, 0.376, Avg Draft acceptance rate: 60.0%
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:16 [scheduler.py:2198] Request finished: req chatcmpl-891a2e59fc1cdf15-b26b4a3e finish_reason=stop prompt_tokens=156 generated_tokens=483 elapsed_s=50.99
+single-1  | INFO:     127.0.0.1:51300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:16 [scheduler.py:2198] Request finished: req chatcmpl-b15a12beb1dfbbc3-a75eb5cb finish_reason=stop prompt_tokens=141 generated_tokens=353 elapsed_s=45.44
+single-1  | INFO:     127.0.0.1:55240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49916 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:18 [scheduler.py:2198] Request finished: req chatcmpl-911bf52532b450ff-bf4ff0df finish_reason=stop prompt_tokens=119 generated_tokens=240 elapsed_s=45.17
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:18 [scheduler.py:2198] Request finished: req chatcmpl-9c3639d605a74c12-a00d24d0 finish_reason=stop prompt_tokens=126 generated_tokens=195 elapsed_s=37.62
+single-1  | INFO:     127.0.0.1:55252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:35350 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:19 [scheduler.py:2198] Request finished: req chatcmpl-b204782c6aac7364-8d13de2f finish_reason=stop prompt_tokens=165 generated_tokens=336 elapsed_s=45.84
+single-1  | INFO:     127.0.0.1:55250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:19 [scheduler.py:2198] Request finished: req chatcmpl-af46274ed98c926a-93c14ede finish_reason=stop prompt_tokens=130 generated_tokens=243 elapsed_s=42.66
+single-1  | INFO:     127.0.0.1:55262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:21 [scheduler.py:2198] Request finished: req chatcmpl-80229c57888c8e42-87b6bbb6 finish_reason=stop prompt_tokens=116 generated_tokens=118 elapsed_s=29.46
+single-1  | INFO:     127.0.0.1:43822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:21 [scheduler.py:2198] Request finished: req chatcmpl-88d01b765b91589c-94999e11 finish_reason=stop prompt_tokens=109 generated_tokens=217 elapsed_s=36.15
+single-1  | INFO:     127.0.0.1:35364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:22 [scheduler.py:2198] Request finished: req chatcmpl-a95965bf8775228b-bbb22b8e finish_reason=stop prompt_tokens=124 generated_tokens=209 elapsed_s=33.99
+single-1  | INFO:     127.0.0.1:35368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:23 [scheduler.py:2198] Request finished: req chatcmpl-8aa2524832bfe6d9-aeb0480a finish_reason=stop prompt_tokens=140 generated_tokens=824 elapsed_s=52.79
+single-1  | INFO:     127.0.0.1:55226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:24 [scheduler.py:2198] Request finished: req chatcmpl-ab4c4a26ea359890-8e581c5f finish_reason=stop prompt_tokens=122 generated_tokens=146 elapsed_s=27.42
+single-1  | INFO:     127.0.0.1:43834 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:24 [scheduler.py:2198] Request finished: req chatcmpl-83f7843db986fd34-9a693e73 finish_reason=stop prompt_tokens=125 generated_tokens=306 elapsed_s=34.93
+single-1  | INFO:     127.0.0.1:35370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:49:25 [loggers.py:320] Engine 000: Avg prompt throughput: 157.7 tokens/s, Avg generation throughput: 385.1 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 86.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:49:25 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.26, Accepted throughput: 311.48 tokens/s, Drafted throughput: 512.37 tokens/s, Accepted: 3115 tokens, Drafted: 5124 tokens, Per-position acceptance rate: 0.895, 0.794, 0.691, 0.578, 0.496, 0.422, 0.380, Avg Draft acceptance rate: 60.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:28 [scheduler.py:2198] Request finished: req chatcmpl-8b0bc17589c9d280-82134528 finish_reason=stop prompt_tokens=195 generated_tokens=357 elapsed_s=29.10
+single-1  | INFO:     127.0.0.1:43840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:29 [scheduler.py:2198] Request finished: req chatcmpl-b341c383e9a3a4f2-a141bef8 finish_reason=stop prompt_tokens=117 generated_tokens=253 elapsed_s=26.62
+single-1  | INFO:     127.0.0.1:50392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:30 [scheduler.py:2198] Request finished: req chatcmpl-9472689ea17e10c9-bc90af1c finish_reason=stop prompt_tokens=138 generated_tokens=384 elapsed_s=28.93
+single-1  | INFO:     127.0.0.1:50362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:30 [scheduler.py:2198] Request finished: req chatcmpl-86738385ffbcb08a-816d7f52 finish_reason=stop prompt_tokens=120 generated_tokens=89 elapsed_s=26.11
+single-1  | INFO:     127.0.0.1:50414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:31 [scheduler.py:2198] Request finished: req chatcmpl-98cec1ae74198e13-815d727d finish_reason=stop prompt_tokens=117 generated_tokens=490 elapsed_s=32.13
+single-1  | INFO:     127.0.0.1:43836 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:32 [scheduler.py:2198] Request finished: req chatcmpl-ac26b2710e0be420-a078598d finish_reason=stop prompt_tokens=158 generated_tokens=436 elapsed_s=30.44
+single-1  | INFO:     127.0.0.1:50376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:32 [scheduler.py:2198] Request finished: req chatcmpl-9489297a47221033-abc002fb finish_reason=stop prompt_tokens=134 generated_tokens=1289 elapsed_s=62.57
+single-1  | INFO:     127.0.0.1:55224 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:33 [scheduler.py:2198] Request finished: req chatcmpl-a97c4de0c4117191-b9712493 finish_reason=stop prompt_tokens=102 generated_tokens=178 elapsed_s=27.30
+single-1  | INFO:     127.0.0.1:50434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:34 [scheduler.py:2198] Request finished: req chatcmpl-9f50d71e1d6eb845-8f4f4ad1 finish_reason=stop prompt_tokens=107 generated_tokens=235 elapsed_s=28.97
+single-1  | INFO:     127.0.0.1:50416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:34 [scheduler.py:2198] Request finished: req chatcmpl-bb2b0b60ec7b3f5e-a85c10d6 finish_reason=stop prompt_tokens=131 generated_tokens=203 elapsed_s=28.27
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:34 [scheduler.py:2198] Request finished: req chatcmpl-b600baf89a4b7fd2-a435b62c finish_reason=stop prompt_tokens=104 generated_tokens=114 elapsed_s=27.43
+single-1  | INFO:     127.0.0.1:50418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:49:37 [loggers.py:320] Engine 000: Avg prompt throughput: 147.3 tokens/s, Avg generation throughput: 374.0 tokens/s, Running: 7 reqs, Waiting: 25 reqs, GPU KV cache usage: 99.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:49:37 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.27, Accepted throughput: 302.86 tokens/s, Drafted throughput: 496.24 tokens/s, Accepted: 3029 tokens, Drafted: 4963 tokens, Per-position acceptance rate: 0.877, 0.790, 0.695, 0.575, 0.502, 0.447, 0.385, Avg Draft acceptance rate: 61.0%
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:37 [scheduler.py:2198] Request finished: req chatcmpl-b0c0c364129488d7-a3a89ac4 finish_reason=stop prompt_tokens=96 generated_tokens=266 elapsed_s=29.28
+single-1  | INFO:     127.0.0.1:50452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:38 [scheduler.py:2198] Request finished: req chatcmpl-ae5c9830453fd2b4-855d6542 finish_reason=stop prompt_tokens=110 generated_tokens=215 elapsed_s=27.49
+single-1  | INFO:     127.0.0.1:50486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:38 [scheduler.py:2198] Request finished: req chatcmpl-8acfa340b41ad69d-9fe54233 finish_reason=stop prompt_tokens=115 generated_tokens=508 elapsed_s=34.86
+single-1  | INFO:     127.0.0.1:50406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:40 [scheduler.py:2198] Request finished: req chatcmpl-a7c7b7175c799092-b0e892b8 finish_reason=stop prompt_tokens=108 generated_tokens=157 elapsed_s=25.60
+single-1  | INFO:     127.0.0.1:49884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:41 [scheduler.py:2198] Request finished: req chatcmpl-83c633d270457112-93a8a3d7 finish_reason=stop prompt_tokens=158 generated_tokens=178 elapsed_s=26.78
+single-1  | INFO:     127.0.0.1:49882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:41 [scheduler.py:2198] Request finished: req chatcmpl-9f5f86de8a89d671-a1acca44 finish_reason=stop prompt_tokens=122 generated_tokens=358 elapsed_s=29.40
+single-1  | INFO:     127.0.0.1:49866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:43 [scheduler.py:2198] Request finished: req chatcmpl-9dfdab8158266987-916f8aea finish_reason=stop prompt_tokens=160 generated_tokens=472 elapsed_s=34.00
+single-1  | INFO:     127.0.0.1:50472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:44 [scheduler.py:2198] Request finished: req chatcmpl-8ffadb8b0a3aa0b4-b573675a finish_reason=stop prompt_tokens=123 generated_tokens=291 elapsed_s=28.21
+single-1  | INFO:     127.0.0.1:49888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:46 [scheduler.py:2198] Request finished: req chatcmpl-8e2a8c628d5a5781-a565b80c finish_reason=stop prompt_tokens=123 generated_tokens=326 elapsed_s=27.13
+single-1  | INFO:     127.0.0.1:49920 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:46 [scheduler.py:2198] Request finished: req chatcmpl-af905db1ff5798fc-b6b0f9a1 finish_reason=stop prompt_tokens=104 generated_tokens=146 elapsed_s=27.04
+single-1  | INFO:     127.0.0.1:49942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:47 [scheduler.py:2198] Request finished: req chatcmpl-a9f5a1317ca56788-9fecf4df finish_reason=stop prompt_tokens=114 generated_tokens=251 elapsed_s=28.16
+single-1  | INFO:     127.0.0.1:49936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:49:47 [loggers.py:320] Engine 000: Avg prompt throughput: 118.0 tokens/s, Avg generation throughput: 369.2 tokens/s, Running: 6 reqs, Waiting: 25 reqs, GPU KV cache usage: 88.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:49:47 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.11, Accepted throughput: 296.77 tokens/s, Drafted throughput: 505.36 tokens/s, Accepted: 2968 tokens, Drafted: 5054 tokens, Per-position acceptance rate: 0.906, 0.762, 0.659, 0.553, 0.467, 0.409, 0.356, Avg Draft acceptance rate: 58.7%
+single-1  | INFO:     127.0.0.1:37874 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:50 [scheduler.py:2198] Request finished: req chatcmpl-9209efd3fe2a3d98-90971f62 finish_reason=stop prompt_tokens=154 generated_tokens=269 elapsed_s=29.04
+single-1  | INFO:     127.0.0.1:37022 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:51 [scheduler.py:2198] Request finished: req chatcmpl-ac7d7f68acfb916b-b0303917 finish_reason=stop prompt_tokens=126 generated_tokens=285 elapsed_s=31.25
+single-1  | INFO:     127.0.0.1:49948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:53 [scheduler.py:2198] Request finished: req chatcmpl-a3c37ac76e25c772-9ea778f8 finish_reason=stop prompt_tokens=168 generated_tokens=495 elapsed_s=32.25
+single-1  | INFO:     127.0.0.1:37006 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:54 [scheduler.py:2198] Request finished: req chatcmpl-88c34c8e0f7f0c65-bca82a52 finish_reason=stop prompt_tokens=149 generated_tokens=260 elapsed_s=31.22
+single-1  | INFO:     127.0.0.1:37044 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:49:57 [loggers.py:320] Engine 000: Avg prompt throughput: 74.3 tokens/s, Avg generation throughput: 357.9 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 91.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:49:57 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.34, Accepted throughput: 275.29 tokens/s, Drafted throughput: 577.49 tokens/s, Accepted: 2753 tokens, Drafted: 5775 tokens, Per-position acceptance rate: 0.806, 0.659, 0.524, 0.439, 0.364, 0.305, 0.240, Avg Draft acceptance rate: 47.7%
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:57 [scheduler.py:2198] Request finished: req chatcmpl-94ec08e837a9b135-a3b10155 finish_reason=stop prompt_tokens=136 generated_tokens=207 elapsed_s=33.24
+single-1  | INFO:     127.0.0.1:37058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:49:58 [scheduler.py:2198] Request finished: req chatcmpl-8d8bd7fb0b9c4328-b921dccf finish_reason=stop prompt_tokens=137 generated_tokens=287 elapsed_s=33.85
+single-1  | INFO:     127.0.0.1:37056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:00 [scheduler.py:2198] Request finished: req chatcmpl-9751f7a14977ced7-993471f2 finish_reason=stop prompt_tokens=102 generated_tokens=88 elapsed_s=31.38
+single-1  | INFO:     127.0.0.1:37078 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:03 [scheduler.py:2198] Request finished: req chatcmpl-a6f1bdc45eca113f-b222dbb0 finish_reason=stop prompt_tokens=120 generated_tokens=274 elapsed_s=34.32
+single-1  | INFO:     127.0.0.1:37068 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:50:08 [loggers.py:320] Engine 000: Avg prompt throughput: 52.5 tokens/s, Avg generation throughput: 338.2 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:50:08 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.12, Accepted throughput: 256.19 tokens/s, Drafted throughput: 573.97 tokens/s, Accepted: 2562 tokens, Drafted: 5740 tokens, Per-position acceptance rate: 0.784, 0.633, 0.502, 0.393, 0.322, 0.272, 0.218, Avg Draft acceptance rate: 44.6%
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:08 [scheduler.py:2198] Request finished: req chatcmpl-aa77a8903c7170c4-bbf5fe04 finish_reason=stop prompt_tokens=187 generated_tokens=425 elapsed_s=37.97
+single-1  | INFO:     127.0.0.1:37092 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:13 [scheduler.py:2198] Request finished: req chatcmpl-aee171ffc1f792d8-b592387a finish_reason=stop prompt_tokens=152 generated_tokens=295 elapsed_s=42.26
+single-1  | INFO:     127.0.0.1:37106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:17 [scheduler.py:2198] Request finished: req chatcmpl-963c186f1cbc2c36-b274c8fe finish_reason=stop prompt_tokens=133 generated_tokens=250 elapsed_s=45.61
+single-1  | INFO:     127.0.0.1:37110 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:50:18 [loggers.py:320] Engine 000: Avg prompt throughput: 44.4 tokens/s, Avg generation throughput: 293.7 tokens/s, Running: 6 reqs, Waiting: 26 reqs, GPU KV cache usage: 99.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:50:18 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.14, Accepted throughput: 222.40 tokens/s, Drafted throughput: 495.61 tokens/s, Accepted: 2224 tokens, Drafted: 4956 tokens, Per-position acceptance rate: 0.784, 0.641, 0.513, 0.414, 0.331, 0.260, 0.199, Avg Draft acceptance rate: 44.9%
+single-1  | INFO:     127.0.0.1:46492 - "GET /health HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:50:28 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 296.3 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 90.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:50:28 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.95, Accepted throughput: 221.19 tokens/s, Drafted throughput: 525.69 tokens/s, Accepted: 2212 tokens, Drafted: 5257 tokens, Per-position acceptance rate: 0.802, 0.615, 0.482, 0.362, 0.289, 0.221, 0.174, Avg Draft acceptance rate: 42.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:36 [scheduler.py:2198] Request finished: req chatcmpl-bc2613fd3f3b88b0-aa4206e9 finish_reason=stop prompt_tokens=167 generated_tokens=2517 elapsed_s=73.81
+single-1  | INFO:     127.0.0.1:37036 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:40 [scheduler.py:2198] Request finished: req chatcmpl-bb8b2624521e108c-86a98c60 finish_reason=stop prompt_tokens=151 generated_tokens=3351 elapsed_s=90.90
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:40 [scheduler.py:2198] Request finished: req chatcmpl-8d1601a71c30f4da-8091312c finish_reason=stop prompt_tokens=159 generated_tokens=377 elapsed_s=67.31
+single-1  | INFO:     127.0.0.1:50482 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:50:40 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 305.3 tokens/s, Running: 3 reqs, Waiting: 27 reqs, GPU KV cache usage: 56.8%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:50:40 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.23, Accepted throughput: 233.19 tokens/s, Drafted throughput: 506.08 tokens/s, Accepted: 2332 tokens, Drafted: 5061 tokens, Per-position acceptance rate: 0.790, 0.633, 0.516, 0.423, 0.340, 0.285, 0.238, Avg Draft acceptance rate: 46.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:42 [scheduler.py:2198] Request finished: req chatcmpl-9e4653f335281c36-9a8b31e8 finish_reason=stop prompt_tokens=102 generated_tokens=147 elapsed_s=68.10
+single-1  | INFO:     127.0.0.1:58284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:45 [scheduler.py:2198] Request finished: req chatcmpl-956f6572090aad26-96818f69 finish_reason=stop prompt_tokens=134 generated_tokens=325 elapsed_s=71.55
+single-1  | INFO:     127.0.0.1:58280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:46 [scheduler.py:2198] Request finished: req chatcmpl-a65fc9e137ae16b2-8fbbb6eb finish_reason=stop prompt_tokens=142 generated_tokens=431 elapsed_s=72.51
+single-1  | INFO:     127.0.0.1:58276 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:50:50 [loggers.py:320] Engine 000: Avg prompt throughput: 82.0 tokens/s, Avg generation throughput: 306.8 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 87.5%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:50:50 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.41, Accepted throughput: 236.89 tokens/s, Drafted throughput: 485.79 tokens/s, Accepted: 2369 tokens, Drafted: 4858 tokens, Per-position acceptance rate: 0.824, 0.677, 0.556, 0.455, 0.372, 0.290, 0.239, Avg Draft acceptance rate: 48.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:51 [scheduler.py:2198] Request finished: req chatcmpl-b569769340782208-a18acc10 finish_reason=stop prompt_tokens=153 generated_tokens=452 elapsed_s=76.50
+single-1  | INFO:     127.0.0.1:58294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49898 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:54 [scheduler.py:2198] Request finished: req chatcmpl-a6e101ea7dd68d3f-ac81fedd finish_reason=stop prompt_tokens=165 generated_tokens=582 elapsed_s=76.81
+single-1  | INFO:     127.0.0.1:58300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:55 [scheduler.py:2198] Request finished: req chatcmpl-ab0b30170881c3c0-97971a91 finish_reason=stop prompt_tokens=124 generated_tokens=369 elapsed_s=76.78
+single-1  | INFO:     127.0.0.1:58304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:56 [scheduler.py:2198] Request finished: req chatcmpl-a9f572bc16fc8d5e-b966e22f finish_reason=stop prompt_tokens=102 generated_tokens=135 elapsed_s=77.99
+single-1  | INFO:     127.0.0.1:58318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:50:58 [scheduler.py:2198] Request finished: req chatcmpl-939e708cf1c26a1e-a5ab7e0b finish_reason=stop prompt_tokens=145 generated_tokens=204 elapsed_s=77.66
+single-1  | INFO:     127.0.0.1:58320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:51:00 [loggers.py:320] Engine 000: Avg prompt throughput: 51.5 tokens/s, Avg generation throughput: 300.3 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 90.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:51:00 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.38, Accepted throughput: 231.79 tokens/s, Drafted throughput: 479.47 tokens/s, Accepted: 2318 tokens, Drafted: 4795 tokens, Per-position acceptance rate: 0.818, 0.672, 0.556, 0.438, 0.369, 0.299, 0.232, Avg Draft acceptance rate: 48.3%
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:03 [scheduler.py:2198] Request finished: req chatcmpl-9e5f19022624fbe9-86dd3aed finish_reason=stop prompt_tokens=113 generated_tokens=205 elapsed_s=81.30
+single-1  | INFO:     127.0.0.1:58340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:06 [scheduler.py:2198] Request finished: req chatcmpl-97e8b29c206d7713-88439cb7 finish_reason=stop prompt_tokens=125 generated_tokens=274 elapsed_s=83.39
+single-1  | INFO:     127.0.0.1:37830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:51:11 [loggers.py:320] Engine 000: Avg prompt throughput: 25.8 tokens/s, Avg generation throughput: 297.8 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 93.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:51:11 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.16, Accepted throughput: 226.09 tokens/s, Drafted throughput: 501.17 tokens/s, Accepted: 2261 tokens, Drafted: 5012 tokens, Per-position acceptance rate: 0.809, 0.669, 0.532, 0.409, 0.306, 0.243, 0.190, Avg Draft acceptance rate: 45.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:14 [scheduler.py:2198] Request finished: req chatcmpl-b25d1721547ecb22-a461c50c finish_reason=stop prompt_tokens=133 generated_tokens=548 elapsed_s=90.42
+single-1  | INFO:     127.0.0.1:37838 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:16 [scheduler.py:2198] Request finished: req chatcmpl-9b373c533fb35388-a7596046 finish_reason=stop prompt_tokens=109 generated_tokens=186 elapsed_s=90.90
+single-1  | INFO:     127.0.0.1:37840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:20 [scheduler.py:2198] Request finished: req chatcmpl-b89f57bc925eb15a-98033c19 finish_reason=stop prompt_tokens=142 generated_tokens=281 elapsed_s=94.14
+single-1  | INFO:     127.0.0.1:37856 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:51:21 [loggers.py:320] Engine 000: Avg prompt throughput: 44.0 tokens/s, Avg generation throughput: 297.0 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 95.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:51:21 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.22, Accepted throughput: 226.60 tokens/s, Drafted throughput: 492.80 tokens/s, Accepted: 2266 tokens, Drafted: 4928 tokens, Per-position acceptance rate: 0.805, 0.636, 0.511, 0.412, 0.342, 0.278, 0.233, Avg Draft acceptance rate: 46.0%
+single-1  | INFO:     127.0.0.1:44002 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:26 [scheduler.py:2198] Request finished: req chatcmpl-aa0560077acc5697-b95eb697 finish_reason=stop prompt_tokens=116 generated_tokens=4287 elapsed_s=115.64
+single-1  | INFO:     127.0.0.1:37086 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:28 [scheduler.py:2198] Request finished: req chatcmpl-b2de2bc60908c9bd-a136064e finish_reason=stop prompt_tokens=121 generated_tokens=145 elapsed_s=97.63
+single-1  | INFO:     127.0.0.1:37882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:30 [scheduler.py:2198] Request finished: req chatcmpl-ae198cf699179999-a900960d finish_reason=stop prompt_tokens=107 generated_tokens=166 elapsed_s=99.80
+single-1  | INFO:     127.0.0.1:37892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:51:31 [loggers.py:320] Engine 000: Avg prompt throughput: 38.5 tokens/s, Avg generation throughput: 294.4 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 92.5%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:51:31 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.15, Accepted throughput: 223.50 tokens/s, Drafted throughput: 496.31 tokens/s, Accepted: 2235 tokens, Drafted: 4963 tokens, Per-position acceptance rate: 0.801, 0.666, 0.498, 0.399, 0.319, 0.258, 0.212, Avg Draft acceptance rate: 45.0%
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:36 [scheduler.py:2198] Request finished: req chatcmpl-98ef447b81c5e4ba-a74b8590 finish_reason=stop prompt_tokens=157 generated_tokens=271 elapsed_s=102.34
+single-1  | INFO:     127.0.0.1:48376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:42 [scheduler.py:2198] Request finished: req chatcmpl-8482b80f2d7a6a0f-a518696c finish_reason=stop prompt_tokens=135 generated_tokens=468 elapsed_s=107.89
+single-1  | INFO:     127.0.0.1:48382 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:51:43 [loggers.py:320] Engine 000: Avg prompt throughput: 26.1 tokens/s, Avg generation throughput: 298.4 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 95.8%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:51:43 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.16, Accepted throughput: 226.61 tokens/s, Drafted throughput: 501.22 tokens/s, Accepted: 2266 tokens, Drafted: 5012 tokens, Per-position acceptance rate: 0.785, 0.626, 0.521, 0.419, 0.330, 0.268, 0.216, Avg Draft acceptance rate: 45.2%
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:45 [scheduler.py:2198] Request finished: req chatcmpl-85ce0ccab59cf6e0-b40defd4 finish_reason=stop prompt_tokens=126 generated_tokens=183 elapsed_s=107.47
+single-1  | INFO:     127.0.0.1:48384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:45 [scheduler.py:2198] Request finished: req chatcmpl-941bc18ba5f5bfa6-90b7be87 finish_reason=stop prompt_tokens=156 generated_tokens=6260 elapsed_s=148.97
+single-1  | INFO:     127.0.0.1:49902 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:47 [scheduler.py:2198] Request finished: req chatcmpl-abd6cdfa5ae25e32-b868a580 finish_reason=stop prompt_tokens=106 generated_tokens=117 elapsed_s=108.93
+single-1  | INFO:     127.0.0.1:48392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:48 [scheduler.py:2198] Request finished: req chatcmpl-a5b8839a7d5d84ae-8515073e finish_reason=stop prompt_tokens=130 generated_tokens=210 elapsed_s=107.68
+single-1  | INFO:     127.0.0.1:48398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:48 [scheduler.py:2198] Request finished: req chatcmpl-b09e2e3d12592e86-92b72d6d finish_reason=stop prompt_tokens=118 generated_tokens=123 elapsed_s=105.49
+single-1  | INFO:     127.0.0.1:48408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:51 [scheduler.py:2198] Request finished: req chatcmpl-a8c3573c06c6c1ba-8d12a889 finish_reason=stop prompt_tokens=100 generated_tokens=151 elapsed_s=102.22
+single-1  | INFO:     127.0.0.1:48364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:53 [scheduler.py:2198] Request finished: req chatcmpl-ac9cabc38e589991-b142463f finish_reason=stop prompt_tokens=116 generated_tokens=145 elapsed_s=95.13
+single-1  | INFO:     127.0.0.1:46476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:51:53 [loggers.py:320] Engine 000: Avg prompt throughput: 83.5 tokens/s, Avg generation throughput: 290.0 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 91.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:51:53 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.35, Accepted throughput: 223.21 tokens/s, Drafted throughput: 466.22 tokens/s, Accepted: 2232 tokens, Drafted: 4662 tokens, Per-position acceptance rate: 0.794, 0.664, 0.527, 0.435, 0.380, 0.302, 0.249, Avg Draft acceptance rate: 47.9%
+single-1  | INFO:     127.0.0.1:36452 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:58 [scheduler.py:2198] Request finished: req chatcmpl-86b05fac4fb23498-b9aa9152 finish_reason=stop prompt_tokens=147 generated_tokens=418 elapsed_s=81.80
+single-1  | INFO:     127.0.0.1:53442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:51:59 [scheduler.py:2198] Request finished: req chatcmpl-9baff4c07dfaf495-8e981d57 finish_reason=stop prompt_tokens=118 generated_tokens=721 elapsed_s=106.32
+single-1  | INFO:     127.0.0.1:48372 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:52:03 [loggers.py:320] Engine 000: Avg prompt throughput: 26.3 tokens/s, Avg generation throughput: 315.2 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 92.5%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:03 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.37, Accepted throughput: 242.99 tokens/s, Drafted throughput: 504.68 tokens/s, Accepted: 2430 tokens, Drafted: 5047 tokens, Per-position acceptance rate: 0.793, 0.645, 0.542, 0.463, 0.372, 0.298, 0.257, Avg Draft acceptance rate: 48.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:12 [scheduler.py:2198] Request finished: req chatcmpl-95a9da02de06c7bc-9fb72d6b finish_reason=stop prompt_tokens=145 generated_tokens=784 elapsed_s=92.41
+single-1  | INFO:     127.0.0.1:53462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:13 [scheduler.py:2198] Request finished: req chatcmpl-a53f364faabced8d-816045be finish_reason=stop prompt_tokens=118 generated_tokens=969 elapsed_s=93.40
+single-1  | INFO:     127.0.0.1:53450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:52:15 [loggers.py:320] Engine 000: Avg prompt throughput: 22.3 tokens/s, Avg generation throughput: 295.0 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 93.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:15 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.12, Accepted throughput: 223.38 tokens/s, Drafted throughput: 501.15 tokens/s, Accepted: 2234 tokens, Drafted: 5012 tokens, Per-position acceptance rate: 0.799, 0.637, 0.517, 0.398, 0.307, 0.254, 0.208, Avg Draft acceptance rate: 44.6%
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:15 [scheduler.py:2198] Request finished: req chatcmpl-ba3e044740c0c509-9be382f3 finish_reason=stop prompt_tokens=111 generated_tokens=186 elapsed_s=92.61
+single-1  | INFO:     127.0.0.1:53466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:16 [scheduler.py:2198] Request finished: req chatcmpl-9ab60eafb9b22038-944046b2 finish_reason=stop prompt_tokens=112 generated_tokens=243 elapsed_s=90.89
+single-1  | INFO:     127.0.0.1:53476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:17 [scheduler.py:2198] Request finished: req chatcmpl-bd42859bef4e2a45-8c4596a6 finish_reason=stop prompt_tokens=118 generated_tokens=163 elapsed_s=91.40
+single-1  | INFO:     127.0.0.1:49886 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:21 [scheduler.py:2198] Request finished: req chatcmpl-9b40bee1a7761833-a4de6993 finish_reason=stop prompt_tokens=129 generated_tokens=319 elapsed_s=89.93
+single-1  | INFO:     127.0.0.1:49894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:24 [scheduler.py:2198] Request finished: req chatcmpl-bfde6076d0328d74-88f646b0 finish_reason=stop prompt_tokens=205 generated_tokens=417 elapsed_s=89.57
+single-1  | INFO:     127.0.0.1:49908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:24 [scheduler.py:2198] Request finished: req chatcmpl-a800dbc3021b542e-87c8d913 finish_reason=stop prompt_tokens=120 generated_tokens=238 elapsed_s=89.28
+single-1  | INFO:     127.0.0.1:49916 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:52:25 [loggers.py:320] Engine 000: Avg prompt throughput: 72.6 tokens/s, Avg generation throughput: 291.1 tokens/s, Running: 5 reqs, Waiting: 26 reqs, GPU KV cache usage: 95.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:25 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.42, Accepted throughput: 225.20 tokens/s, Drafted throughput: 461.29 tokens/s, Accepted: 2252 tokens, Drafted: 4613 tokens, Per-position acceptance rate: 0.821, 0.687, 0.545, 0.428, 0.355, 0.314, 0.267, Avg Draft acceptance rate: 48.8%
+single-1  | INFO:     127.0.0.1:42122 - "GET /health HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:52:35 [loggers.py:320] Engine 000: Avg prompt throughput: 19.7 tokens/s, Avg generation throughput: 286.0 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 99.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:35 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.35, Accepted throughput: 219.98 tokens/s, Drafted throughput: 459.86 tokens/s, Accepted: 2200 tokens, Drafted: 4599 tokens, Per-position acceptance rate: 0.820, 0.671, 0.549, 0.438, 0.342, 0.288, 0.239, Avg Draft acceptance rate: 47.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:40 [scheduler.py:2198] Request finished: req chatcmpl-ad906bb492ce47b0-833f73ff finish_reason=stop prompt_tokens=154 generated_tokens=832 elapsed_s=103.37
+single-1  | INFO:     127.0.0.1:57796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:52:42 [scheduler.py:2198] Request finished: req chatcmpl-b3335aed6435fdf2-ab487ccc finish_reason=stop prompt_tokens=139 generated_tokens=122 elapsed_s=99.48
+single-1  | INFO:     127.0.0.1:57826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:52:46 [loggers.py:320] Engine 000: Avg prompt throughput: 25.2 tokens/s, Avg generation throughput: 243.9 tokens/s, Running: 4 reqs, Waiting: 28 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:46 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.12, Accepted throughput: 184.40 tokens/s, Drafted throughput: 413.70 tokens/s, Accepted: 1844 tokens, Drafted: 4137 tokens, Per-position acceptance rate: 0.795, 0.628, 0.514, 0.406, 0.316, 0.249, 0.212, Avg Draft acceptance rate: 44.6%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:56 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 276.3 tokens/s, Running: 4 reqs, Waiting: 28 reqs, GPU KV cache usage: 93.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:52:56 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.73, Accepted throughput: 202.28 tokens/s, Drafted throughput: 517.95 tokens/s, Accepted: 2023 tokens, Drafted: 5180 tokens, Per-position acceptance rate: 0.750, 0.570, 0.436, 0.357, 0.251, 0.204, 0.165, Avg Draft acceptance rate: 39.1%
+single-1  | INFO:     127.0.0.1:47320 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:06 [scheduler.py:2198] Request finished: req chatcmpl-9339ed2b850b46a6-9234bf79 finish_reason=stop prompt_tokens=155 generated_tokens=7586 elapsed_s=204.81
+single-1  | INFO:     127.0.0.1:58336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:53:06 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 281.7 tokens/s, Running: 5 reqs, Waiting: 26 reqs, GPU KV cache usage: 98.3%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:53:06 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.98, Accepted throughput: 210.99 tokens/s, Drafted throughput: 494.87 tokens/s, Accepted: 2110 tokens, Drafted: 4949 tokens, Per-position acceptance rate: 0.785, 0.598, 0.495, 0.385, 0.298, 0.239, 0.184, Avg Draft acceptance rate: 42.6%
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:09 [scheduler.py:2198] Request finished: req chatcmpl-8a353edeeed43923-ab3d8abf finish_reason=stop prompt_tokens=113 generated_tokens=131 elapsed_s=122.92
+single-1  | INFO:     127.0.0.1:57838 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:14 [scheduler.py:2198] Request finished: req chatcmpl-902d17df9b52917c-82eb825c finish_reason=stop prompt_tokens=165 generated_tokens=432 elapsed_s=120.15
+single-1  | INFO:     127.0.0.1:56518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:16 [scheduler.py:2198] Request finished: req chatcmpl-9c739fb6c4f9ff09-8db83306 finish_reason=stop prompt_tokens=163 generated_tokens=316 elapsed_s=119.27
+single-1  | INFO:     127.0.0.1:56526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:53:18 [loggers.py:320] Engine 000: Avg prompt throughput: 61.6 tokens/s, Avg generation throughput: 259.2 tokens/s, Running: 4 reqs, Waiting: 28 reqs, GPU KV cache usage: 86.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:53:18 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.20, Accepted throughput: 197.09 tokens/s, Drafted throughput: 430.49 tokens/s, Accepted: 1971 tokens, Drafted: 4305 tokens, Per-position acceptance rate: 0.823, 0.676, 0.519, 0.405, 0.317, 0.259, 0.207, Avg Draft acceptance rate: 45.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:19 [scheduler.py:2198] Request finished: req chatcmpl-b96412353ce8ac37-b546805b finish_reason=stop prompt_tokens=113 generated_tokens=265 elapsed_s=118.69
+single-1  | INFO:     127.0.0.1:43986 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:19 [scheduler.py:2198] Request finished: req chatcmpl-983fecd44a39fa6b-a6b5ed8a finish_reason=stop prompt_tokens=189 generated_tokens=6274 elapsed_s=212.90
+single-1  | INFO:     127.0.0.1:37862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:24 [scheduler.py:2198] Request finished: req chatcmpl-a62423c3a86adb67-94098d65 finish_reason=stop prompt_tokens=143 generated_tokens=338 elapsed_s=115.88
+single-1  | INFO:     127.0.0.1:43058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:24 [scheduler.py:2198] Request finished: req chatcmpl-a56ec9936a7d183b-b921bffc finish_reason=stop prompt_tokens=145 generated_tokens=391 elapsed_s=113.76
+single-1  | INFO:     127.0.0.1:43060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:26 [scheduler.py:2198] Request finished: req chatcmpl-be38570394a32051-aee20da3 finish_reason=stop prompt_tokens=175 generated_tokens=639 elapsed_s=120.21
+single-1  | INFO:     127.0.0.1:44018 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:26 [scheduler.py:2198] Request finished: req chatcmpl-82bda6ba5a273810-a77fad8a finish_reason=stop prompt_tokens=197 generated_tokens=3563 elapsed_s=147.98
+single-1  | INFO:     127.0.0.1:57812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:28 [scheduler.py:2198] Request finished: req chatcmpl-a60615dc2f228d1b-b8f370c0 finish_reason=stop prompt_tokens=146 generated_tokens=240 elapsed_s=112.08
+single-1  | INFO:     127.0.0.1:43076 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:53:28 [loggers.py:320] Engine 000: Avg prompt throughput: 86.3 tokens/s, Avg generation throughput: 323.8 tokens/s, Running: 4 reqs, Waiting: 27 reqs, GPU KV cache usage: 72.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:53:28 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.00, Accepted throughput: 258.67 tokens/s, Drafted throughput: 452.85 tokens/s, Accepted: 2587 tokens, Drafted: 4529 tokens, Per-position acceptance rate: 0.844, 0.726, 0.638, 0.560, 0.468, 0.405, 0.357, Avg Draft acceptance rate: 57.1%
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:29 [scheduler.py:2198] Request finished: req chatcmpl-892bad889ce9b650-b08bfaf0 finish_reason=stop prompt_tokens=123 generated_tokens=192 elapsed_s=104.19
+single-1  | INFO:     127.0.0.1:41442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:29 [scheduler.py:2198] Request finished: req chatcmpl-a576833a02a9a8e0-a27f776c finish_reason=stop prompt_tokens=127 generated_tokens=111 elapsed_s=102.60
+single-1  | INFO:     127.0.0.1:41462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50884 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:37 [scheduler.py:2198] Request finished: req chatcmpl-af5e10e72d1da9a0-b80a5936 finish_reason=stop prompt_tokens=114 generated_tokens=543 elapsed_s=109.07
+single-1  | INFO:     127.0.0.1:41488 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:53:38 [loggers.py:320] Engine 000: Avg prompt throughput: 51.3 tokens/s, Avg generation throughput: 295.3 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 91.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:53:38 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.21, Accepted throughput: 224.98 tokens/s, Drafted throughput: 491.36 tokens/s, Accepted: 2250 tokens, Drafted: 4914 tokens, Per-position acceptance rate: 0.808, 0.654, 0.507, 0.406, 0.339, 0.274, 0.218, Avg Draft acceptance rate: 45.8%
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:41 [scheduler.py:2198] Request finished: req chatcmpl-bced7d1bb07b76b2-add84b31 finish_reason=stop prompt_tokens=131 generated_tokens=745 elapsed_s=115.38
+single-1  | INFO:     127.0.0.1:41456 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:42 [scheduler.py:2198] Request finished: req chatcmpl-a6ad64f58877cbff-9f34c86d finish_reason=stop prompt_tokens=128 generated_tokens=297 elapsed_s=111.79
+single-1  | INFO:     127.0.0.1:36424 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:45 [scheduler.py:2198] Request finished: req chatcmpl-baeea28f1bae5672-855bdd0c finish_reason=stop prompt_tokens=140 generated_tokens=315 elapsed_s=112.87
+single-1  | INFO:     127.0.0.1:36438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:46 [scheduler.py:2198] Request finished: req chatcmpl-bbd080d7a71cba20-b5b82ccc finish_reason=stop prompt_tokens=189 generated_tokens=263 elapsed_s=108.22
+single-1  | INFO:     127.0.0.1:36454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:48 [scheduler.py:2198] Request finished: req chatcmpl-ad35f686849bc7f8-9eb9faf2 finish_reason=stop prompt_tokens=132 generated_tokens=163 elapsed_s=108.61
+single-1  | INFO:     127.0.0.1:58444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:53:49 [loggers.py:320] Engine 000: Avg prompt throughput: 66.2 tokens/s, Avg generation throughput: 302.3 tokens/s, Running: 5 reqs, Waiting: 27 reqs, GPU KV cache usage: 92.8%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:53:49 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.45, Accepted throughput: 234.29 tokens/s, Drafted throughput: 475.99 tokens/s, Accepted: 2343 tokens, Drafted: 4760 tokens, Per-position acceptance rate: 0.819, 0.662, 0.549, 0.453, 0.381, 0.319, 0.263, Avg Draft acceptance rate: 49.2%
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:49 [scheduler.py:2198] Request finished: req chatcmpl-9cbcaed86e990df5-89aea5d3 finish_reason=stop prompt_tokens=102 generated_tokens=283 elapsed_s=97.10
+single-1  | INFO:     127.0.0.1:40868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:51 [scheduler.py:2198] Request finished: req chatcmpl-9cdbc6cca0abe642-a917d6d9 finish_reason=stop prompt_tokens=99 generated_tokens=165 elapsed_s=97.50
+single-1  | INFO:     127.0.0.1:40876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:52 [scheduler.py:2198] Request finished: req chatcmpl-8282603f6baed508-ab2c1a6e finish_reason=stop prompt_tokens=103 generated_tokens=200 elapsed_s=96.98
+single-1  | INFO:     127.0.0.1:40884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:53 [scheduler.py:2198] Request finished: req chatcmpl-a9f32a54ac17122c-ba9f33ac finish_reason=stop prompt_tokens=127 generated_tokens=200 elapsed_s=96.99
+single-1  | INFO:     127.0.0.1:40892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:54 [scheduler.py:2198] Request finished: req chatcmpl-8b048631d4046233-94d68c2e finish_reason=stop prompt_tokens=128 generated_tokens=156 elapsed_s=96.65
+single-1  | INFO:     127.0.0.1:40906 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:57 [scheduler.py:2198] Request finished: req chatcmpl-84b17243e9307eff-ae79c275 finish_reason=stop prompt_tokens=175 generated_tokens=1814 elapsed_s=134.73
+single-1  | INFO:     127.0.0.1:41440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:57 [scheduler.py:2198] Request finished: req chatcmpl-a1237063146d99ee-8b3d039c finish_reason=stop prompt_tokens=134 generated_tokens=321 elapsed_s=96.79
+single-1  | INFO:     127.0.0.1:42086 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:53:59 [scheduler.py:2198] Request finished: req chatcmpl-ae722018059d8574-b6d773b4 finish_reason=stop prompt_tokens=150 generated_tokens=313 elapsed_s=94.97
+single-1  | INFO:     127.0.0.1:42102 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:53:59 [loggers.py:320] Engine 000: Avg prompt throughput: 106.7 tokens/s, Avg generation throughput: 296.1 tokens/s, Running: 5 reqs, Waiting: 23 reqs, GPU KV cache usage: 91.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:53:59 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.59, Accepted throughput: 231.48 tokens/s, Drafted throughput: 450.77 tokens/s, Accepted: 2315 tokens, Drafted: 4508 tokens, Per-position acceptance rate: 0.848, 0.710, 0.582, 0.463, 0.384, 0.329, 0.280, Avg Draft acceptance rate: 51.4%
+single-1  | INFO:     127.0.0.1:59428 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:02 [scheduler.py:2198] Request finished: req chatcmpl-845dbc7bbb49cd41-b429a296 finish_reason=stop prompt_tokens=117 generated_tokens=219 elapsed_s=79.49
+single-1  | INFO:     127.0.0.1:34296 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:04 [scheduler.py:2198] Request finished: req chatcmpl-aefe08592c7caee7-a8c3bfea finish_reason=stop prompt_tokens=137 generated_tokens=426 elapsed_s=84.26
+single-1  | INFO:     127.0.0.1:49396 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:06 [scheduler.py:2198] Request finished: req chatcmpl-b73866da19a727f4-af69e9c7 finish_reason=stop prompt_tokens=114 generated_tokens=205 elapsed_s=57.44
+single-1  | INFO:     127.0.0.1:42688 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:08 [scheduler.py:2198] Request finished: req chatcmpl-ab1f1473f34e7eac-bb291a36 finish_reason=stop prompt_tokens=115 generated_tokens=136 elapsed_s=53.87
+single-1  | INFO:     127.0.0.1:43892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:54:09 [loggers.py:320] Engine 000: Avg prompt throughput: 51.5 tokens/s, Avg generation throughput: 296.2 tokens/s, Running: 5 reqs, Waiting: 19 reqs, GPU KV cache usage: 94.7%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:54:09 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.28, Accepted throughput: 226.97 tokens/s, Drafted throughput: 484.33 tokens/s, Accepted: 2270 tokens, Drafted: 4844 tokens, Per-position acceptance rate: 0.827, 0.655, 0.536, 0.429, 0.331, 0.280, 0.223, Avg Draft acceptance rate: 46.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:11 [scheduler.py:2198] Request finished: req chatcmpl-9bd96c8d67c866e3-83e360ed finish_reason=stop prompt_tokens=121 generated_tokens=142 elapsed_s=55.14
+single-1  | INFO:     127.0.0.1:43904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:14 [scheduler.py:2198] Request finished: req chatcmpl-b3b72970764e2344-af0f8ce7 finish_reason=stop prompt_tokens=165 generated_tokens=807 elapsed_s=68.60
+single-1  | INFO:     127.0.0.1:42676 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:54:21 [loggers.py:320] Engine 000: Avg prompt throughput: 27.5 tokens/s, Avg generation throughput: 295.1 tokens/s, Running: 5 reqs, Waiting: 17 reqs, GPU KV cache usage: 98.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:54:21 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.26, Accepted throughput: 225.79 tokens/s, Drafted throughput: 484.38 tokens/s, Accepted: 2258 tokens, Drafted: 4844 tokens, Per-position acceptance rate: 0.829, 0.640, 0.509, 0.434, 0.345, 0.279, 0.227, Avg Draft acceptance rate: 46.6%
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:23 [scheduler.py:2198] Request finished: req chatcmpl-844fb1ada985fd82-b75d2fa5 finish_reason=stop prompt_tokens=171 generated_tokens=1337 elapsed_s=118.72
+single-1  | INFO:     127.0.0.1:42108 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:24 [scheduler.py:2198] Request finished: req chatcmpl-8078a8f2b70bd7a5-ad2ca410 finish_reason=stop prompt_tokens=155 generated_tokens=15085 elapsed_s=315.89
+single-1  | INFO:     127.0.0.1:50466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:26 [scheduler.py:2198] Request finished: req chatcmpl-91828ce6c7b13022-a1f3ec73 finish_reason=stop prompt_tokens=112 generated_tokens=87 elapsed_s=59.66
+single-1  | INFO:     127.0.0.1:50828 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:28 [scheduler.py:2198] Request finished: req chatcmpl-95583e2a612608fc-b82ce040 finish_reason=stop prompt_tokens=167 generated_tokens=1032 elapsed_s=69.73
+single-1  | INFO:     127.0.0.1:43920 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:30 [scheduler.py:2198] Request finished: req chatcmpl-a42f0d76c42097d2-b501ef96 finish_reason=stop prompt_tokens=206 generated_tokens=414 elapsed_s=66.08
+single-1  | INFO:     127.0.0.1:50810 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:54:31 [loggers.py:320] Engine 000: Avg prompt throughput: 87.2 tokens/s, Avg generation throughput: 320.9 tokens/s, Running: 6 reqs, Waiting: 11 reqs, GPU KV cache usage: 95.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:54:31 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.56, Accepted throughput: 250.18 tokens/s, Drafted throughput: 492.06 tokens/s, Accepted: 2502 tokens, Drafted: 4921 tokens, Per-position acceptance rate: 0.835, 0.688, 0.576, 0.469, 0.395, 0.317, 0.277, Avg Draft acceptance rate: 50.8%
+single-1  | INFO:     127.0.0.1:46734 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:33 [scheduler.py:2198] Request finished: req chatcmpl-ad906538132a6676-a50252a1 finish_reason=stop prompt_tokens=141 generated_tokens=249 elapsed_s=63.95
+single-1  | INFO:     127.0.0.1:50868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:54:41 [loggers.py:320] Engine 000: Avg prompt throughput: 14.0 tokens/s, Avg generation throughput: 351.6 tokens/s, Running: 6 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:54:41 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.23, Accepted throughput: 268.48 tokens/s, Drafted throughput: 580.96 tokens/s, Accepted: 2685 tokens, Drafted: 5810 tokens, Per-position acceptance rate: 0.827, 0.648, 0.508, 0.427, 0.346, 0.261, 0.218, Avg Draft acceptance rate: 46.2%
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:45 [scheduler.py:2198] Request finished: req chatcmpl-a880ef15f6f60733-8f25848f finish_reason=stop prompt_tokens=188 generated_tokens=1089 elapsed_s=78.60
+single-1  | INFO:     127.0.0.1:50844 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:46 [scheduler.py:2198] Request finished: req chatcmpl-8462e6c3f5d35c7d-906f0aac finish_reason=stop prompt_tokens=140 generated_tokens=701 elapsed_s=76.55
+single-1  | INFO:     127.0.0.1:50872 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:47 [scheduler.py:2198] Request finished: req chatcmpl-8d95dd092a55d672-b39948d8 finish_reason=stop prompt_tokens=101 generated_tokens=124 elapsed_s=69.39
+single-1  | INFO:     127.0.0.1:39792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:52 [scheduler.py:2198] Request finished: req chatcmpl-99302928f6e42681-9b2893c9 finish_reason=stop prompt_tokens=109 generated_tokens=339 elapsed_s=71.02
+single-1  | INFO:     127.0.0.1:39796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:54:52 [loggers.py:320] Engine 000: Avg prompt throughput: 53.0 tokens/s, Avg generation throughput: 291.4 tokens/s, Running: 6 reqs, Waiting: 6 reqs, GPU KV cache usage: 98.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:54:52 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.25, Accepted throughput: 222.58 tokens/s, Drafted throughput: 478.75 tokens/s, Accepted: 2226 tokens, Drafted: 4788 tokens, Per-position acceptance rate: 0.807, 0.646, 0.519, 0.418, 0.344, 0.287, 0.234, Avg Draft acceptance rate: 46.5%
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:54 [scheduler.py:2198] Request finished: req chatcmpl-904d160561b92929-b35ba59a finish_reason=stop prompt_tokens=108 generated_tokens=2064 elapsed_s=94.76
+single-1  | INFO:     127.0.0.1:43926 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:55 [scheduler.py:2198] Request finished: req chatcmpl-a56ed47ac8cddc5a-b8239ac9 finish_reason=stop prompt_tokens=127 generated_tokens=420 elapsed_s=72.40
+single-1  | INFO:     127.0.0.1:39804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:57 [scheduler.py:2198] Request finished: req chatcmpl-bd4016e32e909c84-8e8d5a88 finish_reason=stop prompt_tokens=113 generated_tokens=160 elapsed_s=71.20
+single-1  | INFO:     127.0.0.1:56450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:59 [scheduler.py:2198] Request finished: req chatcmpl-bad51753cc2e299f-953af1ba finish_reason=stop prompt_tokens=193 generated_tokens=365 elapsed_s=73.29
+single-1  | INFO:     127.0.0.1:56440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:54:59 [scheduler.py:2198] Request finished: req chatcmpl-a139c6033b5b6ce1-81105d34 finish_reason=stop prompt_tokens=113 generated_tokens=140 elapsed_s=69.82
+single-1  | INFO:     127.0.0.1:56476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:55:00 [scheduler.py:2198] Request finished: req chatcmpl-beb166c75e203927-ba44b23a finish_reason=stop prompt_tokens=112 generated_tokens=291 elapsed_s=71.70
+single-1  | INFO:     127.0.0.1:56464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:55:01 [scheduler.py:2198] Request finished: req chatcmpl-a3f845bbb6c4f8ef-9a2a90e8 finish_reason=stop prompt_tokens=124 generated_tokens=222 elapsed_s=70.75
+single-1  | INFO:     127.0.0.1:56486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:55:02 [loggers.py:320] Engine 000: Avg prompt throughput: 76.0 tokens/s, Avg generation throughput: 335.6 tokens/s, Running: 5 reqs, Waiting: 0 reqs, GPU KV cache usage: 84.2%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:02 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 4.43, Accepted throughput: 259.70 tokens/s, Drafted throughput: 530.59 tokens/s, Accepted: 2597 tokens, Drafted: 5306 tokens, Per-position acceptance rate: 0.811, 0.669, 0.534, 0.453, 0.380, 0.323, 0.256, Avg Draft acceptance rate: 48.9%
+single-1  | INFO:     127.0.0.1:55450 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:55:04 [scheduler.py:2198] Request finished: req chatcmpl-b5ae971b33415e40-bd8d01d4 finish_reason=stop prompt_tokens=150 generated_tokens=370 elapsed_s=70.85
+single-1  | INFO:     127.0.0.1:56500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:55:05 [scheduler.py:2198] Request finished: req chatcmpl-ada11cbb32540fef-a5f8307b finish_reason=stop prompt_tokens=148 generated_tokens=400 elapsed_s=72.63
+single-1  | INFO:     127.0.0.1:56490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:55:12 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 250.3 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 58.4%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:12 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.93, Accepted throughput: 186.60 tokens/s, Drafted throughput: 445.89 tokens/s, Accepted: 1866 tokens, Drafted: 4459 tokens, Per-position acceptance rate: 0.761, 0.597, 0.452, 0.369, 0.297, 0.245, 0.209, Avg Draft acceptance rate: 41.8%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:24 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 221.6 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 61.2%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:24 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.69, Accepted throughput: 161.58 tokens/s, Drafted throughput: 419.95 tokens/s, Accepted: 1616 tokens, Drafted: 4200 tokens, Per-position acceptance rate: 0.765, 0.578, 0.418, 0.317, 0.262, 0.207, 0.147, Avg Draft acceptance rate: 38.5%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:34 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 217.6 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 62.9%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:34 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.66, Accepted throughput: 158.20 tokens/s, Drafted throughput: 415.79 tokens/s, Accepted: 1582 tokens, Drafted: 4158 tokens, Per-position acceptance rate: 0.774, 0.574, 0.436, 0.327, 0.242, 0.173, 0.136, Avg Draft acceptance rate: 38.0%
+single-1  | INFO:     127.0.0.1:47598 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:55:38 [scheduler.py:2198] Request finished: req chatcmpl-b570f5ddd11cc335-9c0d5d66 finish_reason=stop prompt_tokens=112 generated_tokens=4126 elapsed_s=130.18
+single-1  | INFO:     127.0.0.1:50860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 14:55:39 [scheduler.py:2198] Request finished: req chatcmpl-887111453af9f8c8-b25d6b95 finish_reason=stop prompt_tokens=113 generated_tokens=4877 elapsed_s=134.97
+single-1  | INFO:     127.0.0.1:50820 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 14:55:44 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 177.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 24.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:44 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.87, Accepted throughput: 131.79 tokens/s, Drafted throughput: 321.98 tokens/s, Accepted: 1318 tokens, Drafted: 3220 tokens, Per-position acceptance rate: 0.793, 0.600, 0.452, 0.357, 0.270, 0.217, 0.176, Avg Draft acceptance rate: 40.9%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:56 [loggers.py:320] Engine 000: Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 108.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 26.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 14:55:56 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 3.30, Accepted throughput: 75.90 tokens/s, Drafted throughput: 230.99 tokens/s, Accepted: 759 tokens, Drafted: 2310 tokens, Per-position acceptance rate: 0.755, 0.530, 0.376, 0.258, 0.164, 0.124, 0.094, Avg Draft acceptance rate: 32.9%
+single-1  | (EngineCore pid=138) INFO 10-14 14:56:01 [scheduler.py:2198] Request finished: req chatcmpl-9b6d0f38b90dc2cf-bd3246c1 finish_reason=stop prompt_tokens=144 generated_tokens=9066 elapsed_s=252.49
+single-1  | INFO:     127.0.0.1:41476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
