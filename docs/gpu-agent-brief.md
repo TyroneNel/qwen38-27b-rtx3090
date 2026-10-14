@@ -1,5 +1,8 @@
 # GPU agent brief — decode-speed experiments on the RTX 3090 box
 
+> Batch 1. Superseded for later runs by [batch 2](gpu-agent-brief-batch2.md) and
+> [batch 3](gpu-agent-brief-batch3.md); the hard rules below carry forward unchanged.
+
 Paste the whole of this file as the task for the agent running on the Windows machine. It is written to be
 executed literally; where it says "verify", the answer belongs in the report, not in your memory.
 

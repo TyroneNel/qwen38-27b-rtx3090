@@ -3,7 +3,9 @@
 **Ran on the reference 3090 on 2026-10-13.** Results, raw logs and per-arm reports are in
 [../bench/results/2026-10-13-SUMMARY.md](../bench/results/2026-10-13-SUMMARY.md); the outcomes are digested in
 [decode-speed-landscape.md](decode-speed-landscape.md#what-the-3090-measured-2026-10-13). This file is kept as
-the protocol that was run, with the two places the run diverged from it marked below.
+the protocol that was run, with the two places the run diverged from it marked below. Later batches:
+[batch 2](decode-speed-batch2.md) (capacity gate, then the parked arms on the bigger pool) and
+[batch 3](decode-speed-batch3.md) (what caps residency).
 
 The run list for [decode-speed-landscape.md](decode-speed-landscape.md): seven arms, each an A/B on one RTX
 3090, each with the metric and the pass/fail rule decided **before** the run. Written to be executed by an

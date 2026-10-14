@@ -285,7 +285,11 @@ back, before committing to a second quantization path.
 binding constraint at N=8 — `run` 6, `kv%` ~100, and a *lower* aggregate than the small-pool arm (165-188 vs
 216-222, tail rows). The limit is the recurrent-state pages, not the KV tokens: ~4 resident requests for a
 7,136-token mean response, and 1,017 preemptions when 32 client threads were pointed at a 4-request server.
-Every concurrency number in this repo is downstream of this, and no arm has yet attacked it directly.
+Every concurrency number in this repo is downstream of this. It is the subject of
+[batch 3](decode-speed-batch3.md), which tests the launcher's own seat model (`RESIDENT = KV_MEM /
+((k+2) x 104988089)`, ~6 seats at k=7 and ~10 at k=3) against a held 8-request load, with the engine's
+`Running:` line as the primary metric. Batch 2's k=3 arm read `run` 5 where that model predicts 8, so the
+test has two possible conclusions and both are useful: k is a concurrency control, or the formula is wrong.
 
 
 Three independent measurements land on the same mechanism:
@@ -297,9 +301,14 @@ Three independent measurements land on the same mechanism:
   without — an 8× difference, from 48 layers × 8 fp32 history rows.
 - deathwing475/vllm-030win, on a 24 GB-class card: **64 MiB of extra residency costs −30% decode**.
 
-ninfer-3090's "ReplaySSM" (cheap save/restore of spec-decode state so MTP survives C8) is the concept to look
-at, though their engine is not ours. In our tree the levers are the verify-history dtype and count
-(`hybrid-kv-groups-v2-cudagraph`, `mamba-align-checkpoint-order`), and the fp16 GDN state we already ship.
+ninfer-3090's "ReplaySSM" (cheap save/restore of spec-decode state so MTP survives C8) is the concept behind
+this, but it is **not a lever we can pull**: upstream 0.31.0 has the config fields (`use_replayssm`,
+`replayssm_buffer_len: 16`) and no CLI flag for them on this pin, and the field's own docstring says
+"standard (non-speculative) decode only" — so it is a batch-mode candidate at best. The levers in our tree are
+the verify-history dtype and count (`hybrid-kv-groups-v2-cudagraph`, `mamba-align-checkpoint-order`) and the
+state dtype, which is a live question: the batch-2 boot log shows our `--mamba-ssm-cache-dtype float16` falls
+back off the fused GDN CUDA kernel, which requires BF16 or FP32 state, and bf16 is the same two bytes
+([batch 3](decode-speed-batch3.md) Q2).
 
 **Cheapest experiment.** Measure the pool and the preemption count while a C1-C8 ladder runs with DFlash2
 attached, then repeat with the verify history at fp16 vs bf16 vs int8 and with `--mamba-block-size` raised
@@ -424,6 +433,7 @@ leads, row 2 as an answer, row 5 as a capacity win rather than a speed one, and 
 | 10 | `--mamba-block-size` and boot residency | config | KV tokens, preemptions, TTFT | ~20% more usable pool, fewer preemptions | low |
 | 11 | EXL3 second quantization path | `vllm-exl3` / `trellis-serve` | C1 tok/s on our prompts | up to +28% C1 on a rival engine's row; largest effort | high |
 | 12 | SGLang as a second engine | club-3090 PR #1226 row | ms/step at C1 | +43% C1 on an identical config (their measurement) | high |
+| 13 | Residency/seats (G7): is residency capped by the verify block? | [batch 3](decode-speed-batch3.md), config only | `Running:`/`Waiting:` under a held 8-request load; seats per k | decides whether k is a concurrency control or the launcher formula needs fixing | low |
 
 ## What we already lead on
 
