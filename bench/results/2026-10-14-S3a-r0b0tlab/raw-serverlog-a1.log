@@ -1,0 +1,993 @@
+single-1  | entrypoint: first-boot stages: [1/3] docker/prepare.sh [2/3] verify.sh --no-server [3/3] start_qwen.sh (single)
+single-1  | entrypoint: stage 1 is minutes on first boot (download + requantize), seconds once prepared
+single-1  | entrypoint: use log timestamps as the elapsed timer; total first boot can exceed 30 min
+single-1  | [effective-config] MODE=single
+single-1  | [effective-config] CTX=fast SPEC=dflash2
+single-1  | [effective-config] MODEL=/app/models/Qwen3.8-27B-W4A16-AutoRound-fast PORT=18020
+single-1  | [effective-config] MAX_LEN=8192 MAX_SEQS=8
+single-1  | [effective-config] VLLM_API_KEY=unset api_key.txt=absent
+single-1  | [start_qwen] note: the pinned pool holds about 5 resident requests at DFLASH_TOKENS=7 (state pages), fewer with long prompts; MAX_SEQS=8 admits more than that and the rest queue.
+single-1  | WSL detected: PYTORCH_CUDA_ALLOC_CONF=expandable_segments:False (VMM breaks Marlin repack under the paravirt driver; set it explicitly to override)
+single-1  | WARNING: no API key: this container listens on 0.0.0.0, so whatever the published port reaches is open. Set VLLM_API_KEY (make keygen) or publish the port on 127.0.0.1 only.
+single-1  | (MainProcess pid=1) WARNING 10-14 13:11:42 [cuda.py:1074] Detected different devices in the system: NVIDIA GeForce RTX 3090, NVIDIA GeForce RTX 3080 Ti. Please make sure to set `CUDA_DEVICE_ORDER=PCI_BUS_ID` to avoid unexpected behavior.
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:347] 
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:347]        █     █     █▄   ▄█
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:347]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.31.0
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:347]   █▄█▀ █     █     █     █  model   /app/models/Qwen3.8-27B-W4A16-AutoRound-fast
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:347]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:347] 
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'port': 18020, 'model': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'max_model_len': 8192, 'served_model_name': ['qwen3.8-27b'], 'attention_backend': 'FLASH_ATTN', 'reasoning_parser': 'qwen3', 'gpu_memory_utilization': 0.93, 'kv_cache_memory_bytes': 5315022028, 'kv_cache_dtype': 'bfloat16', 'enable_prefix_caching': True, 'prefix_cache_retention_interval': None, 'mamba_ssm_cache_dtype': 'float16', 'mamba_cache_mode': 'align', 'language_model_only': True, 'max_num_batched_tokens': 2048, 'max_num_seqs': 8, 'async_scheduling': True, 'speculative_config': {'method': 'dflash', 'model': '/app/models/Qwen3.8-27B-DFlash2-W4A16', 'num_speculative_tokens': 7, 'draft_sample_method': 'probabilistic'}, 'compilation_config': {'mode': None, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['+rms_norm', '+silu_and_mul'], 'ir_enable_torch_wrap': None, 'splitting_ops': None, 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': None, 'compile_ranges_endpoints': None, 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': None, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': None, 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': None, 'pass_config': {}, 'max_cudagraph_capture_size': 64, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': None, 'static_all_moe_layers': []}}
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [model.py:699] Resolved architecture: Qwen3_5ForConditionalGeneration
+single-1  | (APIServer pid=1) INFO 10-14 13:11:42 [model.py:2109] Using max model len 8192
+single-1  | [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [model.py:917] All limits of multimodal modalities supported by the model are set to 0, running in text-only mode.
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [model.py:974] Disabled mm_prefix attention mode because multimodal inputs are configuration-disabled. Attention backends without mm_prefix support may now be selected.
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [model.py:699] Resolved architecture: DFlash2DraftModel
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [model.py:2109] Using max model len 262144
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [speculative.py:1663] Overriding draft model max model len from 262144 to 8192
+single-1  | (APIServer pid=1) WARNING 10-14 13:11:45 [config.py:837] Qwen3.5 model specifies mamba_ssm_dtype='float32' in its config, but --mamba-ssm-cache-dtype='float16' was passed. Using the user-specified value.
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [kernel.py:408] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native'])
+single-1  | (APIServer pid=1) WARNING 10-14 13:11:45 [vllm.py:2372] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+single-1  | (APIServer pid=1) INFO 10-14 13:11:45 [compilation.py:331] Enabled custom fusions: norm_quant, act_quant
+single-1  | (EngineCore pid=138) WARNING 10-14 13:11:56 [cuda.py:1074] Detected different devices in the system: NVIDIA GeForce RTX 3090, NVIDIA GeForce RTX 3080 Ti. Please make sure to set `CUDA_DEVICE_ORDER=PCI_BUS_ID` to avoid unexpected behavior.
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:56 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=8192, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=compressed-tensors, quantization_config=None, enforce_eager=False, aux_output_config=AuxOutputConfig(enable_return_routed_experts=False, max_bytes=None), kv_cache_dtype=bfloat16, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, per_request_spec_decode_metrics='none', kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=qwen3.8-27b, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['+rms_norm', '+silu_and_mul', 'none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::qwen4_exp_ple_short_conv', 'vllm::qwen4_exp_qsa_with_output', 'vllm::linear_attention', 'vllm::qwen_gdn_attention_core', 'vllm::qwen_gdn_attention_core_fused_norm_packed', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 64, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_jit_warmup=True, moe_backend='auto', sparse_indexer_topk_backend='auto', linear_backend='auto', linear_backend_per_quant=None)
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:56 [parallel_state.py:1825] world_size=1 rank=0 local_rank=0 distributed_init_method=file:///tmp/vllm_dist_ce48b2d33a644a4aaa48c982132bbe15 backend=nccl
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:56 [parallel_state.py:2269] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, ETP rank 0, EP rank N/A, EPLB rank N/A
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:56 [gpu_worker.py:479] Using V2 Model Runner
+single-1  | [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /app/venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:57 [speculator.py:399] DFlash2 lookup-augmented drafting on (k=7 nmin=6 nmax=12 nstrong=6 agree=0 nmin_tail=4 longmin=6 search=1073741824)
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:57 [model_runner.py:378] Loading model from scratch...
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [cuda.py:651] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [mm_encoder_attention.py:372] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [__init__.py:870] Using MarlinLinearKernel for mixed-precision linear
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [compressed_tensors_wNa16.py:138] Using MarlinLinearKernel for CompressedTensorsWNA16
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [qwen_gdn_linear_attn.py:177] Using Triton/FLA GDN prefill kernel (requested=auto, head_k_dim=128).
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [qwen_gdn_linear_attn.py:523] Falling back to the Triton GDN decode path: the fused CUDA kernel requires a BF16 GDN model with K=V=128, SiLU or sigmoid gating, non-interleaved GQA layout, BF16 convolution cache, BF16 or FP32 recurrent state, and a GPU with compute capability 8.0+
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [qwen_gdn_linear_attn.py:533] GDN decode kernel: triton
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [cuda.py:532] Using AttentionBackendEnum.FLASH_ATTN backend.
+single-1  | (EngineCore pid=138) INFO 10-14 13:11:58 [flash_attn.py:1167] Using FlashAttention version 2
+single-1  | (EngineCore pid=138) WARNING 10-14 13:12:00 [compilation.py:1350] Op 'rms_norm' not present in model, enabling with '+rms_norm' has no effect
+single-1  | (EngineCore pid=138) INFO 10-14 13:12:00 [weight_utils.py:1063] Filesystem type for checkpoints: 9P. Checkpoint size: 14.71 GiB. Available RAM: 18.79 GiB.
+single-1  | (EngineCore pid=138) INFO 10-14 13:12:00 [weight_utils.py:1086] Auto-prefetch is disabled because the filesystem (9P) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+single-1  | Loading safetensors checkpoint shards:   0% Completed | 0/8 [00:00<?, ?it/s]
+single-1  | Loading safetensors checkpoint shards:  12% Completed | 1/8 [00:18<02:08, 18.39s/it]
+single-1  | Loading safetensors checkpoint shards:  25% Completed | 2/8 [00:37<01:52, 18.76s/it]
+single-1  | Loading safetensors checkpoint shards:  38% Completed | 3/8 [00:55<01:31, 18.39s/it]
+single-1  | Loading safetensors checkpoint shards:  50% Completed | 4/8 [01:11<01:10, 17.61s/it]
+single-1  | Loading safetensors checkpoint shards:  62% Completed | 5/8 [01:12<00:34, 11.37s/it]
+single-1  | Loading safetensors checkpoint shards:  75% Completed | 6/8 [01:19<00:20, 10.07s/it]
+single-1  | Loading safetensors checkpoint shards:  88% Completed | 7/8 [01:22<00:07,  7.85s/it]
+single-1  | Loading safetensors checkpoint shards: 100% Completed | 8/8 [01:22<00:00, 10.37s/it]
+single-1  | 
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:23 [default_loader.py:484] Loading weights took 79.44 seconds
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:23 [eagle3_utils.py:27] Using Eagle3 auxiliary layers from config: (6, 20, 34, 48, 62)
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:23 [kernel.py:408] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native'])
+single-1  | (EngineCore pid=138) WARNING 10-14 13:13:23 [vllm.py:2372] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_speculative_tokens.
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:23 [compilation.py:331] Enabled custom fusions: norm_quant, act_quant
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:24 [cuda.py:592] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:24 [weight_utils.py:1063] Filesystem type for checkpoints: 9P. Checkpoint size: 1.19 GiB. Available RAM: 19.00 GiB.
+single-1  | Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+single-1  | Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:00<00:00, 10.55it/s]
+single-1  | 
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [default_loader.py:484] Loading weights took 6.88 seconds
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [model_runner.py:410] Model loading took 15.33 GiB memory and 91.007865 seconds
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [topk_topp_sampler.py:96] FlashInfer top-p/top-k sampling disabled via VLLM_USE_FLASHINFER_SAMPLER=0.
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [torch_utils.py:290] Reducing Torch threads from 8 to 1 for serving. Set OMP_NUM_THREADS in the external environment to override.
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [interface.py:1006] Setting attention block size to 448 tokens to ensure that attention page size is >= mamba page size.
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [interface.py:1030] Padding mamba page size by 3.23% to ensure that mamba page size and attention page size are exactly equal.
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:31 [utils.py:343] Using LBNHC KV cache layout.
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:47 [backends.py:1090] Using cache directory: /cache/.cache/vllm/torch_compile_cache/0450de6749/rank_0_0/backbone for vLLM's torch.compile
+single-1  | (EngineCore pid=138) INFO 10-14 13:13:47 [backends.py:1151] Dynamo bytecode transform time: 12.86 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:14:12 [backends.py:391] Compiling a graph for compile range (1, 2048) takes 23.73 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:14:20 [backends.py:916] collected artifacts: 65 entries, 22 artifacts, 32089989 bytes total
+single-1  | (EngineCore pid=138) INFO 10-14 13:14:20 [decorators.py:717] saved AOT compiled function to /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/c87301d5700b98e895f5519ceb90f654a37b143c0812cad48d8b2790804b765a/rank_0_0/model
+single-1  | (EngineCore pid=138) INFO 10-14 13:14:20 [monitor.py:53] torch.compile took 45.19 s in total
+single-1  | /app/venv/lib/python3.12/site-packages/triton/language/core.py:2284: UserWarning: tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.
+single-1  |   warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:27 [monitor.py:81] Initial profiling/warmup run took 64.70 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:30 [backends.py:1090] Using cache directory: /cache/.cache/vllm/torch_compile_cache/0450de6749/rank_0_0/dflash_head for vLLM's torch.compile
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:30 [backends.py:1151] Dynamo bytecode transform time: 2.10 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:45 [backends.py:391] Compiling a graph for compile range (1, 2048) takes 13.90 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [backends.py:916] collected artifacts: 6 entries, 3 artifacts, 7130954 bytes total
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [decorators.py:717] saved AOT compiled function to /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/026b2ea16e04ad127d30e76749865740e6d1835ef24cf5e4490e10256f29b29d/rank_0_0/model
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [monitor.py:53] torch.compile took 18.15 s in total
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [monitor.py:81] Initial profiling/warmup run took 0.07 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [logits_processor.py:44] VLLM_USE_FLASHINFER_SAMPLER=0; vocab-parallel top-k uses torch.topk, at roughly half the speed.
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [backends.py:1090] Using cache directory: /cache/.cache/vllm/torch_compile_cache/0450de6749/rank_0_0/dflash2_candidate_selector for vLLM's torch.compile
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:46 [backends.py:1151] Dynamo bytecode transform time: 0.21 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:49 [backends.py:391] Compiling a graph for compile range (1, 2048) takes 1.36 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:49 [backends.py:916] collected artifacts: 1 entries, 1 artifacts, 639661 bytes total
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:49 [decorators.py:717] saved AOT compiled function to /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/a674d96f30f90a976a1bae42e7e4a99a86226c901bb6e60cd5df6e0039d722ce/rank_0_0/model
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:49 [monitor.py:53] torch.compile took 2.82 s in total
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:49 [monitor.py:81] Initial profiling/warmup run took 0.00 s
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:50 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.95 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of KV cache memory size. If OOM'ed, check the difference of initial free memory between the current run and the previous run where kv_cache_memory_bytes is suggested and update it correspondingly.
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:50 [kv_cache_utils.py:1634] Sliding-window bucket(s) are the smallest; using group_size 8 (pads the sliding-window group instead of the full-attention/mamba layers)
+single-1  | (EngineCore pid=138) WARNING 10-14 13:15:50 [kv_cache_utils.py:1769] Add 3 padding layers, may waste at most 60.00% KV cache memory
+single-1  | (EngineCore pid=138) WARNING 10-14 13:15:50 [kv_cache_utils.py:2449] Speculative decoding (method=dflash) is enabled but no KV cache group could be identified as the draft model's.
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:50 [kv_cache_utils.py:2659] GPU KV cache size: 27,714 tokens, Maximum concurrency for 8,192 tokens per request: 3.38x
+single-1  | (EngineCore pid=138) INFO 10-14 13:15:51 [kernel_warmup.py:230] JIT kernel warmup starting.
+single-1  | JIT kernel warmup (132 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (132 compile keys):  25%|██▌       | 1/4 [00:09<00:28,  9.46s/kernel, _DecoratedTritonJitKernel (12 keys)]JIT kernel warmup (132 compile keys):  50%|█████     | 2/4 [00:10<00:09,  4.53s/kernel, _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys):  75%|███████▌  | 3/4 [00:20<00:07,  7.11s/kernel, _DecoratedTritonJitKernel (72 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:25<00:00,  6.08s/kernel, _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:25<00:00,  6.30s/kernel, _DecoratedTritonJitKernel (24 keys)]
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:17 [kernel_warmup.py:243] JIT kernel warmup finished in 25.27s.
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:17 [qwen_triton_warmup.py:294] Warming up Qwen GDN Triton kernels for model_type=qwen3_5_text.
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:18 [qwen_vl_triton_warmup.py:98] Warmed M-RoPE Triton kernels.
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:18 [mamba_triton_warmup.py:42] Warmed Mamba batch_memcpy_kernel.
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:19 [kernel_warmup.py:190] Warmed rejection-sampler kernels (k=7, draft_logits=True)
+single-1  | Capturing CUDA graphs (PIECEWISE):   0%|          | 0/11 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   9%|▉         | 1/11 [00:00<00:03,  2.64it/s]Capturing CUDA graphs (PIECEWISE):  18%|█▊        | 2/11 [00:00<00:03,  2.77it/s]Capturing CUDA graphs (PIECEWISE):  27%|██▋       | 3/11 [00:01<00:02,  2.70it/s]Capturing CUDA graphs (PIECEWISE):  36%|███▋      | 4/11 [00:02<00:04,  1.61it/s]Capturing CUDA graphs (PIECEWISE):  45%|████▌     | 5/11 [00:02<00:03,  1.92it/s]Capturing CUDA graphs (PIECEWISE):  55%|█████▍    | 6/11 [00:02<00:02,  2.17it/s]Capturing CUDA graphs (PIECEWISE):  64%|██████▎   | 7/11 [00:03<00:01,  2.38it/s]Capturing CUDA graphs (PIECEWISE):  73%|███████▎  | 8/11 [00:03<00:00,  3.07it/s]Capturing CUDA graphs (PIECEWISE):  82%|████████▏ | 9/11 [00:03<00:00,  3.81it/s]Capturing CUDA graphs (PIECEWISE):  91%|█████████ | 10/11 [00:03<00:00,  4.55it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 11/11 [00:03<00:00,  5.24it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 11/11 [00:03<00:00,  3.03it/s]
+single-1  | Capturing CUDA graphs (FULL):   0%|          | 0/8 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):  12%|█▎        | 1/8 [00:00<00:00,  7.83it/s]Capturing CUDA graphs (FULL):  25%|██▌       | 2/8 [00:00<00:00,  7.82it/s]Capturing CUDA graphs (FULL):  38%|███▊      | 3/8 [00:00<00:00,  7.96it/s]Capturing CUDA graphs (FULL):  50%|█████     | 4/8 [00:00<00:00,  7.95it/s]Capturing CUDA graphs (FULL):  62%|██████▎   | 5/8 [00:00<00:00,  8.01it/s]Capturing CUDA graphs (FULL):  75%|███████▌  | 6/8 [00:00<00:00,  8.07it/s]Capturing CUDA graphs (FULL):  88%|████████▊ | 7/8 [00:00<00:00,  8.03it/s]Capturing CUDA graphs (FULL): 100%|██████████| 8/8 [00:00<00:00,  8.09it/s]Capturing CUDA graphs (FULL): 100%|██████████| 8/8 [00:00<00:00,  8.02it/s]
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:35 [speculator.py:182] Capturing model for DFlash2 speculator...
+single-1  | Capturing dflash2 CUDA graphs (FULL):   0%|          | 0/8 [00:00<?, ?it/s]Capturing dflash2 CUDA graphs (FULL):  62%|██████▎   | 5/8 [00:00<00:00, 49.51it/s]Capturing dflash2 CUDA graphs (FULL): 100%|██████████| 8/8 [00:00<00:00, 49.37it/s]
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:36 [model_runner.py:1102] Graph capturing finished in 6 secs, took 0.13 GiB (driver free-memory delta 0.32 GiB)
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:36 [jit_monitor.py:84] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:37 [core.py:435] init engine (profile, create kv cache, warmup model) took 185.67 s (compilation: 66.16 s)
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:37 [kv_cache_utils.py:772] kv cache group sizes [448, 448, 448, 448, 448, 448, 448, 448, 448]
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:37 [kv_cache_utils.py:773] kv lcm block sizes 448
+single-1  | (EngineCore pid=138) INFO 10-14 13:16:37 [kernel.py:408] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'], gelu_and_mul_sparse=['triton', 'native'])
+single-1  | (APIServer pid=1) INFO 10-14 13:16:37 [entry.py:132] Supported tasks: ['generate']
+single-1  | (APIServer pid=1) INFO 10-14 13:16:37 [factories.py:76] Scale-out endpoints are disabled. Set --enable-scale-out to enable them.
+single-1  | (APIServer pid=1) INFO 10-14 13:16:37 [parser_manager.py:35] "auto" tool choice has been enabled.
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [hf.py:646] Detected the chat template content format to be 'openai'. You can set `--chat-template-content-format` to override this.
+single-1  | (APIServer pid=1) WARNING 10-14 13:16:39 [model.py:1850] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 1.0, 'top_k': 20, 'top_p': 0.95}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`.
+single-1  | (APIServer pid=1) WARNING 10-14 13:16:39 [serving.py:221] The chat template requires system-first ordering, so inline system messages in /v1/messages requests (e.g. Claude Code's per-turn reminders) are merged into the leading system prompt. Each new one changes the prompt prefix, so the rest of the conversation misses the prefix cache. Pass a --chat-template that accepts non-leading system messages to avoid this.
+single-1  | (APIServer pid=1) WARNING 10-14 13:16:39 [serving.py:221] The chat template requires system-first ordering, so inline system messages in /v1/messages requests (e.g. Claude Code's per-turn reminders) are merged into the leading system prompt. Each new one changes the prompt prefix, so the rest of the conversation misses the prefix cache. Pass a --chat-template that accepts non-leading system messages to avoid this.
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [entry.py:136] Starting vLLM server on http://0.0.0.0:18020
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:60] Available routes are:
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /openapi.json, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /docs, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /docs/oauth2-redirect, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /redoc, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /, Methods: GET, HEAD
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /api/status, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /api/experimental/model-recommendations, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /api/show, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /load, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /version, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /kv_event_sources, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /health, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /metrics, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /tokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /detokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/tokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/detokenize, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/models, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /ping, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /ping, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /invocations, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/chat/completions, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/chat/completions/batch, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/responses, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/responses/{response_id}, Methods: GET
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/responses/{response_id}/cancel, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/completions, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/messages, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /v1/messages/count_tokens, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /generative_scoring, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /scale_elastic_ep, Methods: POST
+single-1  | (APIServer pid=1) INFO 10-14 13:16:39 [launcher.py:69] Route: /is_scaling_elastic_ep, Methods: POST
+single-1  | INFO:     Started server process [1]
+single-1  | INFO:     Waiting for application startup.
+single-1  | INFO:     Application startup complete.
+single-1  | INFO:     172.20.0.1:55964 - "GET /health HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:59626 - "GET /health HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:36988 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:36990 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37002 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37018 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37020 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37034 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37036 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37050 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37062 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37072 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37080 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37086 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37090 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37094 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37098 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37112 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37120 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37130 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37146 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37154 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37168 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37180 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37186 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37198 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37200 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37202 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37204 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37216 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37220 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37228 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37234 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37240 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37242 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37246 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37260 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37274 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37286 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37296 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37302 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37316 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37330 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) WARNING 10-14 13:17:09 [jit_monitor.py:140] Triton kernel JIT compilation during inference: _topk_log_softmax_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:09 [scheduler.py:2198] Request finished: req cmpl-ac535fbe3b91c7bc-0-ba25cdb2 finish_reason=stop prompt_tokens=16 generated_tokens=1 elapsed_s=0.25
+single-1  | INFO:     127.0.0.1:53826 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:09 [scheduler.py:2198] Request finished: req cmpl-a27c1156ac6df853-0-8589394d finish_reason=stop prompt_tokens=16 generated_tokens=1 elapsed_s=0.08
+single-1  | INFO:     127.0.0.1:53830 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53842 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:17:10 [loggers.py:320] Engine 000: Avg prompt throughput: 10.9 tokens/s, Avg generation throughput: 15.8 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:17:10 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.17, Accepted throughput: 3.91 tokens/s, Drafted throughput: 6.57 tokens/s, Accepted: 125 tokens, Drafted: 210 tokens, Per-position acceptance rate: 0.800, 0.767, 0.600, 0.600, 0.500, 0.467, 0.433, Avg Draft acceptance rate: 59.5%
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:10 [scheduler.py:2198] Request finished: req cmpl-9def32fdec9d401c-0-a7aa63f1 finish_reason=stop prompt_tokens=77 generated_tokens=222 elapsed_s=1.24
+single-1  | INFO:     127.0.0.1:53844 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53854 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53858 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:11 [scheduler.py:2198] Request finished: req cmpl-9b78b1b1d4d4c7b7-0-a223ef7b finish_reason=stop prompt_tokens=38 generated_tokens=140 elapsed_s=0.78
+single-1  | INFO:     127.0.0.1:53864 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53872 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53874 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53882 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:14 [scheduler.py:2198] Request finished: req cmpl-969c499301d3f1ff-0-b1f967a2 finish_reason=stop prompt_tokens=69 generated_tokens=457 elapsed_s=2.20
+single-1  | INFO:     127.0.0.1:53886 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53896 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53904 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:14 [scheduler.py:2198] Request finished: req cmpl-94e89615e9d702f3-0-92939039 finish_reason=stop prompt_tokens=47 generated_tokens=166 elapsed_s=0.76
+single-1  | INFO:     127.0.0.1:53914 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53926 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53930 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:16 [scheduler.py:2198] Request finished: req cmpl-b22c969a581ddcb7-0-9f8cc90f finish_reason=stop prompt_tokens=123 generated_tokens=245 elapsed_s=1.24
+single-1  | INFO:     127.0.0.1:53946 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53958 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53960 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:18 [scheduler.py:2198] Request finished: req cmpl-8aa978f18e6aa09c-0-80ec038b finish_reason=stop prompt_tokens=67 generated_tokens=384 elapsed_s=2.08
+single-1  | INFO:     127.0.0.1:53962 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53970 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53976 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:18 [scheduler.py:2198] Request finished: req cmpl-8837a1cb7e7930f3-0-88af247f finish_reason=stop prompt_tokens=53 generated_tokens=152 elapsed_s=0.68
+single-1  | INFO:     127.0.0.1:53982 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53986 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53998 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:17:20 [loggers.py:320] Engine 000: Avg prompt throughput: 47.9 tokens/s, Avg generation throughput: 197.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 15.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:17:20 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.64, Accepted throughput: 162.69 tokens/s, Drafted throughput: 245.68 tokens/s, Accepted: 1627 tokens, Drafted: 2457 tokens, Per-position acceptance rate: 0.897, 0.815, 0.726, 0.647, 0.575, 0.513, 0.462, Avg Draft acceptance rate: 66.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:21 [scheduler.py:2198] Request finished: req cmpl-8f656e813c188201-0-97389c15 finish_reason=stop prompt_tokens=82 generated_tokens=490 elapsed_s=2.36
+single-1  | INFO:     127.0.0.1:37998 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38000 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38010 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:23 [scheduler.py:2198] Request finished: req cmpl-98278fe5b3769b98-0-959ec2a3 finish_reason=length prompt_tokens=116 generated_tokens=512 elapsed_s=2.36
+single-1  | INFO:     127.0.0.1:38022 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38032 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38038 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:26 [scheduler.py:2198] Request finished: req cmpl-b2741a710c52400c-0-bea73123 finish_reason=stop prompt_tokens=72 generated_tokens=334 elapsed_s=2.85
+single-1  | INFO:     127.0.0.1:38046 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38062 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38070 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:28 [scheduler.py:2198] Request finished: req cmpl-bfe6f25fbd25dfbb-0-be510097 finish_reason=stop prompt_tokens=72 generated_tokens=388 elapsed_s=1.71
+single-1  | INFO:     127.0.0.1:38078 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38082 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38088 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:29 [scheduler.py:2198] Request finished: req cmpl-89ff9565538f03c0-0-a1ce64e9 finish_reason=stop prompt_tokens=77 generated_tokens=406 elapsed_s=1.69
+single-1  | INFO:     127.0.0.1:38100 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38102 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38104 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:17:31 [loggers.py:320] Engine 000: Avg prompt throughput: 41.6 tokens/s, Avg generation throughput: 216.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 15.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:17:31 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.10, Accepted throughput: 181.49 tokens/s, Drafted throughput: 249.18 tokens/s, Accepted: 1815 tokens, Drafted: 2492 tokens, Per-position acceptance rate: 0.927, 0.840, 0.798, 0.708, 0.654, 0.604, 0.567, Avg Draft acceptance rate: 72.8%
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:32 [scheduler.py:2198] Request finished: req cmpl-88425bb69a2ea735-0-9aa31fbb finish_reason=stop prompt_tokens=79 generated_tokens=455 elapsed_s=2.33
+single-1  | INFO:     127.0.0.1:59968 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:59984 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:59986 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:34 [scheduler.py:2198] Request finished: req cmpl-81f9f5d4b20911b8-0-ac35b9d8 finish_reason=length prompt_tokens=70 generated_tokens=512 elapsed_s=2.28
+single-1  | INFO:     127.0.0.1:60002 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60014 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60020 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:36 [scheduler.py:2198] Request finished: req cmpl-986a79df77e7a3d5-0-a7462382 finish_reason=stop prompt_tokens=64 generated_tokens=357 elapsed_s=1.61
+single-1  | INFO:     127.0.0.1:60034 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60048 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60060 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:37 [scheduler.py:2198] Request finished: req cmpl-a0a39aa9bbb68e90-0-98911a87 finish_reason=stop prompt_tokens=106 generated_tokens=365 elapsed_s=1.74
+single-1  | INFO:     127.0.0.1:60068 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60070 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60082 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:39 [scheduler.py:2198] Request finished: req cmpl-b8391bb8ef9f096e-0-ad98c432 finish_reason=stop prompt_tokens=65 generated_tokens=293 elapsed_s=1.57
+single-1  | INFO:     127.0.0.1:60086 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60102 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:60110 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:41 [scheduler.py:2198] Request finished: req cmpl-949cc7c092bc8e17-0-919a9c4d finish_reason=stop prompt_tokens=70 generated_tokens=334 elapsed_s=1.59
+single-1  | INFO:     127.0.0.1:38110 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38118 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38134 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:17:41 [loggers.py:320] Engine 000: Avg prompt throughput: 41.6 tokens/s, Avg generation throughput: 207.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:17:41 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.90, Accepted throughput: 172.39 tokens/s, Drafted throughput: 246.39 tokens/s, Accepted: 1724 tokens, Drafted: 2464 tokens, Per-position acceptance rate: 0.915, 0.815, 0.759, 0.685, 0.619, 0.582, 0.523, Avg Draft acceptance rate: 70.0%
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:42 [scheduler.py:2198] Request finished: req cmpl-a05cdaa71d80e74c-0-86896df0 finish_reason=stop prompt_tokens=41 generated_tokens=240 elapsed_s=1.14
+single-1  | INFO:     127.0.0.1:38144 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38154 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38158 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:44 [scheduler.py:2198] Request finished: req cmpl-a14b7f75eb57fd76-0-823db77b finish_reason=length prompt_tokens=77 generated_tokens=512 elapsed_s=2.41
+single-1  | INFO:     127.0.0.1:38162 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38178 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38188 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38202 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:47 [scheduler.py:2198] Request finished: req cmpl-8fd928d49290b288-0-a4f21960 finish_reason=length prompt_tokens=75 generated_tokens=512 elapsed_s=2.69
+single-1  | INFO:     127.0.0.1:38204 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38220 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38224 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:48 [scheduler.py:2198] Request finished: req cmpl-b6e47336833d4bb9-0-a7ec009b finish_reason=stop prompt_tokens=58 generated_tokens=272 elapsed_s=1.30
+single-1  | INFO:     127.0.0.1:38232 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38248 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38260 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:49 [scheduler.py:2198] Request finished: req cmpl-9be39851b9021904-0-a7ce81c0 finish_reason=stop prompt_tokens=67 generated_tokens=205 elapsed_s=1.11
+single-1  | INFO:     127.0.0.1:38272 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38280 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38294 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:50 [scheduler.py:2198] Request finished: req cmpl-b60e3e96f29d4a11-0-a4baf636 finish_reason=stop prompt_tokens=52 generated_tokens=204 elapsed_s=1.04
+single-1  | INFO:     127.0.0.1:53376 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53380 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53390 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:17:51 [loggers.py:320] Engine 000: Avg prompt throughput: 38.0 tokens/s, Avg generation throughput: 197.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:17:51 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.64, Accepted throughput: 162.69 tokens/s, Drafted throughput: 245.68 tokens/s, Accepted: 1627 tokens, Drafted: 2457 tokens, Per-position acceptance rate: 0.903, 0.795, 0.704, 0.638, 0.590, 0.533, 0.473, Avg Draft acceptance rate: 66.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:52 [scheduler.py:2198] Request finished: req cmpl-a95ccd396de4d68a-0-a0422594 finish_reason=stop prompt_tokens=51 generated_tokens=305 elapsed_s=1.48
+single-1  | INFO:     127.0.0.1:53404 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53416 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53426 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:54 [scheduler.py:2198] Request finished: req cmpl-935c0946bbf45308-0-bdfdbf3e finish_reason=stop prompt_tokens=79 generated_tokens=404 elapsed_s=1.91
+single-1  | INFO:     127.0.0.1:53434 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53440 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53450 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:57 [scheduler.py:2198] Request finished: req cmpl-ba566aafb6bfc574-0-90fac1e4 finish_reason=stop prompt_tokens=81 generated_tokens=361 elapsed_s=2.78
+single-1  | INFO:     127.0.0.1:53454 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53462 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53478 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:58 [scheduler.py:2198] Request finished: req cmpl-99472d219700df53-0-a8014e49 finish_reason=stop prompt_tokens=69 generated_tokens=199 elapsed_s=1.07
+single-1  | INFO:     127.0.0.1:53494 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53496 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53502 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:58 [scheduler.py:2198] Request finished: req cmpl-867137e8fdbea948-0-bc3fcede finish_reason=stop prompt_tokens=62 generated_tokens=102 elapsed_s=0.56
+single-1  | INFO:     127.0.0.1:53510 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53522 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53538 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:17:59 [scheduler.py:2198] Request finished: req cmpl-b9a85f63fa17e1ba-0-96cc04c7 finish_reason=stop prompt_tokens=81 generated_tokens=200 elapsed_s=1.10
+single-1  | INFO:     127.0.0.1:53542 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53554 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53560 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:00 [scheduler.py:2198] Request finished: req cmpl-819c2a2e27bb968a-0-abda7747 finish_reason=stop prompt_tokens=51 generated_tokens=242 elapsed_s=1.06
+single-1  | INFO:     127.0.0.1:53564 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53568 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:53572 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:02 [scheduler.py:2198] Request finished: req cmpl-a218378093d70435-0-8a7c0e01 finish_reason=stop prompt_tokens=75 generated_tokens=354 elapsed_s=1.71
+single-1  | INFO:     127.0.0.1:34808 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34822 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34826 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:18:03 [loggers.py:320] Engine 000: Avg prompt throughput: 55.1 tokens/s, Avg generation throughput: 204.7 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:18:03 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.07, Accepted throughput: 170.99 tokens/s, Drafted throughput: 235.89 tokens/s, Accepted: 1710 tokens, Drafted: 2359 tokens, Per-position acceptance rate: 0.935, 0.852, 0.763, 0.703, 0.659, 0.608, 0.555, Avg Draft acceptance rate: 72.5%
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:03 [scheduler.py:2198] Request finished: req cmpl-83a3bac2936e7f29-0-b4a76932 finish_reason=stop prompt_tokens=53 generated_tokens=182 elapsed_s=0.86
+single-1  | INFO:     127.0.0.1:34832 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34848 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34864 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:04 [scheduler.py:2198] Request finished: req cmpl-862bebc9e987c50b-0-865e62ad finish_reason=stop prompt_tokens=43 generated_tokens=197 elapsed_s=0.88
+single-1  | INFO:     127.0.0.1:34872 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34882 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34890 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:05 [scheduler.py:2198] Request finished: req cmpl-ae718f8b5a65c0fe-0-ac5a0c1b finish_reason=stop prompt_tokens=53 generated_tokens=170 elapsed_s=0.81
+single-1  | INFO:     127.0.0.1:34900 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34910 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34924 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:06 [scheduler.py:2198] Request finished: req cmpl-b04f8b3b50e8b887-0-a2a5c856 finish_reason=stop prompt_tokens=64 generated_tokens=246 elapsed_s=1.26
+single-1  | INFO:     127.0.0.1:34938 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34952 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34958 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:08 [scheduler.py:2198] Request finished: req cmpl-a86ebf652cd6c957-0-bb9b7e18 finish_reason=stop prompt_tokens=54 generated_tokens=350 elapsed_s=1.71
+single-1  | INFO:     127.0.0.1:34972 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34974 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34976 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:11 [scheduler.py:2198] Request finished: req cmpl-8dec9e4442ffdb50-0-819cdf6d finish_reason=length prompt_tokens=75 generated_tokens=512 elapsed_s=3.14
+single-1  | INFO:     127.0.0.1:34980 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34982 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34992 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:18:13 [loggers.py:320] Engine 000: Avg prompt throughput: 34.5 tokens/s, Avg generation throughput: 193.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:18:13 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.60, Accepted throughput: 159.50 tokens/s, Drafted throughput: 242.90 tokens/s, Accepted: 1595 tokens, Drafted: 2429 tokens, Per-position acceptance rate: 0.888, 0.787, 0.723, 0.651, 0.588, 0.533, 0.427, Avg Draft acceptance rate: 65.7%
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:13 [scheduler.py:2198] Request finished: req cmpl-99fd09845c92e8d0-0-af4ae5aa finish_reason=stop prompt_tokens=56 generated_tokens=354 elapsed_s=1.73
+single-1  | INFO:     127.0.0.1:48120 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48124 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48126 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:15 [scheduler.py:2198] Request finished: req cmpl-8e94e73a1d41e2f0-0-a9fa7eb2 finish_reason=length prompt_tokens=85 generated_tokens=512 elapsed_s=2.46
+single-1  | INFO:     127.0.0.1:48136 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48148 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48156 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48158 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:16 [scheduler.py:2198] Request finished: req cmpl-b0aa6a4ab8cec1a3-0-9dc730fa finish_reason=stop prompt_tokens=77 generated_tokens=222 elapsed_s=1.30
+single-1  | INFO:     127.0.0.1:48170 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48172 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48178 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:17 [scheduler.py:2198] Request finished: req cmpl-9892962f2cca9417-0-bb19c56a finish_reason=stop prompt_tokens=38 generated_tokens=140 elapsed_s=0.82
+single-1  | INFO:     127.0.0.1:48182 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48196 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48210 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:20 [scheduler.py:2198] Request finished: req cmpl-972c4fc506c118a5-0-8ea6b074 finish_reason=stop prompt_tokens=69 generated_tokens=457 elapsed_s=2.30
+single-1  | INFO:     127.0.0.1:48226 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48238 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48242 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:20 [scheduler.py:2198] Request finished: req cmpl-a3e409d15dfb611c-0-91f94b00 finish_reason=stop prompt_tokens=47 generated_tokens=166 elapsed_s=0.79
+single-1  | INFO:     127.0.0.1:48254 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48266 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48280 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:22 [scheduler.py:2198] Request finished: req cmpl-b8b9f15085ab6c47-0-9d1b783c finish_reason=stop prompt_tokens=123 generated_tokens=245 elapsed_s=1.30
+single-1  | INFO:     127.0.0.1:33718 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33724 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33726 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:18:23 [loggers.py:320] Engine 000: Avg prompt throughput: 50.6 tokens/s, Avg generation throughput: 186.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:18:23 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.59, Accepted throughput: 152.89 tokens/s, Drafted throughput: 233.09 tokens/s, Accepted: 1529 tokens, Drafted: 2331 tokens, Per-position acceptance rate: 0.880, 0.799, 0.709, 0.640, 0.577, 0.529, 0.459, Avg Draft acceptance rate: 65.6%
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:24 [scheduler.py:2198] Request finished: req cmpl-9ffd2cf37b69d7ab-0-be76e360 finish_reason=stop prompt_tokens=67 generated_tokens=384 elapsed_s=2.19
+single-1  | INFO:     127.0.0.1:33738 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33740 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33744 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:25 [scheduler.py:2198] Request finished: req cmpl-807b932910b5427f-0-a478c85c finish_reason=stop prompt_tokens=53 generated_tokens=152 elapsed_s=0.73
+single-1  | INFO:     127.0.0.1:33748 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33756 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33764 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:28 [scheduler.py:2198] Request finished: req cmpl-add52a5d1604c37f-0-b0fc3522 finish_reason=stop prompt_tokens=82 generated_tokens=490 elapsed_s=3.69
+single-1  | INFO:     127.0.0.1:33772 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33776 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33788 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:31 [scheduler.py:2198] Request finished: req cmpl-aa135bfcd33d83f7-0-a71ec5e5 finish_reason=length prompt_tokens=116 generated_tokens=512 elapsed_s=2.51
+single-1  | INFO:     127.0.0.1:33792 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33804 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:33810 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:33 [scheduler.py:2198] Request finished: req cmpl-83fa72607e6b93d9-0-83ce516b finish_reason=stop prompt_tokens=72 generated_tokens=334 elapsed_s=1.75
+single-1  | INFO:     127.0.0.1:41950 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:41964 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:41968 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:18:34 [loggers.py:320] Engine 000: Avg prompt throughput: 39.5 tokens/s, Avg generation throughput: 199.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:18:34 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.93, Accepted throughput: 166.10 tokens/s, Drafted throughput: 235.90 tokens/s, Accepted: 1661 tokens, Drafted: 2359 tokens, Per-position acceptance rate: 0.923, 0.837, 0.777, 0.685, 0.617, 0.558, 0.531, Avg Draft acceptance rate: 70.4%
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:34 [scheduler.py:2198] Request finished: req cmpl-9e29190f87abf21b-0-918433cc finish_reason=stop prompt_tokens=72 generated_tokens=388 elapsed_s=1.81
+single-1  | INFO:     127.0.0.1:41970 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:41984 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42000 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:36 [scheduler.py:2198] Request finished: req cmpl-bdf70f5de8b80fe2-0-b2baf81f finish_reason=stop prompt_tokens=77 generated_tokens=406 elapsed_s=1.78
+single-1  | INFO:     127.0.0.1:42010 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42024 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42034 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:39 [scheduler.py:2198] Request finished: req cmpl-9709afd03eba442a-0-a42755db finish_reason=stop prompt_tokens=79 generated_tokens=455 elapsed_s=2.48
+single-1  | INFO:     127.0.0.1:42038 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42052 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42060 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:41 [scheduler.py:2198] Request finished: req cmpl-b58c2a4b9808f352-0-b581f39a finish_reason=length prompt_tokens=70 generated_tokens=512 elapsed_s=2.45
+single-1  | INFO:     127.0.0.1:42066 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42076 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42084 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:43 [scheduler.py:2198] Request finished: req cmpl-b4af98b66f82fffe-0-943e6cf5 finish_reason=stop prompt_tokens=64 generated_tokens=357 elapsed_s=1.71
+single-1  | INFO:     127.0.0.1:43840 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43850 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43856 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:18:44 [loggers.py:320] Engine 000: Avg prompt throughput: 39.6 tokens/s, Avg generation throughput: 203.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:18:44 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.11, Accepted throughput: 170.30 tokens/s, Drafted throughput: 233.10 tokens/s, Accepted: 1703 tokens, Drafted: 2331 tokens, Per-position acceptance rate: 0.925, 0.853, 0.808, 0.727, 0.649, 0.601, 0.553, Avg Draft acceptance rate: 73.1%
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:45 [scheduler.py:2198] Request finished: req cmpl-a6be7ba7581d2021-0-9bfea951 finish_reason=stop prompt_tokens=106 generated_tokens=365 elapsed_s=1.85
+single-1  | INFO:     127.0.0.1:43858 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43874 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43882 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:46 [scheduler.py:2198] Request finished: req cmpl-8c27907509fccd4a-0-9f0801fe finish_reason=stop prompt_tokens=65 generated_tokens=293 elapsed_s=1.65
+single-1  | INFO:     127.0.0.1:43890 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43902 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43906 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43912 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:48 [scheduler.py:2198] Request finished: req cmpl-8eb1051686250b32-0-b9bde8e9 finish_reason=stop prompt_tokens=70 generated_tokens=334 elapsed_s=1.69
+single-1  | INFO:     127.0.0.1:43924 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43938 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43944 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:49 [scheduler.py:2198] Request finished: req cmpl-9bff5a18d6158341-0-b8b372b1 finish_reason=stop prompt_tokens=41 generated_tokens=240 elapsed_s=1.21
+single-1  | INFO:     127.0.0.1:43954 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43964 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43980 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:52 [scheduler.py:2198] Request finished: req cmpl-9c5bf013fa05e64e-0-89fea568 finish_reason=length prompt_tokens=77 generated_tokens=512 elapsed_s=2.56
+single-1  | INFO:     127.0.0.1:43990 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43994 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44010 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:18:54 [loggers.py:320] Engine 000: Avg prompt throughput: 32.8 tokens/s, Avg generation throughput: 189.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:18:54 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.69, Accepted throughput: 156.69 tokens/s, Drafted throughput: 233.79 tokens/s, Accepted: 1567 tokens, Drafted: 2338 tokens, Per-position acceptance rate: 0.901, 0.790, 0.722, 0.650, 0.599, 0.551, 0.479, Avg Draft acceptance rate: 67.0%
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:55 [scheduler.py:2198] Request finished: req cmpl-a891affc3291cf20-0-9fe0e324 finish_reason=length prompt_tokens=75 generated_tokens=512 elapsed_s=2.86
+single-1  | INFO:     127.0.0.1:44670 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44672 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44684 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:56 [scheduler.py:2198] Request finished: req cmpl-b9a88c76efddb2b8-0-a1670530 finish_reason=stop prompt_tokens=58 generated_tokens=272 elapsed_s=1.38
+single-1  | INFO:     127.0.0.1:44700 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44710 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44720 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:18:58 [scheduler.py:2198] Request finished: req cmpl-b6f26f8a25f0cef7-0-927189b4 finish_reason=stop prompt_tokens=67 generated_tokens=205 elapsed_s=1.67
+single-1  | INFO:     127.0.0.1:44722 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44728 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44730 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:00 [scheduler.py:2198] Request finished: req cmpl-874aa228bf291349-0-a2d95cfd finish_reason=stop prompt_tokens=52 generated_tokens=204 elapsed_s=1.10
+single-1  | INFO:     127.0.0.1:44732 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44740 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44742 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:01 [scheduler.py:2198] Request finished: req cmpl-a52c9938adce81e9-0-bec15af5 finish_reason=stop prompt_tokens=51 generated_tokens=305 elapsed_s=1.58
+single-1  | INFO:     127.0.0.1:44750 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44760 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44764 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:03 [scheduler.py:2198] Request finished: req cmpl-a66aae60656a86be-0-9042b3c3 finish_reason=stop prompt_tokens=79 generated_tokens=404 elapsed_s=2.02
+single-1  | INFO:     127.0.0.1:44780 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44794 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44808 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:19:05 [loggers.py:320] Engine 000: Avg prompt throughput: 38.8 tokens/s, Avg generation throughput: 194.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 15.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:19:05 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.92, Accepted throughput: 161.89 tokens/s, Drafted throughput: 230.29 tokens/s, Accepted: 1619 tokens, Drafted: 2303 tokens, Per-position acceptance rate: 0.933, 0.833, 0.745, 0.681, 0.629, 0.568, 0.532, Avg Draft acceptance rate: 70.3%
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:05 [scheduler.py:2198] Request finished: req cmpl-a26ca2c5774ede43-0-bae5d935 finish_reason=stop prompt_tokens=81 generated_tokens=361 elapsed_s=1.68
+single-1  | INFO:     127.0.0.1:37876 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37892 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37898 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:06 [scheduler.py:2198] Request finished: req cmpl-96e79efb6f2f9705-0-ad87f76a finish_reason=stop prompt_tokens=69 generated_tokens=199 elapsed_s=1.12
+single-1  | INFO:     127.0.0.1:37900 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37906 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37908 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:07 [scheduler.py:2198] Request finished: req cmpl-8919772eeeff8d06-0-b24d99b4 finish_reason=stop prompt_tokens=62 generated_tokens=102 elapsed_s=0.58
+single-1  | INFO:     127.0.0.1:37922 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37928 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37938 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:08 [scheduler.py:2198] Request finished: req cmpl-95f12130fdda5906-0-b26b346e finish_reason=stop prompt_tokens=81 generated_tokens=200 elapsed_s=1.15
+single-1  | INFO:     127.0.0.1:37954 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37956 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37968 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:09 [scheduler.py:2198] Request finished: req cmpl-ac400cd51abd7818-0-bc1633e9 finish_reason=stop prompt_tokens=51 generated_tokens=242 elapsed_s=1.11
+single-1  | INFO:     127.0.0.1:37980 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:37996 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38002 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:11 [scheduler.py:2198] Request finished: req cmpl-b1b51d32a4cfafa6-0-9af564e9 finish_reason=stop prompt_tokens=75 generated_tokens=354 elapsed_s=1.79
+single-1  | INFO:     127.0.0.1:38014 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38030 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38040 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:12 [scheduler.py:2198] Request finished: req cmpl-bc1760fa5854f84c-0-9db0c701 finish_reason=stop prompt_tokens=53 generated_tokens=182 elapsed_s=0.90
+single-1  | INFO:     127.0.0.1:38052 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38066 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38082 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:13 [scheduler.py:2198] Request finished: req cmpl-a563e88f2cb8dd1e-0-a8d6945b finish_reason=stop prompt_tokens=43 generated_tokens=197 elapsed_s=0.93
+single-1  | INFO:     127.0.0.1:38096 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38110 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:38124 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:14 [scheduler.py:2198] Request finished: req cmpl-a87f251d653f6489-0-8bdf2ec2 finish_reason=stop prompt_tokens=53 generated_tokens=170 elapsed_s=0.84
+single-1  | INFO:     127.0.0.1:54650 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54664 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54668 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:15 [scheduler.py:2198] Request finished: req cmpl-9bcccd7d51f1e343-0-9eaf7b0b finish_reason=stop prompt_tokens=64 generated_tokens=246 elapsed_s=1.31
+single-1  | INFO:     127.0.0.1:54682 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54684 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54692 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:19:15 [loggers.py:320] Engine 000: Avg prompt throughput: 60.5 tokens/s, Avg generation throughput: 189.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:19:15 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 6.05, Accepted throughput: 158.50 tokens/s, Drafted throughput: 219.79 tokens/s, Accepted: 1585 tokens, Drafted: 2198 tokens, Per-position acceptance rate: 0.927, 0.838, 0.764, 0.704, 0.662, 0.621, 0.532, Avg Draft acceptance rate: 72.1%
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:17 [scheduler.py:2198] Request finished: req cmpl-add6e6c7cdb00ec6-0-b9a40460 finish_reason=stop prompt_tokens=54 generated_tokens=350 elapsed_s=1.79
+single-1  | INFO:     127.0.0.1:54708 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54720 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54726 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54734 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:20 [scheduler.py:2198] Request finished: req cmpl-822d1f6d32ae374b-0-910dee5d finish_reason=length prompt_tokens=75 generated_tokens=512 elapsed_s=3.27
+single-1  | INFO:     127.0.0.1:54746 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54748 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54764 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:22 [scheduler.py:2198] Request finished: req cmpl-a1c451dab5042ec2-0-89a50ea7 finish_reason=stop prompt_tokens=56 generated_tokens=354 elapsed_s=1.80
+single-1  | INFO:     127.0.0.1:54774 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54776 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54784 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:24 [scheduler.py:2198] Request finished: req cmpl-b6d77db220ba375a-0-948567a8 finish_reason=length prompt_tokens=85 generated_tokens=512 elapsed_s=2.57
+single-1  | INFO:     127.0.0.1:42862 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42864 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42870 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42872 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42880 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42894 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42898 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42908 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42920 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42922 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42932 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42944 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42954 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42962 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42968 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42984 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42986 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42992 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:19:25 [loggers.py:320] Engine 000: Avg prompt throughput: 21.6 tokens/s, Avg generation throughput: 172.7 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:19:25 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.45, Accepted throughput: 141.50 tokens/s, Drafted throughput: 222.60 tokens/s, Accepted: 1415 tokens, Drafted: 2226 tokens, Per-position acceptance rate: 0.874, 0.777, 0.704, 0.632, 0.566, 0.500, 0.396, Avg Draft acceptance rate: 63.6%
+single-1  | INFO:     127.0.0.1:43004 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43014 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43028 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43042 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43048 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43050 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43064 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43068 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43080 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43082 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43084 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43086 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43096 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43104 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43120 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43122 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43128 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43138 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43150 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43162 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43170 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43180 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43194 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43202 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:25 [scheduler.py:2198] Request finished: req cmpl-9c1b1a8fa6f052d1-0-b280fb4c finish_reason=stop prompt_tokens=16 generated_tokens=1 elapsed_s=0.08
+single-1  | INFO:     127.0.0.1:43218 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:25 [scheduler.py:2198] Request finished: req cmpl-9bcb9d586623a202-0-b09c402b finish_reason=stop prompt_tokens=16 generated_tokens=1 elapsed_s=0.10
+single-1  | INFO:     127.0.0.1:43220 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43236 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:27 [scheduler.py:2198] Request finished: req cmpl-9800120d937f5d7e-0-80b18dfa finish_reason=stop prompt_tokens=73 generated_tokens=221 elapsed_s=1.34
+single-1  | INFO:     127.0.0.1:43238 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43240 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43254 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:28 [scheduler.py:2198] Request finished: req cmpl-996adb680073cbed-0-b7f23059 finish_reason=stop prompt_tokens=34 generated_tokens=144 elapsed_s=0.95
+single-1  | INFO:     127.0.0.1:43266 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43280 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43292 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:31 [scheduler.py:2198] Request finished: req cmpl-b33216b21d865bf6-0-bc23499d finish_reason=stop prompt_tokens=65 generated_tokens=461 elapsed_s=3.75
+single-1  | INFO:     127.0.0.1:43304 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43314 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43316 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:32 [scheduler.py:2198] Request finished: req cmpl-9975a860f3a1f83e-0-b3a51b7b finish_reason=stop prompt_tokens=43 generated_tokens=170 elapsed_s=0.91
+single-1  | INFO:     127.0.0.1:43330 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43332 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43348 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:34 [scheduler.py:2198] Request finished: req cmpl-a5b0522cf82bdad4-0-a7a21c35 finish_reason=stop prompt_tokens=119 generated_tokens=248 elapsed_s=1.44
+single-1  | INFO:     127.0.0.1:43352 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43354 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43360 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:36 [scheduler.py:2198] Request finished: req cmpl-a8cb579f2cbbbd04-0-b8ff1302 finish_reason=stop prompt_tokens=63 generated_tokens=438 elapsed_s=2.42
+single-1  | INFO:     127.0.0.1:50890 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50896 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50898 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:19:36 [loggers.py:320] Engine 000: Avg prompt throughput: 47.8 tokens/s, Avg generation throughput: 168.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:19:36 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.39, Accepted throughput: 137.10 tokens/s, Drafted throughput: 218.40 tokens/s, Accepted: 1371 tokens, Drafted: 2184 tokens, Per-position acceptance rate: 0.872, 0.760, 0.663, 0.603, 0.551, 0.500, 0.446, Avg Draft acceptance rate: 62.8%
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:37 [scheduler.py:2198] Request finished: req cmpl-9d07900eeb6ca8be-0-abbf8de8 finish_reason=stop prompt_tokens=49 generated_tokens=156 elapsed_s=0.83
+single-1  | INFO:     127.0.0.1:50906 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50908 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50910 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:40 [scheduler.py:2198] Request finished: req cmpl-b2759bdf7b00996a-0-a862195a finish_reason=length prompt_tokens=78 generated_tokens=512 elapsed_s=2.83
+single-1  | INFO:     127.0.0.1:50916 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50928 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50938 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:43 [scheduler.py:2198] Request finished: req cmpl-80d3f53263887c17-0-a24e8973 finish_reason=length prompt_tokens=112 generated_tokens=512 elapsed_s=2.70
+single-1  | INFO:     127.0.0.1:50940 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50946 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50962 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:44 [scheduler.py:2198] Request finished: req cmpl-b27cfbc063cc6d80-0-bbbe4428 finish_reason=stop prompt_tokens=68 generated_tokens=330 elapsed_s=1.75
+single-1  | INFO:     127.0.0.1:50966 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50968 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:50976 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:19:46 [loggers.py:320] Engine 000: Avg prompt throughput: 32.6 tokens/s, Avg generation throughput: 189.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 16.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:19:46 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.78, Accepted throughput: 156.70 tokens/s, Drafted throughput: 229.60 tokens/s, Accepted: 1567 tokens, Drafted: 2296 tokens, Per-position acceptance rate: 0.887, 0.805, 0.741, 0.652, 0.604, 0.555, 0.534, Avg Draft acceptance rate: 68.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:46 [scheduler.py:2198] Request finished: req cmpl-96f04fb8685dad89-0-afa253f2 finish_reason=stop prompt_tokens=68 generated_tokens=392 elapsed_s=1.97
+single-1  | INFO:     127.0.0.1:42182 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42186 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42192 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:48 [scheduler.py:2198] Request finished: req cmpl-bcec978085e2c7ea-0-a1e5e3af finish_reason=stop prompt_tokens=73 generated_tokens=410 elapsed_s=1.91
+single-1  | INFO:     127.0.0.1:42206 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42218 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42220 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42232 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:51 [scheduler.py:2198] Request finished: req cmpl-84ee0ca419a6c0b7-0-9dad4070 finish_reason=length prompt_tokens=75 generated_tokens=512 elapsed_s=3.20
+single-1  | INFO:     127.0.0.1:42234 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42244 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42254 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:54 [scheduler.py:2198] Request finished: req cmpl-bed847e15c410f37-0-80011887 finish_reason=length prompt_tokens=66 generated_tokens=512 elapsed_s=2.60
+single-1  | INFO:     127.0.0.1:42260 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42268 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:42272 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:56 [scheduler.py:2198] Request finished: req cmpl-a3900f6b817492a2-0-92836965 finish_reason=stop prompt_tokens=60 generated_tokens=361 elapsed_s=1.86
+single-1  | INFO:     127.0.0.1:55444 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55456 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55470 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:19:56 [loggers.py:320] Engine 000: Avg prompt throughput: 37.6 tokens/s, Avg generation throughput: 182.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:19:56 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.63, Accepted throughput: 150.50 tokens/s, Drafted throughput: 227.50 tokens/s, Accepted: 1505 tokens, Drafted: 2275 tokens, Per-position acceptance rate: 0.877, 0.775, 0.708, 0.646, 0.585, 0.545, 0.495, Avg Draft acceptance rate: 66.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:19:58 [scheduler.py:2198] Request finished: req cmpl-93eac5427aeaf3ed-0-9c817f52 finish_reason=stop prompt_tokens=102 generated_tokens=369 elapsed_s=1.99
+single-1  | INFO:     127.0.0.1:55486 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55494 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55510 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:00 [scheduler.py:2198] Request finished: req cmpl-b8daed5c6483e687-0-b039e892 finish_reason=stop prompt_tokens=61 generated_tokens=297 elapsed_s=2.26
+single-1  | INFO:     127.0.0.1:55526 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55528 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55534 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:03 [scheduler.py:2198] Request finished: req cmpl-a1d203cb614824fb-0-b0267cd0 finish_reason=stop prompt_tokens=66 generated_tokens=338 elapsed_s=2.50
+single-1  | INFO:     127.0.0.1:55536 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55548 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55562 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:04 [scheduler.py:2198] Request finished: req cmpl-b6f24f4b9adda66e-0-962387f3 finish_reason=stop prompt_tokens=37 generated_tokens=244 elapsed_s=1.32
+single-1  | INFO:     127.0.0.1:55568 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55570 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:55574 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:07 [scheduler.py:2198] Request finished: req cmpl-9850a5fa4ff045a5-0-9d3acb87 finish_reason=length prompt_tokens=73 generated_tokens=512 elapsed_s=2.76
+single-1  | INFO:     127.0.0.1:56438 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56440 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56444 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:20:07 [loggers.py:320] Engine 000: Avg prompt throughput: 30.8 tokens/s, Avg generation throughput: 180.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:20:07 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.56, Accepted throughput: 148.10 tokens/s, Drafted throughput: 227.50 tokens/s, Accepted: 1481 tokens, Drafted: 2275 tokens, Per-position acceptance rate: 0.874, 0.769, 0.702, 0.640, 0.582, 0.532, 0.458, Avg Draft acceptance rate: 65.1%
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:10 [scheduler.py:2198] Request finished: req cmpl-a5f4af0a84f6a7b3-0-8c530527 finish_reason=length prompt_tokens=71 generated_tokens=512 elapsed_s=2.99
+single-1  | INFO:     127.0.0.1:56448 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56456 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56462 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:11 [scheduler.py:2198] Request finished: req cmpl-a3330612d9000796-0-81b4d419 finish_reason=stop prompt_tokens=54 generated_tokens=276 elapsed_s=1.50
+single-1  | INFO:     127.0.0.1:56468 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56476 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56488 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:13 [scheduler.py:2198] Request finished: req cmpl-acb89455a0e02d53-0-84187cb5 finish_reason=stop prompt_tokens=63 generated_tokens=209 elapsed_s=1.25
+single-1  | INFO:     127.0.0.1:56492 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56506 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56518 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:14 [scheduler.py:2198] Request finished: req cmpl-9142381074140e50-0-aeb4108c finish_reason=stop prompt_tokens=48 generated_tokens=207 elapsed_s=1.20
+single-1  | INFO:     127.0.0.1:56526 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56542 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56544 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:15 [scheduler.py:2198] Request finished: req cmpl-b35e7586ddf1c971-0-a11bc972 finish_reason=stop prompt_tokens=47 generated_tokens=309 elapsed_s=1.67
+single-1  | INFO:     127.0.0.1:56558 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56564 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:56580 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:20:17 [loggers.py:320] Engine 000: Avg prompt throughput: 28.7 tokens/s, Avg generation throughput: 181.2 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 16.6%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:20:17 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.57, Accepted throughput: 148.90 tokens/s, Drafted throughput: 228.19 tokens/s, Accepted: 1489 tokens, Drafted: 2282 tokens, Per-position acceptance rate: 0.890, 0.776, 0.690, 0.626, 0.577, 0.525, 0.485, Avg Draft acceptance rate: 65.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:18 [scheduler.py:2198] Request finished: req cmpl-96b6d88ef2000c58-0-b8de2da3 finish_reason=stop prompt_tokens=75 generated_tokens=408 elapsed_s=2.12
+single-1  | INFO:     127.0.0.1:49326 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49338 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49346 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:20 [scheduler.py:2198] Request finished: req cmpl-b9b33a7bbd94563c-0-a37a8036 finish_reason=length prompt_tokens=77 generated_tokens=512 elapsed_s=2.64
+single-1  | INFO:     127.0.0.1:49348 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49360 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49376 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49390 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:22 [scheduler.py:2198] Request finished: req cmpl-a0e4f0dcbdcf18c2-0-9b9f5584 finish_reason=stop prompt_tokens=65 generated_tokens=203 elapsed_s=1.22
+single-1  | INFO:     127.0.0.1:49404 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49416 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49422 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:23 [scheduler.py:2198] Request finished: req cmpl-b1725b0cbcc68505-0-8a7af3a2 finish_reason=stop prompt_tokens=58 generated_tokens=310 elapsed_s=1.97
+single-1  | INFO:     127.0.0.1:49430 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49444 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49454 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:25 [scheduler.py:2198] Request finished: req cmpl-ae0c02e32c3f234a-0-adb1d5ef finish_reason=stop prompt_tokens=77 generated_tokens=204 elapsed_s=1.28
+single-1  | INFO:     127.0.0.1:49464 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49474 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49476 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:26 [scheduler.py:2198] Request finished: req cmpl-a04d71df111d935f-0-8936e7d8 finish_reason=stop prompt_tokens=47 generated_tokens=246 elapsed_s=1.21
+single-1  | INFO:     127.0.0.1:54504 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54516 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54522 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:20:27 [loggers.py:320] Engine 000: Avg prompt throughput: 39.5 tokens/s, Avg generation throughput: 175.7 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:20:27 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.51, Accepted throughput: 144.20 tokens/s, Drafted throughput: 224.00 tokens/s, Accepted: 1442 tokens, Drafted: 2240 tokens, Per-position acceptance rate: 0.881, 0.766, 0.675, 0.603, 0.578, 0.522, 0.481, Avg Draft acceptance rate: 64.4%
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:28 [scheduler.py:2198] Request finished: req cmpl-9255762936ccf965-0-b5e7caf9 finish_reason=stop prompt_tokens=71 generated_tokens=371 elapsed_s=1.99
+single-1  | INFO:     127.0.0.1:54528 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54530 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54534 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:29 [scheduler.py:2198] Request finished: req cmpl-97410f8c83443e7f-0-8bbaa72f finish_reason=stop prompt_tokens=49 generated_tokens=186 elapsed_s=1.02
+single-1  | INFO:     127.0.0.1:54550 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54554 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54566 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:30 [scheduler.py:2198] Request finished: req cmpl-bb6caf85435c5628-0-8b4156a5 finish_reason=stop prompt_tokens=39 generated_tokens=201 elapsed_s=1.04
+single-1  | INFO:     127.0.0.1:54568 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54570 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54586 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:32 [scheduler.py:2198] Request finished: req cmpl-a440437b301b39b9-0-968f3993 finish_reason=stop prompt_tokens=49 generated_tokens=174 elapsed_s=2.20
+single-1  | INFO:     127.0.0.1:54590 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54604 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54618 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:34 [scheduler.py:2198] Request finished: req cmpl-bf7fae1a18ab989a-0-ba8feaf5 finish_reason=stop prompt_tokens=60 generated_tokens=250 elapsed_s=1.41
+single-1  | INFO:     127.0.0.1:54634 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54650 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54652 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:36 [scheduler.py:2198] Request finished: req cmpl-999911efdb7b8a2b-0-affc5a57 finish_reason=stop prompt_tokens=50 generated_tokens=354 elapsed_s=1.90
+single-1  | INFO:     127.0.0.1:54664 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54674 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54676 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:20:39 [loggers.py:320] Engine 000: Avg prompt throughput: 31.8 tokens/s, Avg generation throughput: 178.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 15.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:20:39 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.56, Accepted throughput: 146.41 tokens/s, Drafted throughput: 224.71 tokens/s, Accepted: 1464 tokens, Drafted: 2247 tokens, Per-position acceptance rate: 0.882, 0.782, 0.723, 0.645, 0.573, 0.520, 0.436, Avg Draft acceptance rate: 65.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:39 [scheduler.py:2198] Request finished: req cmpl-ad13864b4d613b8e-0-a213bf03 finish_reason=length prompt_tokens=71 generated_tokens=512 elapsed_s=3.18
+single-1  | INFO:     127.0.0.1:44528 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44534 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44542 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:41 [scheduler.py:2198] Request finished: req cmpl-ad88104632e577a0-0-a1f52a88 finish_reason=stop prompt_tokens=52 generated_tokens=358 elapsed_s=1.95
+single-1  | INFO:     127.0.0.1:44544 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44558 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44572 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:44 [scheduler.py:2198] Request finished: req cmpl-94dda2ccad5b1f50-0-aa66a090 finish_reason=length prompt_tokens=81 generated_tokens=512 elapsed_s=2.72
+single-1  | INFO:     127.0.0.1:44584 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44600 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44610 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:45 [scheduler.py:2198] Request finished: req cmpl-9f39e9163f00d524-0-acd3d5be finish_reason=stop prompt_tokens=73 generated_tokens=221 elapsed_s=1.37
+single-1  | INFO:     127.0.0.1:44626 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44642 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44654 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:46 [scheduler.py:2198] Request finished: req cmpl-a3b28593c75797e5-0-9d921d6c finish_reason=stop prompt_tokens=34 generated_tokens=144 elapsed_s=0.96
+single-1  | INFO:     127.0.0.1:44656 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44670 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44684 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:48 [scheduler.py:2198] Request finished: req cmpl-b52f94f002c9325b-0-be26336a finish_reason=stop prompt_tokens=65 generated_tokens=461 elapsed_s=2.53
+single-1  | INFO:     127.0.0.1:57974 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:57986 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:57990 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:20:49 [loggers.py:320] Engine 000: Avg prompt throughput: 34.8 tokens/s, Avg generation throughput: 172.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:20:49 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.43, Accepted throughput: 141.19 tokens/s, Drafted throughput: 223.29 tokens/s, Accepted: 1412 tokens, Drafted: 2233 tokens, Per-position acceptance rate: 0.875, 0.771, 0.674, 0.614, 0.552, 0.505, 0.436, Avg Draft acceptance rate: 63.2%
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:49 [scheduler.py:2198] Request finished: req cmpl-8e7fa511c926c52a-0-b92a3e53 finish_reason=stop prompt_tokens=43 generated_tokens=170 elapsed_s=0.92
+single-1  | INFO:     127.0.0.1:58000 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58002 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58004 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:51 [scheduler.py:2198] Request finished: req cmpl-8eb7cdbade39c090-0-ad05b976 finish_reason=stop prompt_tokens=119 generated_tokens=248 elapsed_s=1.46
+single-1  | INFO:     127.0.0.1:58014 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58028 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58044 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58056 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:53 [scheduler.py:2198] Request finished: req cmpl-8bd54ecc909de9c1-0-8c331e08 finish_reason=stop prompt_tokens=63 generated_tokens=438 elapsed_s=2.45
+single-1  | INFO:     127.0.0.1:58066 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58068 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58084 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:54 [scheduler.py:2198] Request finished: req cmpl-919ca544fb647942-0-ad964ebd finish_reason=stop prompt_tokens=49 generated_tokens=156 elapsed_s=0.84
+single-1  | INFO:     127.0.0.1:58086 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58100 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58110 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:20:57 [scheduler.py:2198] Request finished: req cmpl-8a236e6edf78c45f-0-835fca6a finish_reason=length prompt_tokens=78 generated_tokens=512 elapsed_s=2.88
+single-1  | INFO:     127.0.0.1:58122 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58134 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58150 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:20:59 [loggers.py:320] Engine 000: Avg prompt throughput: 42.1 tokens/s, Avg generation throughput: 178.4 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:20:59 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.55, Accepted throughput: 146.20 tokens/s, Drafted throughput: 224.70 tokens/s, Accepted: 1462 tokens, Drafted: 2247 tokens, Per-position acceptance rate: 0.879, 0.782, 0.720, 0.623, 0.567, 0.505, 0.480, Avg Draft acceptance rate: 65.1%
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:00 [scheduler.py:2198] Request finished: req cmpl-9ec051294300a9b2-0-bc27627a finish_reason=length prompt_tokens=112 generated_tokens=512 elapsed_s=2.72
+single-1  | INFO:     127.0.0.1:54138 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54148 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54158 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:02 [scheduler.py:2198] Request finished: req cmpl-a7d85dab6674b04d-0-8a0308a3 finish_reason=stop prompt_tokens=68 generated_tokens=330 elapsed_s=1.77
+single-1  | INFO:     127.0.0.1:54170 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54184 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54198 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:05 [scheduler.py:2198] Request finished: req cmpl-a5466a0ef42d1d1c-0-b1bfde91 finish_reason=stop prompt_tokens=68 generated_tokens=392 elapsed_s=3.19
+single-1  | INFO:     127.0.0.1:54210 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54220 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54228 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:07 [scheduler.py:2198] Request finished: req cmpl-b9eb2e6f15217e5b-0-b4185143 finish_reason=stop prompt_tokens=73 generated_tokens=410 elapsed_s=1.92
+single-1  | INFO:     127.0.0.1:54230 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54238 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:54250 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:21:10 [loggers.py:320] Engine 000: Avg prompt throughput: 28.4 tokens/s, Avg generation throughput: 187.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 15.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:21:10 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.76, Accepted throughput: 155.20 tokens/s, Drafted throughput: 228.20 tokens/s, Accepted: 1552 tokens, Drafted: 2282 tokens, Per-position acceptance rate: 0.899, 0.801, 0.718, 0.650, 0.613, 0.564, 0.515, Avg Draft acceptance rate: 68.0%
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:10 [scheduler.py:2198] Request finished: req cmpl-af17e23283c16a74-0-a10d8c70 finish_reason=length prompt_tokens=75 generated_tokens=512 elapsed_s=3.22
+single-1  | INFO:     127.0.0.1:34288 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34298 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34302 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:13 [scheduler.py:2198] Request finished: req cmpl-ab0a3bd9c83002a8-0-a3c011ab finish_reason=length prompt_tokens=66 generated_tokens=512 elapsed_s=2.62
+single-1  | INFO:     127.0.0.1:34304 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34316 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34330 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:15 [scheduler.py:2198] Request finished: req cmpl-9ef5b0ec88b25f46-0-8ae37954 finish_reason=stop prompt_tokens=60 generated_tokens=361 elapsed_s=1.87
+single-1  | INFO:     127.0.0.1:34336 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34338 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34354 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:17 [scheduler.py:2198] Request finished: req cmpl-8df08a0dcf696a9b-0-9c298e7c finish_reason=stop prompt_tokens=102 generated_tokens=369 elapsed_s=2.00
+single-1  | INFO:     127.0.0.1:34364 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34366 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34374 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:18 [scheduler.py:2198] Request finished: req cmpl-af0398d80b536b75-0-8088bfae finish_reason=stop prompt_tokens=61 generated_tokens=297 elapsed_s=1.76
+single-1  | INFO:     127.0.0.1:34386 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34402 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:34412 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:21:20 [loggers.py:320] Engine 000: Avg prompt throughput: 35.5 tokens/s, Avg generation throughput: 185.5 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:21:20 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.74, Accepted throughput: 153.59 tokens/s, Drafted throughput: 226.78 tokens/s, Accepted: 1536 tokens, Drafted: 2268 tokens, Per-position acceptance rate: 0.889, 0.787, 0.731, 0.667, 0.599, 0.559, 0.509, Avg Draft acceptance rate: 67.7%
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:20 [scheduler.py:2198] Request finished: req cmpl-adf5cf68e42ac549-0-ae010fe8 finish_reason=stop prompt_tokens=66 generated_tokens=338 elapsed_s=1.79
+single-1  | INFO:     127.0.0.1:43520 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43532 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43538 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:21 [scheduler.py:2198] Request finished: req cmpl-99c22ca0fb3c4e2c-0-90754c4d finish_reason=stop prompt_tokens=37 generated_tokens=244 elapsed_s=1.32
+single-1  | INFO:     127.0.0.1:43548 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43558 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43574 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43580 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:24 [scheduler.py:2198] Request finished: req cmpl-bcd6c3e27db807ab-0-a86c8548 finish_reason=length prompt_tokens=73 generated_tokens=512 elapsed_s=2.76
+single-1  | INFO:     127.0.0.1:43586 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43598 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43612 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:27 [scheduler.py:2198] Request finished: req cmpl-b7fd064d81cd8a66-0-87829e2c finish_reason=length prompt_tokens=71 generated_tokens=512 elapsed_s=2.98
+single-1  | INFO:     127.0.0.1:43618 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43632 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43646 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:29 [scheduler.py:2198] Request finished: req cmpl-9054f2c5b8f54f37-0-a061464e finish_reason=stop prompt_tokens=54 generated_tokens=276 elapsed_s=1.50
+single-1  | INFO:     127.0.0.1:48870 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48880 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48896 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:21:30 [loggers.py:320] Engine 000: Avg prompt throughput: 29.8 tokens/s, Avg generation throughput: 177.3 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:21:30 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.43, Accepted throughput: 144.99 tokens/s, Drafted throughput: 228.88 tokens/s, Accepted: 1450 tokens, Drafted: 2289 tokens, Per-position acceptance rate: 0.856, 0.743, 0.673, 0.621, 0.566, 0.523, 0.453, Avg Draft acceptance rate: 63.3%
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:30 [scheduler.py:2198] Request finished: req cmpl-8f984348eb89a368-0-a465aff9 finish_reason=stop prompt_tokens=63 generated_tokens=209 elapsed_s=1.25
+single-1  | INFO:     127.0.0.1:48904 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48912 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48926 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:31 [scheduler.py:2198] Request finished: req cmpl-b1f2f5e8ef270f7c-0-b09f371b finish_reason=stop prompt_tokens=48 generated_tokens=207 elapsed_s=1.17
+single-1  | INFO:     127.0.0.1:48934 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48946 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48956 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:33 [scheduler.py:2198] Request finished: req cmpl-90884629359e88ac-0-867f137f finish_reason=stop prompt_tokens=47 generated_tokens=309 elapsed_s=1.67
+single-1  | INFO:     127.0.0.1:48968 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48976 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:48984 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:36 [scheduler.py:2198] Request finished: req cmpl-ae0bb32da514a1aa-0-8da5d8d4 finish_reason=stop prompt_tokens=75 generated_tokens=408 elapsed_s=3.34
+single-1  | INFO:     127.0.0.1:48998 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49000 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49010 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:39 [scheduler.py:2198] Request finished: req cmpl-bd0dab4bfe1a07f2-0-a793e3af finish_reason=length prompt_tokens=77 generated_tokens=512 elapsed_s=2.63
+single-1  | INFO:     127.0.0.1:49022 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49038 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:49046 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:40 [scheduler.py:2198] Request finished: req cmpl-a5fb220fd5d0357c-0-bf4b9801 finish_reason=stop prompt_tokens=65 generated_tokens=203 elapsed_s=1.21
+single-1  | INFO:     127.0.0.1:43102 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43114 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43126 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:21:41 [loggers.py:320] Engine 000: Avg prompt throughput: 37.0 tokens/s, Avg generation throughput: 178.9 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:21:41 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.57, Accepted throughput: 147.20 tokens/s, Drafted throughput: 225.40 tokens/s, Accepted: 1472 tokens, Drafted: 2254 tokens, Per-position acceptance rate: 0.888, 0.789, 0.702, 0.624, 0.578, 0.509, 0.481, Avg Draft acceptance rate: 65.3%
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:42 [scheduler.py:2198] Request finished: req cmpl-9887289449c6a2ed-0-84b2c159 finish_reason=stop prompt_tokens=58 generated_tokens=310 elapsed_s=1.96
+single-1  | INFO:     127.0.0.1:43128 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43138 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43146 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:43 [scheduler.py:2198] Request finished: req cmpl-bfb79209c23f4960-0-8675b811 finish_reason=stop prompt_tokens=77 generated_tokens=204 elapsed_s=1.26
+single-1  | INFO:     127.0.0.1:43148 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43158 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43168 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:45 [scheduler.py:2198] Request finished: req cmpl-b17d3c4c1693100c-0-90fa5579 finish_reason=stop prompt_tokens=47 generated_tokens=246 elapsed_s=1.20
+single-1  | INFO:     127.0.0.1:43182 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43198 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43212 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:47 [scheduler.py:2198] Request finished: req cmpl-b883fee142f41b78-0-9616c06b finish_reason=stop prompt_tokens=71 generated_tokens=371 elapsed_s=1.97
+single-1  | INFO:     127.0.0.1:43218 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43230 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43246 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:48 [scheduler.py:2198] Request finished: req cmpl-9837caabdc61cf08-0-9980565a finish_reason=stop prompt_tokens=49 generated_tokens=186 elapsed_s=1.01
+single-1  | INFO:     127.0.0.1:43256 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43270 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43272 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:49 [scheduler.py:2198] Request finished: req cmpl-b3f9c748c6527203-0-912e5ca2 finish_reason=stop prompt_tokens=39 generated_tokens=201 elapsed_s=1.03
+single-1  | INFO:     127.0.0.1:43286 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43294 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43310 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:50 [scheduler.py:2198] Request finished: req cmpl-95eb3e0b500a43b6-0-9d8437d5 finish_reason=stop prompt_tokens=49 generated_tokens=174 elapsed_s=0.95
+single-1  | INFO:     127.0.0.1:43314 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43328 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:43334 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:51 [scheduler.py:2198] Request finished: req cmpl-bb233ca5ef1c5546-0-89440048 finish_reason=stop prompt_tokens=60 generated_tokens=250 elapsed_s=1.39
+single-1  | INFO:     127.0.0.1:58654 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58668 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58678 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:21:51 [loggers.py:320] Engine 000: Avg prompt throughput: 44.2 tokens/s, Avg generation throughput: 180.6 tokens/s, Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.1%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:21:51 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.66, Accepted throughput: 148.60 tokens/s, Drafted throughput: 223.29 tokens/s, Accepted: 1486 tokens, Drafted: 2233 tokens, Per-position acceptance rate: 0.887, 0.771, 0.696, 0.633, 0.602, 0.571, 0.498, Avg Draft acceptance rate: 66.5%
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:53 [scheduler.py:2198] Request finished: req cmpl-b27eea739ef93e9c-0-b3095fd4 finish_reason=stop prompt_tokens=50 generated_tokens=354 elapsed_s=1.87
+single-1  | INFO:     127.0.0.1:58692 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58702 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58706 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58708 - "GET /health HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:56 [scheduler.py:2198] Request finished: req cmpl-8e925be5eb8c6e64-0-96ea4515 finish_reason=length prompt_tokens=71 generated_tokens=512 elapsed_s=3.13
+single-1  | INFO:     127.0.0.1:58720 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58734 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58744 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:21:58 [scheduler.py:2198] Request finished: req cmpl-b4f0fd3e0e904694-0-b42b5e54 finish_reason=stop prompt_tokens=52 generated_tokens=358 elapsed_s=1.92
+single-1  | INFO:     127.0.0.1:58760 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58766 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:58772 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:01 [scheduler.py:2198] Request finished: req cmpl-9e9d35294dfce474-0-8851130b finish_reason=length prompt_tokens=81 generated_tokens=512 elapsed_s=2.67
+single-1  | INFO:     127.0.0.1:44584 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | (APIServer pid=1) INFO 10-14 13:22:01 [loggers.py:320] Engine 000: Avg prompt throughput: 20.4 tokens/s, Avg generation throughput: 173.1 tokens/s, Running: 0 reqs, Waiting: 0 reqs, GPU KV cache usage: 0.0%, Prefix cache hit rate: 0.0%
+single-1  | (APIServer pid=1) INFO 10-14 13:22:01 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 5.47, Accepted throughput: 141.69 tokens/s, Drafted throughput: 221.88 tokens/s, Accepted: 1417 tokens, Drafted: 2219 tokens, Per-position acceptance rate: 0.883, 0.789, 0.713, 0.631, 0.558, 0.486, 0.410, Avg Draft acceptance rate: 63.9%
+single-1  | INFO:     127.0.0.1:44592 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44602 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:02 [scheduler.py:2198] Request finished: req cmpl-89cf0c6844ccb9d0-0-b22493ca finish_reason=length prompt_tokens=14 generated_tokens=64 elapsed_s=0.48
+single-1  | INFO:     127.0.0.1:44614 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:02 [scheduler.py:2198] Request finished: req cmpl-b8bb22b0e4beb50c-0-8971c0e2 finish_reason=length prompt_tokens=14 generated_tokens=64 elapsed_s=0.54
+single-1  | INFO:     127.0.0.1:44628 - "POST /tokenize HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44638 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:03 [scheduler.py:2198] Request finished: req cmpl-8354352fd9ed5aa9-0-931b2dd5 finish_reason=stop prompt_tokens=99 generated_tokens=226 elapsed_s=1.25
+single-1  | INFO:     127.0.0.1:44640 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44654 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:06 [scheduler.py:2198] Request finished: req cmpl-958a2d947b1b6d27-0-b215897f finish_reason=stop prompt_tokens=99 generated_tokens=226 elapsed_s=2.46
+single-1  | INFO:     127.0.0.1:44656 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44670 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44674 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:07 [scheduler.py:2198] Request finished: req cmpl-a34d5ddf8aeb3565-0-8639161e finish_reason=stop prompt_tokens=99 generated_tokens=226 elapsed_s=1.25
+single-1  | INFO:     127.0.0.1:44680 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44688 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44692 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:08 [scheduler.py:2198] Request finished: req cmpl-bf68889937433a51-0-b9bc26cb finish_reason=length prompt_tokens=99 generated_tokens=128 elapsed_s=0.76
+single-1  | INFO:     127.0.0.1:44708 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44712 - "GET /metrics HTTP/1.1" 200 OK
+single-1  | INFO:     127.0.0.1:44716 - "POST /v1/completions HTTP/1.1" 200 OK
+single-1  | (EngineCore pid=138) INFO 10-14 13:22:09 [scheduler.py:2198] Request finished: req cmpl-82046507fbea682f-0-a1b43ebe finish_reason=stop prompt_tokens=227 generated_tokens=98 elapsed_s=0.73
+single-1  | INFO:     127.0.0.1:44726 - "GET /metrics HTTP/1.1" 200 OK

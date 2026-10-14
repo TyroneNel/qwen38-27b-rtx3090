@@ -1,0 +1,22 @@
+=== a1: engine memory lines (raw-boot-a1.log) ===
+(APIServer pid=1) INFO 10-14 13:11:42 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'po
+(EngineCore pid=138) INFO 10-14 13:11:56 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRou
+(EngineCore pid=138) INFO 10-14 13:11:58 [cuda.py:532] Using AttentionBackendEnum.FLASH_ATTN backend.
+(EngineCore pid=138) INFO 10-14 13:13:24 [cuda.py:592] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=138) INFO 10-14 13:13:31 [model_runner.py:410] Model loading took 15.33 GiB memory and 91.007865 seconds
+(EngineCore pid=138) INFO 10-14 13:15:50 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.95 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control o
+(EngineCore pid=138) INFO 10-14 13:15:50 [kv_cache_utils.py:2659] GPU KV cache size: 27,714 tokens, Maximum concurrency for 8,192 tokens per request: 3.38x
+(EngineCore pid=138) INFO 10-14 13:16:36 [model_runner.py:1102] Graph capturing finished in 6 secs, took 0.13 GiB (driver free-memory delta 0.32 GiB)
+
+=== a1: nvidia-smi, GPU 0 = 3090 (raw-smi-a1.log) ===
+# before boot 2026-10-14T13:11:26Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 21.23 W, 50, 210 MHz
+# after boot, before any request 2026-10-14T13:16:41Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22604 MiB, 1723 MiB, 250.00 W, 41.40 W, 53, 210 MHz
+
+=== a1: 3090 adapter counters (luid_0x00000000_0x00011456_phys_0) from mem-trace-a1.csv ===
+samples=65  max dedicated=22761.8 MiB  max shared=82.2 MiB  loaded-engine shared floor=82.2 MiB
+  no sample above floor+16 MiB: no spill seen
+

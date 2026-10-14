@@ -1,0 +1,5 @@
+# start 2026-10-14T13:17:08Z
+# a1-chat template=chat n=40 max_tokens=512 reps=2
+R0B0 a1-chat rep=1 n=40 hit_cap=6 mean_accept_len(theirs)=5.893 mean_tok/s(theirs,incl.prefill)=199.9 mean_decode_tok/s=218.1 agg_tok/step=5.817 agg_decode_tok/s=211.7 mean_ttft=122ms new_tokens=12847
+R0B0 a1-chat rep=2 n=40 hit_cap=6 mean_accept_len(theirs)=5.893 mean_tok/s(theirs,incl.prefill)=190.9 mean_decode_tok/s=208.1 agg_tok/step=5.817 agg_decode_tok/s=203.0 mean_ttft=126ms new_tokens=12847
+# end 2026-10-14T13:19:24Z exit=0

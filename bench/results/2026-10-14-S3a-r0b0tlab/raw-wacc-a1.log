@@ -1,0 +1,5 @@
+# start 2026-10-14T13:22:01Z
+# a1 think=False effort=<template default> max_tokens=512 chunk=128
+WACC a1 gsm8k CAPTURED n=226 -> /tmp/targets-s3a/gsm8k.json
+WACC a1 gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=97.2/202.9 tok/s firstbad=None
+# end 2026-10-14T13:22:09Z exit=0

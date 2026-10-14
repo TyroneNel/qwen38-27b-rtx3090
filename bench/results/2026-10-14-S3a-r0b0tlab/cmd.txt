@@ -1,0 +1,32 @@
+2026-10-14T13:11:25Z [a1] cp bench/results/2026-10-14-S3a-r0b0tlab/.env.A .env
+2026-10-14T13:11:25Z [a1] sampler: bench/results/2026-10-14-batch2-tools/sampler.ps1 -> bench/results/2026-10-14-S3a-r0b0tlab/mem-trace-a1.csv
+2026-10-14T13:11:26Z [a1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T13:16:41Z [a1] healthy after 313 s
+2026-10-14T13:16:41Z [a1] spill watch started: bench/results/2026-10-14-batch2-tools/spillwatch.sh
+2026-10-14T13:17:08Z [a1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/r0b0_protocol.py single:/tmp/
+2026-10-14T13:17:08Z [a1] docker compose --profile single cp bench/results/2026-10-14-batch2-tools/workload_accept.py single:/tmp/
+2026-10-14T13:17:08Z [r0b0-chat-a1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/r0b0_protocol.py a1-chat --template chat --n 40 --max-tokens 512 --reps 2'
+2026-10-14T13:19:25Z [r0b0-raw-a1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/r0b0_protocol.py a1-raw --template raw --n 40 --max-tokens 512 --reps 2'
+2026-10-14T13:22:01Z [wacc-a1] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py a1 --targets /tmp/targets-s3a --tasks gsm8k --max-tokens 512'
+2026-10-14T13:22:10Z [a1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

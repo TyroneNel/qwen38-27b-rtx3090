@@ -1,0 +1,5 @@
+# start 2026-10-14T13:19:25Z
+# a1-raw template=raw n=40 max_tokens=512 reps=2
+R0B0 a1-raw rep=1 n=40 hit_cap=9 mean_accept_len(theirs)=5.619 mean_tok/s(theirs,incl.prefill)=174.7 mean_decode_tok/s=187.7 agg_tok/step=5.575 agg_decode_tok/s=183.9 mean_ttft=123ms new_tokens=13453
+R0B0 a1-raw rep=2 n=40 hit_cap=9 mean_accept_len(theirs)=5.619 mean_tok/s(theirs,incl.prefill)=177.7 mean_decode_tok/s=190.9 agg_tok/step=5.575 agg_decode_tok/s=187.1 mean_ttft=122ms new_tokens=13453
+# end 2026-10-14T13:22:01Z exit=0

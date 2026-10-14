@@ -1,0 +1,18 @@
+[
+ {
+  "task": "gsm8k",
+  "prompt_tokens": 99,
+  "target_tokens": 226,
+  "chunks_clean": 2,
+  "chunks": 2,
+  "steps": 39.0,
+  "tok_per_step": 5.794871794871795,
+  "accept_rate": 0.684981684981685,
+  "freerun_tok_per_step_last": 5.794871794871795,
+  "decode_tok_s": [
+   97.16083196548608,
+   202.9431669140058
+  ],
+  "first_bad": null
+ }
+]
