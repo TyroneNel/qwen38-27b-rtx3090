@@ -1,0 +1,81 @@
+# excerpts from ../2026-10-15-Q2-k7/raw-metrics-q2k7-w*.log (full /metrics text at each wave's peak Running count, boot q2k7)
+## w1: # full /metrics text at 2026-10-15T09:03:03.310000Z, vllm:num_requests_running=6.0 (last sample at the wave's peak before any stream ended)
+vllm:num_requests_running{engine="0",model_name="qwen3.8-27b"} 6.0
+vllm:num_requests_waiting{engine="0",model_name="qwen3.8-27b"} 2.0
+vllm:kv_cache_usage_perc{engine="0",model_name="qwen3.8-27b"} 0.8925619834710744
+vllm:num_preemptions_total{engine="0",model_name="qwen3.8-27b"} 0.0
+## w2: # full /metrics text at 2026-10-15T09:03:41.640000Z, vllm:num_requests_running=5.0 (last sample at the wave's peak before any stream ended)
+vllm:num_requests_running{engine="0",model_name="qwen3.8-27b"} 5.0
+vllm:num_requests_waiting{engine="0",model_name="qwen3.8-27b"} 11.0
+vllm:kv_cache_usage_perc{engine="0",model_name="qwen3.8-27b"} 0.8815426997245179
+vllm:num_preemptions_total{engine="0",model_name="qwen3.8-27b"} 0.0
+## w3: # full /metrics text at 2026-10-15T09:05:07.890000Z, vllm:num_requests_running=6.0 (last sample at the wave's peak before any stream ended)
+vllm:num_requests_running{engine="0",model_name="qwen3.8-27b"} 6.0
+vllm:num_requests_waiting{engine="0",model_name="qwen3.8-27b"} 10.0
+vllm:kv_cache_usage_perc{engine="0",model_name="qwen3.8-27b"} 0.8925619834710744
+vllm:num_preemptions_total{engine="0",model_name="qwen3.8-27b"} 0.0
+## w4: # full /metrics text at 2026-10-15T09:07:02.580000Z, vllm:num_requests_running=3.0 (last sample at the wave's peak before any stream ended)
+vllm:num_requests_running{engine="0",model_name="qwen3.8-27b"} 3.0
+vllm:num_requests_waiting{engine="0",model_name="qwen3.8-27b"} 3.0
+vllm:kv_cache_usage_perc{engine="0",model_name="qwen3.8-27b"} 0.7520661157024793
+vllm:num_preemptions_total{engine="0",model_name="qwen3.8-27b"} 0.0
+## w5: # full /metrics text at 2026-10-15T09:10:11.490000Z, vllm:num_requests_running=2.0 (last sample at the wave's peak before any stream ended)
+vllm:num_requests_running{engine="0",model_name="qwen3.8-27b"} 2.0
+vllm:num_requests_waiting{engine="0",model_name="qwen3.8-27b"} 2.0
+vllm:kv_cache_usage_perc{engine="0",model_name="qwen3.8-27b"} 0.7107438016528926
+vllm:num_preemptions_total{engine="0",model_name="qwen3.8-27b"} 0.0
+## cache_config_info (w2)
+vllm:cache_config_info{_block_size_resolved="True",block_size="864",cache_dtype="int8_per_token_head",effective_attention_block_size="864",enable_mamba_shared_prefix_checkpoint="False",enable_prefix_caching="True",engine="0",gpu_memory_utilization="0.93",is_attention_free="False",kv_cache_dtype_skip_layers="[]",kv_cache_layout="None",kv_cache_max_concurrency="1.6930232558139535",kv_cache_memory_bytes="5315022028",kv_cache_size_tokens="110953",kv_offloading_backend="native",kv_offloading_size="None",kv_sharing_fast_prefill="False",mamba_block_size="864",mamba_cache_dtype="auto",mamba_cache_mode="align",mamba_page_size_padded="None",mamba_ssm_cache_dtype="float16",num_cpu_blocks="None",num_gpu_blocks="364",num_gpu_blocks_override="None",prefix_cache_retention_interval="None",prefix_caching_hash_algo="sha256",prefix_match_unit="None",replayssm_buffer_len="16",skip_page_size_padded="None",sliding_window="None",swa_bounded_replay="True",use_kda_recoverssm="False",use_replayssm="False",user_specified_block_size="False",user_specified_mamba_block_size="False"} 1.0
+## every vllm: metric family on /metrics (w2), suffixes stripped
+vllm:cache_config_info
+vllm:e2e_request_latency_seconds
+vllm:engine_sleep_state
+vllm:estimated_flops_per_gpu
+vllm:estimated_read_bytes_per_gpu
+vllm:estimated_write_bytes_per_gpu
+vllm:external_prefix_cache_hits
+vllm:external_prefix_cache_queries
+vllm:generation_tokens
+vllm:inter_token_latency_seconds
+vllm:iteration_tokens_total
+vllm:kv_cache_usage_perc
+vllm:mm_cache_hits
+vllm:mm_cache_queries
+vllm:num_preemptions
+vllm:num_requests_running
+vllm:num_requests_waiting
+vllm:num_requests_waiting_by_reason
+vllm:prefix_cache_hits
+vllm:prefix_cache_queries
+vllm:prompt_tokens
+vllm:prompt_tokens_by_source
+vllm:prompt_tokens_cached
+vllm:request_decode_time_seconds
+vllm:request_generation_tokens
+vllm:request_inference_time_seconds
+vllm:request_max_num_generation_tokens
+vllm:request_num_preemptions
+vllm:request_params_max_tokens
+vllm:request_params_n
+vllm:request_prefill_kv_computed_tokens
+vllm:request_prefill_time_seconds
+vllm:request_prompt_tokens
+vllm:request_queue_time_seconds
+vllm:request_success
+vllm:request_time_per_output_token_seconds
+vllm:spec_decode_num_accepted_tokens
+vllm:spec_decode_num_accepted_tokens_per_pos
+vllm:spec_decode_num_draft_tokens
+vllm:spec_decode_num_drafts
+vllm:time_to_first_token_seconds
+vllm:tool_call_parser_invocations
+## lines mentioning mamba|state|slot|num_gpu_blocks (w2)
+# HELP vllm:engine_sleep_state Engine sleep state; awake = 0 means engine is sleeping; awake = 1 means engine is awake; weights_offloaded = 1 means sleep level 1; discard_all = 1 means sleep level 2.
+# TYPE vllm:engine_sleep_state gauge
+vllm:engine_sleep_state{engine="0",model_name="qwen3.8-27b",sleep_state="awake"} 1.0
+vllm:engine_sleep_state{engine="0",model_name="qwen3.8-27b",sleep_state="weights_offloaded"} 0.0
+vllm:engine_sleep_state{engine="0",model_name="qwen3.8-27b",sleep_state="discard_all"} 0.0
+vllm:cache_config_info{_block_size_resolved="True",block_size="864",cache_dtype="int8_per_token_head",effective_attention_block_size="864",enable_mamba_shared_prefix_checkpoint="False",enable_prefix_c
+## num_gpu_blocks, q2k3: num_gpu_blocks="385"
+## num_gpu_blocks, q2k1: num_gpu_blocks="393"
+## num_gpu_blocks, q2off: num_gpu_blocks="199"

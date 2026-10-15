@@ -1,0 +1,110 @@
+2026-10-15T08:50:58Z [q2k7] cp bench/results/2026-10-15-Q2-k7/.env.q2k7 .env
+2026-10-15T08:50:58Z [q2k7] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-15-Q2-k7/mem-trace-q2k7.csv
+2026-10-15T08:50:58Z [q2k7] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T08:51:01Z [q2k7] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-15T08:53:11Z [q2k7] KV-cache line at 2026-10-15T08:53:07.881445915Z = 2026-10-15T10:53:07 local
+2026-10-15T08:53:21Z [q2k7] healthy after 140 s
+2026-10-15T08:53:51Z [q2k7] first measurement request at 2026-10-15T10:53:51 local
+2026-10-15T08:53:56Z [q2k7] guard floors: FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5 (window: KV-cache line 2026-10-15T10:53:07 -> first request 2026-10-15T10:53:51, local time)
+2026-10-15T08:53:56Z [q2k7] BOOT SPILL: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped probe: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped probe: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped probe: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped probe: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped probe: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped ladder: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped bench: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:12Z [q2k7] skipped bench: BOOTRISE q2k7 FLOORS F_ctx=82.2 F_kv=102.2 n_kv=5: the boot rose 20.0 MiB above the CUDA-context level before the first request
+2026-10-15T08:54:13Z [q2k7] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-15T08:55:02Z [q2k7cut1g] boot-spill discriminator: q2k7 with KV_MEM cut a further 1 GiB (5315022028 - 1073741824 = 4241280204), boot only, no measurement
+2026-10-15T08:55:02Z [q2k7cut1g] cp bench/results/2026-10-15-Q2-k7/.env.q2k7cut1g .env
+2026-10-15T08:55:02Z [q2k7cut1g] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-15-Q2-k7/mem-trace-q2k7cut1g.csv
+2026-10-15T08:55:03Z [q2k7cut1g] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T08:55:04Z [q2k7cut1g] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-15T08:57:09Z [q2k7cut1g] KV-cache line at 2026-10-15T08:57:05.589342630Z = 2026-10-15T10:57:05 local
+2026-10-15T08:57:19Z [q2k7cut1g] healthy after 135 s
+2026-10-15T08:57:49Z [q2k7cut1g-noop] first measurement request at 2026-10-15T10:57:49 local
+2026-10-15T08:58:10Z [q2k7cut1g-noop] docker compose --profile single exec -T single bash -lc 'true'
+2026-10-15T08:58:26Z [q2k7cut1g] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-15T08:58:51Z [q2k7cut1g] note: the no-op exec ran under label q2k7cut1g-noop, so its first-request marker was renamed to .firstreq-q2k7cut1g and memsum rerun
+2026-10-15T08:59:31Z [q2k7] cp bench/results/2026-10-15-Q2-k7/.env.q2k7 .env
+2026-10-15T08:59:31Z [q2k7] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-15-Q2-k7/mem-trace-q2k7.csv
+2026-10-15T08:59:31Z [q2k7] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T08:59:33Z [q2k7] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-15T09:01:44Z [q2k7] KV-cache line at 2026-10-15T09:01:43.054450884Z = 2026-10-15T11:01:43 local
+2026-10-15T09:01:53Z [q2k7] healthy after 140 s
+2026-10-15T09:02:23Z [q2k7] first measurement request at 2026-10-15T11:02:23 local
+2026-10-15T09:02:28Z [q2k7] guard floors: FLOORS F_ctx=86.2 F_kv=102.2 n_kv=4 (window: KV-cache line 2026-10-15T11:01:43 -> first request 2026-10-15T11:02:23, local time)
+2026-10-15T09:02:28Z [q2k7] BOOT RISE (recorded, not blocking): BOOTRISE q2k7 FLOORS F_ctx=86.2 F_kv=102.2 n_kv=4: the boot rose 16.0 MiB above the CUDA-context level before the first request
+2026-10-15T09:02:45Z [q2k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q2k7 1 --n 8 --ctx-tokens 1024
+2026-10-15T09:03:16Z [q2k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q2k7 2 --n 16 --ctx-tokens 4096
+2026-10-15T09:04:54Z [q2k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q2k7 3 --n 16 --ctx-tokens 1024
+2026-10-15T09:05:50Z [q2k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q2k7 4 --n 6 --ctx-tokens 16384
+2026-10-15T09:08:19Z [q2k7] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q2k7 5 --n 4 --ctx-tokens 32768
+2026-10-15T09:12:10Z [q2k7] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,2,4,8,16 --json /tmp/ladder-q2k7.json
+2026-10-15T09:17:47Z [q2k7] docker compose --profile single exec -T single env OUT=/tmp/rb-q2k7-1 bash bench/run_benchmarks.sh single
+2026-10-15T09:26:32Z [q2k7] docker compose --profile single exec -T single env OUT=/tmp/rb-q2k7-2 bash bench/run_benchmarks.sh single
+2026-10-15T09:35:22Z [q2k7] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

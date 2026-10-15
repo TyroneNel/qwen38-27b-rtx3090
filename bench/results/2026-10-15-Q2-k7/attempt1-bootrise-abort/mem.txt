@@ -1,0 +1,28 @@
+=== q2k7: engine memory lines (raw-boot-q2k7.log) ===
+(APIServer pid=1) INFO 10-15 08:51:14 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'po
+(EngineCore pid=144) INFO 10-15 08:51:28 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRou
+(EngineCore pid=144) INFO 10-15 08:51:31 [cuda.py:532] Using AttentionBackendEnum.TRITON_ATTN backend.
+(EngineCore pid=144) INFO 10-15 08:52:54 [cuda.py:592] Using TRITON_ATTN attention backend out of potential backends: ['TRITON_ATTN'].
+(EngineCore pid=144) INFO 10-15 08:53:02 [model_runner.py:410] Model loading took 15.55 GiB memory and 95.823141 seconds
+(EngineCore pid=144) INFO 10-15 08:53:07 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.95 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control o
+(EngineCore pid=144) INFO 10-15 08:53:07 [kv_cache_utils.py:2659] GPU KV cache size: 110,953 tokens, Maximum concurrency for 65,536 tokens per request: 1.69x
+(EngineCore pid=144) INFO 10-15 08:53:14 [model_runner.py:1102] Graph capturing finished in 5 secs, took 0.13 GiB (driver free-memory delta 0.32 GiB)
+
+=== q2k7: nvidia-smi, GPU 0 = 3090 (raw-smi-q2k7.log) ===
+# before boot 2026-10-15T08:50:58Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 20.26 W, 37, 210 MHz
+# after boot, before any request 2026-10-15T08:53:21Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22890 MiB, 1437 MiB, 250.00 W, 21.93 W, 45, 210 MHz
+
+=== q2k7: 3090 adapter counters (luid_0x00000000_0x00011456_phys_0) from mem-trace-q2k7.csv; KV-cache line 2026-10-15T10:53:07, first request 2026-10-15T10:53:51 (local) ===
+samples=20  max dedicated=23033.8 MiB  max shared=102.2 MiB  F_ctx=82.2 MiB  F_kv=102.2 MiB (floor used)
+  BOOT SPILL: F_kv is 20.0 MiB above F_ctx
+  measurements: no sample after the first request above F_kv+16 MiB: no spill seen
+  trace (time shared dedicated), every 6th sample:
+    2026-10-15T10:50:59 0.2 4.0
+    2026-10-15T10:52:00 86.2 15301.7
+    2026-10-15T10:53:00 86.2 23033.8
+    2026-10-15T10:54:00 102.2 22893.8
+
