@@ -1498,5 +1498,10 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     (bf16)** against the same 84-92 MiB floor, an order of magnitude past the 156/410 MiB
     first seen. And the guard has a second failure mode worth knowing about: a floor taken
     *after* the rise reads the spilled level as normal, which is how three uncapped
-    `MAX_SEQS=16` boots spilled ~16 MiB at memory profiling without being flagged.
+    `MAX_SEQS=16` boots rose ~16 MiB at memory profiling without being flagged.
+    **That rise is not a spill** (batch 4, 2026-10-15): it follows `MAX_SEQS` itself —
+    8.0 MiB at 8, 16.0 at 16, 32.0 at 24 — and steps identically with `KV_MEM` a
+    further 1 GiB lower and with `SPEC=off`. Memory profiling also runs *before* the
+    `GPU KV cache size` line, so any window that starts there begins above the rise.
+    Report it as a boot step, not as a shortfall.
 

@@ -24,7 +24,7 @@ from someone else's measurement. "Precision cost" is the second axis, not a bloc
 
 | id | lever | gain | kind | effort | precision cost |
 |---|---|---|---|---|---|
-| S-1 | **Ship k as a concurrency control**: a k=3 (and k=1) profile instead of k=7 for every load | **measured**: N=4 aggregate +9.2%; N=8 350.1 against 178.5 (k=7's tail row); preemptions 2 → 0; C1 pays 112.1 → 94.1 tok/s | config | low | none |
+| S-1 | **Ship k as a concurrency control**: k=7 at 1 stream, **k=3 at 2-8, `SPEC=off` above ~9** — k=1 wins no concurrency | **measured** (batch 4's policy table): N=4 263.6 against 239.1 (k=7) and 143.2 (off); N=8 **337.1** against 176.8 (k=7, tail) and 250.7 (off); N=16 only `SPEC=off` seats all 16 (369.2). C1 pays 103.4 → 93.5 → 40.7 | config | low | none |
 | S-2 | **`TRITON_ATTN` + `int8_per_token_head` as the `CTX=fast` default** | **measured**: pool 68,605 → 116,440 tokens (+69.7%), N=8 preemptions 23 → 1, C1 a tie (111.2 vs 111.0) | config | low | none measured (GSM8K n=200 within one question, perplexity within 0.07%) |
 | S-3 | **`CG=40`** | **measured**: +3.3% C1, +4.1% with `CUDAGRAPH_MODE=FULL` — and the mechanism is *acceptance*, 3.34 → 3.48 tokens/step at unchanged step time | config | low | unknown; the mechanism is X-1 |
 | S-4 | **`INT8_ACT=int8` for prefill** | **measured**: prefill 1,437 → 1,845 tok/s at 1k and 1,200 → 1,423 at 51k (+27-30%, +19% at depth), decode unchanged | config | low | +0.9-3.7% perplexity, documented in [optimizations.md](optimizations.md) |
@@ -42,18 +42,29 @@ the only lever that would let one server be fast for one user *and* hold thirtee
 
 ### S-1 and S-2, in shippable form
 
-Both are configuration, so "shipping" them means publishing the recipes rather than changing the launchers. The
-one below is not a proposal — it is the exact `.env` the batch-3 k=3 arm ran, and the numbers beside it are that
-run's. Each band is a `.env` a user can paste today; none of it flips a default.
+Both are configuration, so "shipping" them means publishing the recipes rather than changing the launchers. This
+table is **batch 4's policy measurement**, not a proposal: every seat count, aggregate and C1 figure was measured
+on the reference 3090 at 250 W with `KV_MEM` pinned and `MAX_SEQS=16` on every arm.
 
-| band | diff from the shipped `.env` | C1 T=0 | seats (`Running:`) | N=8 aggregate | preemptions |
-|---|---|---|---|---|---|
-| **1 user** (as shipped) | — | **112.1** | 7 | 178.5 (tail row) | 2 |
-| **2-6 users** | `DFLASH_TOKENS=3` + `EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head'` | 94.1 | 13 | **350.1** | **0** |
-| **7-16 users** | as above plus `DFLASH_TOKENS=1` | 64.7 | 16 | 299.4 | 0 |
+| band | profile | C1 T=0 | seats at ~4k prompts | N=4 | N=8 | N=16 |
+|---|---|---|---|---|---|---|
+| **1 stream** | as shipped (k=7) | **103.4** | 5 | 239.1 | 176.8 (tail) | 156.1 (tail) |
+| **2-8 streams** | `DFLASH_TOKENS=3` + `EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head'` | 93.5 | 9 | **263.6** | **337.1** | 300.4 (tail) |
+| **9+ streams** | `SPEC=off` (batch mode's shape: no speculation) | 40.7 | 16 | 143.2 | 250.7 | **369.2** |
+| *(k=1)* | `DFLASH_TOKENS=1` | 63.3 | 13-14 | 202.3 | 294.9 | 180.8 (tail) |
+
+Three things the table decides that a single number cannot:
+
+- **The band boundary is where an arm's own aggregate stops rising**, which is the first N above its seat count:
+  4 → 8 for k=7 (5 seats), 8 → 16 for k=3 (9 seats). Above N=8 no speculating row is steady state.
+- **k=1 wins nothing at any concurrency.** It is a strictly worse k=3: fewer tokens per step, more seats than any
+  load needs. It was in this table as "7-16 users" after batch 3 — that was wrong, and the measurement is what
+  corrected it.
+- **Above ~9 concurrent, the answer is to stop speculating** (N=16: `SPEC=off` 369.2 against k=3's 300.4 tail).
+  Shorter prompts move that crossover up, because seats rise as prompts shorten.
 
 ```dotenv
-# 2-6 concurrent users: the seat/quality/speed point batch 3 measured
+# 2-8 concurrent streams: the seat/speed point batch 4 measured
 SPEC=dflash2
 PREFIX_CACHE=1
 CTX=fast
@@ -63,12 +74,6 @@ MAX_LEN=65536
 MAX_SEQS=16                # the admission cap: 8 hides the seat effect entirely
 EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head'
 ```
-
-Two things the table says that a single number cannot. The **aggregate nearly doubles** from band 1 to band 2
-(178.5 → 350.1) while **single-stream costs 16%** — so the band boundary is a policy decision, not a tuning one,
-and it should be picked from the workload's concurrency, not from a benchmark. And band 3 is *worse* than band 2
-on aggregate (299.4): past ~13 seats the per-step token count has fallen far enough that more seats stop paying.
-**k=3 is the knee, k=1 is past it** — the same shape our MTP work found at k=4 for a different reason.
 
 ### S-5 is not what it looked like (source-level answer, 2026-10-14)
 
@@ -115,11 +120,11 @@ not a per-step reservation.
 
 | id | what | evidence | status | next action |
 |---|---|---|---|---|
-| O-1 | **The `RESIDENT` constant is 16-23% low.** `single-user/start_qwen.sh` budgets `104988089` bytes per (k+2) unit; measured cost is 81-88 MB, so the boot print says "about 5 seats" where 7 actually run | batch 3: pool shares 14.2 / 7.45 / 4.37% at k=7/3/1 and `Running:` 7/13/16 | **open** | one-line constant fix; calibrate against a state-slot counter first if O-5 lands |
+| O-1 | **The `RESIDENT` constant is wrong in principle, not just in value.** `single-user/start_qwen.sh` budgets `104988089` bytes per (k+2) unit. The measured cost is 87.6 / 82.8 / 81.1 MB per (k+2) — 20-29% lower — **and it grows with context**: k=7 costs 54 / 64 / 91 / 129 blocks per request at ~1k / 4k / 16k / 32k prompts, 2.4× from end to end. The state term is exactly `6(k+2)` blocks; the rest is `2·⌈ctx/block⌉` | batch 3 seats, then batch 4 Q1's block accounting | **open** | replace the constant with the function: seats ≈ `(num_gpu_blocks − 1) / (6(k+2) + 2·⌈ctx/block⌉)`. A corrected constant would still mislead at 32k |
 | O-2 | **`.dockerignore` excluded `.env` but not `.env.bench`/`.env.hf`/`.env.long`**, so `COPY . .` baked the owner's env files — and any keys in them — into local images | batch 2 preflight; the built image contained them | **fixed** `9cbf00f` (now `.env*`) | none; confirm on the next build that no `.env*` lands in the image |
-| O-3 | **The spill guard took its baseline after the level had risen**, so it read a spilled boot as clean and missed ~16 MiB on three uncapped boots | batch 3 caveats; `../bench/results/2026-10-14-batch3-tools/spillwatch.sh` | **partly fixed** — batch 2's mid-write CSV false positive is fixed (sub-1 MiB ignored, two consecutive samples required); the baseline-order hole is not | batch 4 Q4: take the floor between the engine's KV-cache line and the first request |
+| O-3 | **The guard's baseline window cannot see the boot rise, and the rise is not a spill.** Memory profiling runs *before* the "GPU KV cache size" line, so the KV-line-to-first-request window starts above the rise. The step follows `MAX_SEQS` (8.0 MiB at 8, 16.0 at 16, 32.0 at 24), not memory pressure — a `KV_MEM` 1 GiB lower and `SPEC=off` both step identically | batch 3 caveats, then batch 4's `guard-test.txt` replay | **fixed by batch 4**: the guard keeps the brief's floor for measurement spills and adds the pre-profiling level to report the boot step | none — but the boot step should be reported, not treated as a spill |
 | O-4 | **`bench/quality_battery.py` cites "gotcha 10 in the README"** for perplexity headroom, and gotcha 10 is about DeltaNet kernels. The spill is also an order of magnitude bigger than recorded (1,002 MiB vs 410) | batch 3 Q2; [gotchas.md](gotchas.md) 60 | **partly fixed** — gotcha 60 carries the real magnitude and the guard's blind spot; the docstring reference is still stale | point the docstring at gotcha 60 and gotcha 53 |
-| O-5 | **No way to read the state pool.** No boot line reports mamba blocks or state slots, so the `RESIDENT` constant cannot be calibrated against anything | batch 3 Q4 | **open** | batch 4 Q1: check `/metrics` for a per-group or state gauge; if none, a log line is the patch |
+| O-5 | **No state gauge on `/metrics`** — but blocks-in-use is obtainable anyway | batch 4 Q1: no state or per-group gauge exists, while `vllm:kv_cache_usage_perc` × (`num_gpu_blocks` − 1) is an exact integer on all 11 dumps, with `num_gpu_blocks` from `vllm:cache_config_info` | **answered** (workaround, not a gauge) | use the product for seat accounting; a first-class state gauge is still the cleaner patch |
 | O-6 | **The launcher warns about seats but not about the profiling transient** that spills when `MAX_SEQS` is raised above what the pool supports | batch 3 Q4: 16 MiB spilled at `MAX_SEQS=16`, 32 MiB at 24 | **open** | extend the existing `RESIDENT` warning to cover the transient, or document the ceiling |
 | O-7 | **The `upstream` remote's push URL is enabled on the GPU checkout** (only the sandbox had it disabled) — one `git push upstream` from touching a repo we do not own | batch 2 preflight | **open** | make it a repo-level convention, not a local setting |
 
@@ -139,6 +144,7 @@ not a per-step reservation.
 |---|---|---|---|
 | X-1 | **`CG=40` changes greedy acceptance**: 3.34 → 3.48 tokens/step at *unchanged* step time (28.9 vs 28.7-29.1 ms), every run | batch 2, "seen that the sessions did not ask for" | a CUDA-graph **capture size** should not change sampled output. Either a numerics difference between capture modes or something subtler — and it is why E5 was never a speed result |
 | X-2 | **`GPU KV cache size` falls with `max_model_len` at a fixed `KV_MEM`**: 27,714 tokens at 8,192 against 63,872 at 57,344, same 5,315,022,028 bytes | batch 2, same section | it quietly undermines any capacity claim made from a short-context row (S3a's, for instance) |
+| X-3 | **A 16-seat boot costs k=7 single-stream speed:** C1 T=0 is 103.4 on a `MAX_SEQS=16` boot against batch 3's 112.1 on an 8-seat boot, a 7.8% loss, with the N=1 step at 32.7 against 29.5 ms/pass. k=3 (−0.6%) and k=1 (−2.2%) barely move. The one `MAX_SEQS`-sized buffer in the boot log doubles (`int4 3D scratch: capacity=256 query tokens` against 128) | batch 4, "where this contradicts batch 3" | the band table above pays it: band 2's C1 (93.5) carries this loss as well as the k=3 loss, so the real k=3 cost may be nearer 4% than 16% once the boot is matched |
 
 Both are isolatable with `bench/results/2026-10-14-batch3-tools/workload_accept.py` (teacher-forced, so the
 trajectory is not a variable) plus a two-arm boot. Neither is in any batch yet.
@@ -177,13 +183,15 @@ reconnaissance, X-1 if batch 4 skipped it, and the IFBench gate for the band-2 p
 
 ## Recommended order
 
-1. **S-1 and S-2 together, as one change.** Both are measured, both are config, neither costs precision: a k=3
-   profile plus the int8-KV/TRITON `CTX=fast` default is the difference between a server that preempts at eight
-   concurrent users and one that holds thirteen without preempting. This is the cheapest real speed on the board.
-2. **S-3, after X-1.** `CG=40` is +3-4% C1 and we do not know why. Confirm the mechanism on a teacher-forced
-   target first — a capture size that changes sampled output is worth understanding before it becomes a default.
-3. **S-4** for any prefill-heavy workload; it is already implemented and documented, just not on by default.
-4. **S-5 or S-6** if the effort is available — the two levers with no ceiling. S-5 removes the seats-versus-C1
-   trade (the thing S-1 can only choose a point on); S-6 raises acceptance rather than step time, and acceptance is
-   where our single-stream numbers live.
-5. **S-7 to S-11** as fill-in work, cheapest first (S-11 is one boot).
+1. **Ship the policy bands (S-1 + S-2).** Batch 4 measured them end to end, so this is now a documentation change
+   plus three `.env` recipes, not an experiment: k=7 at one stream, k=3 at 2-8, `SPEC=off` above ~9. This is the
+   largest measured speed gain available and it needs no code.
+2. **O-1, generated as a function** rather than a constant, using batch 4 Q1's `num_gpu_blocks` accounting. The
+   constant misleads most at 32k prompts, which is exactly where an operator is deciding whether they can afford a
+   long-context profile.
+3. **X-3**, the 16-seat C1 loss — 7.8% for a buffer that doubles. If it can be sized independently of
+   `MAX_SEQS`, band 2 gets cheaper and the k=3 cost narrows.
+4. **Batch 5** for the cheap unknowns it still holds: the unadvertised mamba knobs (four boots), the `CG=40`
+   mechanism, and the IFBench gate the band-2 profile should have before it is recommended rather than measured.
+5. **S-5 as the redesign it is.** The per-step-k framing is dead (see the note above); the route to k=7 speed at
+   13+ seats is journal-and-replay under speculation, which is a project.
