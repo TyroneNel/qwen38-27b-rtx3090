@@ -27,10 +27,10 @@ mkdir -p "$T/models/Qwen3.8-27B-DFlash2-W4A16" && : > "$T/models/Qwen3.8-27B-DFl
 run() {
   (cd "$T" && env -u PRINT_ARGV -u DFLASH_TOKENS -u KV_MEM -u MAX_SEQS -u MAX_LEN \
      SPEC=dflash2 PREFIX_CACHE=0 PRINT_ARGV=1 VLLM_API_KEY=k HOME="$T" "$@" \
-     bash single-user/start_qwen.sh 2>/dev/null </dev/null) | grep -o 'the pinned pool holds about [0-9]* resident requests on short (~1k-token) prompts and about [0-9]* at MAX_LEN=[0-9]*' || true
+     bash single-user/start_qwen.sh 2>/dev/null </dev/null) | grep -o 'the pinned pool holds about .*resident requests on short' || true
 }
-# seats <env...>: just the two numbers, "1k:len".
-seats() { run "$@" | sed -E 's/.*about ([0-9]+) resident.*about ([0-9]+) at.*/\1:\2/'; }
+# seats <env...>: the printed range as "lo:hi" (a single number prints as "n:n").
+seats() { run "$@" | sed -E 's/.*about ([0-9]+) to ([0-9]+) resident.*/\1:\2/; s/.*about ([0-9]+) resident.*/\1:\1/'; }
 # note <env...>: the whole note, so the parts beyond the seat counts can be checked.
 note() {
   (cd "$T" && env -u PRINT_ARGV -u DFLASH_TOKENS -u KV_MEM -u MAX_SEQS -u MAX_LEN \
@@ -38,42 +38,39 @@ note() {
      bash single-user/start_qwen.sh 2>/dev/null </dev/null) | grep -o '\[start_qwen\] note: the pinned pool.*' || true
 }
 
-echo "== the formula matches the measurement it came from"
-# batch 4's k=7 boot: KV_MEM=5315022028, 364 pages, 6(k+2)=54, +2*ceil(1024/864)=4 -> 58; 363/58=6
-# at MAX_LEN=65536: 54 + 2*76 = 206; 363/206 = 1
-check "6:1" "$(seats KV_MEM=5315022028 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" \
-      "k=7 at batch 4's pin: 6 at ~1k, 1 at 65536 (measured 6 held; the engine's own label reads 1.69)"
-check "6:1" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=8 MAX_LEN=65536)" \
-      "shipped pin, MAX_SEQS=8: still prints (8 > 6)"
+echo "== the printed range brackets every measured arm (batch 5 Q2, 2026-10-15)"
+# The pool is ENGINE-CHOSEN (382 pages at k=7 on int8 KV, 404 at k=3 -- the block becomes 816), so
+# each KV_MEM below is the one whose pool matched that boot's num_gpu_blocks. The claim under test
+# is the pass rule: the observed seat count lies inside the printed bracket.
+#   a    pool 382, k=7, observed 7   -> bracket 6:7
+#   b    pool 404, k=3, observed 13  -> bracket 11:13
+#   c    pool 308, k=7, observed 5   -> bracket 5:5
+#   d    pool 364, k=7, observed 6   -> bracket 6:6   (batch 4's arm)
+check "6:7"   "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" "k=7, pool 382: bracket 6:7 contains the observed 7 (batch 5 a)"
+check "11:13" "$(seats KV_MEM=5899090436 DFLASH_TOKENS=3 MAX_SEQS=16 MAX_LEN=65536)" "k=3, pool 404: bracket 11:13 contains the observed 13 (batch 5 b)"
+check "5:5"   "$(seats KV_MEM=4509715660 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" "k=7, pool 308: bracket 5:5 contains the observed 5 (batch 5 c)"
+check "6:6"   "$(seats KV_MEM=5315022028 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" "k=7, pool 364: bracket 6:6 contains the observed 6 (batch 4)"
 
-echo "== the context term is what moves it, and the note says so"
-# pool 382 pages at the shipped pin; 6(k+2)=54
-check "6:1" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" "65536 -> 54+152=206 -> 1 seat"
-check "6:2" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=32768)"  "32768 -> 54+76=130 -> 2 seats (measured 2)"
-check "6:5" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=4096)"   "4096 -> 54+10=64 -> 5 seats (measured 5)"
-check "6:6" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=1024)"   "1024 -> 54+4=58 -> 6 seats"
+echo "== the state term is 6*(k+2) pages, and MAX_LEN no longer enters the print"
+check "6:7"   "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=1024)"  "the printed range does not depend on MAX_LEN"
+check "6:7"   "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" "  ... nor at 65536"
+check "11:13" "$(seats KV_MEM=5899090436 DFLASH_TOKENS=3 MAX_SEQS=16 MAX_LEN=65536)" "k=3: state 30 -> 13 upper, 11 lower"
+check "15:21" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=1 MAX_SEQS=24 MAX_LEN=65536)" "k=1: state 18 -> 21 upper, 15 lower; the observed 21 is inside (batch 4 Q4)"
 
-echo "== k changes the state term: 6*(k+2) pages"
-check "17:2" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=1 MAX_SEQS=20 MAX_LEN=65536)" "k=1: 18+4=22 -> 17 at ~1k; 18+152=170 -> 2 at 65536"
-check "11:2" "$(seats KV_MEM=5583457484 DFLASH_TOKENS=3 MAX_SEQS=16 MAX_LEN=65536)" "k=3: 30+4=34 -> 11 at ~1k"
-check "6:1"  "$(seats KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536)" "k=7: 54+4=58 -> 6 at ~1k"
-
-echo "== silent when MAX_SEQS already fits, and where the fit is unmeasured"
-check "" "$(run KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=4 MAX_LEN=65536)" \
-      "MAX_SEQS=4 <= 6 seats: no note"
-check "" "$(run KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=6 MAX_LEN=65536)" \
-      "MAX_SEQS=6 == 6 seats: no note (the boundary is 'admits more than')"
-check "" "$(run KV_MEM=4900000000 DFLASH_TOKENS=3 MAX_SEQS=16 CTX=huge)" \
-      "CTX=huge: skipped (KVarN block and page are unmeasured)"
+echo "== silent when MAX_SEQS fits the pool"
+check "" "$(run KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=7 MAX_LEN=65536)"  "MAX_SEQS=7 == the upper bound: no note"
+check "" "$(run KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=4 MAX_LEN=65536)"  "MAX_SEQS=4: no note"
+check "" "$(run KV_MEM=4900000000 DFLASH_TOKENS=3 MAX_SEQS=16 CTX=huge)"      "CTX=huge: skipped (KVarN block and page are unmeasured)"
 [ -n "$(run KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=16 MAX_LEN=65536 CTX=long)" ] \
   && check 1 1 "CTX=long still prints" || check 1 0 "CTX=long still prints"
 
 echo "== the note stays auditable"
 n="$(note KV_MEM=5583457484 DFLASH_TOKENS=7 MAX_SEQS=8 MAX_LEN=65536)"
-case "$n" in *"54+2*ceil(ctx/864)"*) check 1 1 "the note names the per-request formula";; *) check 1 0 "the note names the per-request formula";; esac
-case "$n" in *"the pool's 382 pages"*) check 1 1 "the note names the pool in pages (5583457484/14601709=382)";; *) check 1 0 "the note names the pool in pages (382)";; esac
+case "$n" in *"reserves 54 of the"*) check 1 1 "the note names the state term (54 at k=7)";; *) check 1 0 "the note names the state term";; esac
+case "$n" in *"382 pages for recurrent state"*) check 1 1 "the note names the pool in pages";; *) check 1 0 "the note names the pool in pages";; esac
 case "$n" in *"DFLASH_TOKENS=7"*) check 1 1 "the note names k";; *) check 1 0 "the note names k";; esac
-case "$n" in *"MAX_LEN=65536"*) check 1 1 "the note names the context it used";; *) check 1 0 "the note names the context";; esac
+case "$n" in *"GPU KV cache size"*) check 1 1 "the note points at the engine's own authority";; *) check 1 0 "the note points at the engine's authority";; esac
+case "$n" in *"before any"*) check 1 1 "the note separates state from attention pages";; *) check 1 0 "the note separates state from attention";; esac
 
 echo "== nothing else about the launcher moved"
 # The pool/stub makes a full dry run cheap; the exit code must stay 0.

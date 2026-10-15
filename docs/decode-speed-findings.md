@@ -82,7 +82,7 @@ from someone else's measurement. "Precision cost" is the second axis, not a bloc
 |---|---|---|---|---|---|
 | S-1 | **Ship k as a concurrency control**: k=7 at 1 stream, **k=3 at 2-8, `SPEC=off` above ~9** — k=1 wins no concurrency | **measured** (batch 4's policy table): N=4 263.6 against 239.1 (k=7) and 143.2 (off); N=8 **337.1** against 176.8 (k=7, tail) and 250.7 (off); N=16 only `SPEC=off` seats all 16 (369.2). C1 pays 103.4 → 93.5 → 40.7 | config | low | none |
 | S-2 | **`TRITON_ATTN` + `int8_per_token_head` as the `CTX=fast` default** | **measured**: pool 68,605 → 116,440 tokens (+69.7%), N=8 preemptions 23 → 1, C1 a tie (111.2 vs 111.0) | config | low | none measured (GSM8K n=200 within one question, perplexity within 0.07%) |
-| S-3 | **`CG=40`** | **measured**: +3.3% C1, +4.1% with `CUDAGRAPH_MODE=FULL` — and the mechanism is *acceptance*, 3.34 → 3.48 tokens/step at unchanged step time | config | low | unknown; the mechanism is X-1 |
+| S-3 | ~~**`CG=40`**~~ | **falsified** (batch 5 Q3): the +3.3% C1 was trajectory drift, not speed — on one shared frozen target the gap vanishes (GSM8K 39 steps both, real4 182 against 184 i.e. `CG=40` 1.1% *lower*) and step time never moved. See **R** | — | — | — |
 | S-4 | **`INT8_ACT=int8` for prefill** | **measured**: prefill 1,437 → 1,845 tok/s at 1k and 1,200 → 1,423 at 51k (+27-30%, +19% at depth), decode unchanged | config | low | +0.9-3.7% perplexity, documented in [optimizations.md](optimizations.md) |
 | S-5 | **Journal-and-replay the state instead of holding k+1 pages per request** (ReplaySSM's shape, made spec-decode-safe) | **estimated**: removes the seats-versus-C1 trade entirely — k=7 speed at 13+ seats. **Reframed: "make the reservation follow the per-step k" is impossible** — see the note under this table | engine work | high | none |
 | S-6 | **DFlash2 selector headroom** | **corrected, and much smaller than first written** — the published oracle 6.79-vs-4.27 gap is a 5-layer Qwen3-4B drafter on GSM8K, not ours; our own teacher-forced acceptance on GSM8K is **5.80**, already above the published DFlash2 5.46. The headroom that exists is on *chat* (3.50) | engine work | high | none (lossless by construction) |
@@ -90,7 +90,7 @@ from someone else's measurement. "Precision cost" is the second axis, not a bloc
 | S-8 | **Workload-aware k** — per-endpoint rather than one global value | **measured** that the spread is real: gsm8k 5.80, code 4.78, chat 3.50 tokens/step; k=7 is a compromise for all three | config | med | none |
 | S-9 | **FlashInfer cudagraph support for the spec-decode verify shape** | **estimated**: recovers the measured 26-29% PIECEWISE penalty on that path (it may only tie `TRITON_ATTN`) | upstream | med | none |
 | S-10 | **int8-KV prefill attention** (the e4m3→half scale-fold route) | **estimated**: prefill attention 41 → 72 TFLOPS on the b70 port; our 51k prefill row is where the 16 full-attention layers dominate | kernel work | med | none |
-| S-11 | **The unadvertised mamba knobs** (`--mamba-ssu-algorithm`, `--mamba-backend`) | unknown — never tested | config | low | unknown |
+| S-11 | ~~**The unadvertised mamba knobs**~~ | **falsified** (batch 5 Q1): `--mamba-ssu-algorithm horizontal|vertical` is refused at validation ("only supported with the FlashInfer backend") and `--mamba-backend flashinfer` **applies to nothing** — the args show it while every kernel line stays identical (`GDN decode kernel: triton`), because in 0.31.0 only Mamba2 layers and ReplaySSM read those settings and this model's layers are GDN. N=8 moved +1.4%, below the bar, at a *higher* ms/pass. See **R** | — | — | — |
 | S-12 | **`CG=40` default, once X-1 is understood** | see S-3 | config | low | unknown |
 
 S-1 to S-4 are one item type: knobs we already have, measured, not yet shipped. S-5 is the one with no ceiling —
@@ -179,6 +179,8 @@ not a per-step reservation.
 | bf16 recurrent state | brings the fused GDN kernel back and buys nothing: +0.1% C1, 1.9% slower `ms/pass` at N=1 | batch 3 Q2 |
 | `--enable-mamba-shared-prefix-checkpoint`, `--mamba-block-size 8192` | neither changed the block size, the page padding, the pool or the seat count | batch 3 Q3 |
 | a per-step k schedule as a **seat** lever | state is sized for the configured maximum k, so varying k per step frees nothing | batch 3 |
+| **`CG=40` as a speed or acceptance knob** | the free-run gain reproduces (3.34 → 3.48 tok/step) and then vanishes on a shared frozen target: it is the two boots forking the greedy continuation at different points (`code` 382, `real5` 29, `real6` 362), not faster decoding. `CG` does move greedy numerics, which is worth knowing, but it buys no speed | batch 5 Q3 |
+| **the mamba knobs** (`--mamba-ssu-algorithm`, `--mamba-backend`) | one is refused at validation; the other applies to nothing, because the GDN layers never read those settings in 0.31.0 | batch 5 Q1 |
 | `--use-replayssm` | the flag reaches the engine (`'use_replayssm': True` in the args line) and validation then refuses it: `Value error, --use-replayssm is not supported for architecture 'Qwen3_5ForConditionalGeneration'`. The engine never boots — **the last upstream state knob is closed for this checkpoint** | batch 4 Q3 |
 | FlashInfer as the fast path on this workload | 26-29% slower than the shipped path, entirely from the cudagraph downgrade | batch 2 E2 |
 | fp8 KV for decode speed | a context buy, not a speed one — the A/Bs cost decode | our [reproductions](reproductions/README.md), club-3090 |
@@ -188,8 +190,8 @@ not a per-step reservation.
 
 | id | what | evidence | status | next action |
 |---|---|---|---|---|
-| O-1 | **The `RESIDENT` constant is wrong in principle, not just in value.** `single-user/start_qwen.sh` budgets `104988089` bytes per (k+2) unit. The measured cost is 87.6 / 82.8 / 81.1 MB per (k+2) — 20-29% lower — **and it grows with context**: k=7 costs 54 / 64 / 91 / 129 blocks per request at ~1k / 4k / 16k / 32k prompts, 2.4× from end to end. The state term is exactly `6(k+2)` blocks; the rest is `2·⌈ctx/block⌉` | batch 3 seats, then batch 4 Q1's block accounting | **fixed on this branch** — the print is now the measured function (`6(k+2) + 2*ceil(ctx/864)` pages of a 14,601,709 B pool page), printing both ends (a ~1k prompt and `MAX_LEN`), and `CTX=huge` is skipped because its block and page are unmeasured. Covered by `bench/test_resident_print.sh` (17 CPU checks, no GPU) | the exact version still needs a state-slot counter (O-5); the current fit is calibrated at k=7 and reads ~10-20% high at k=3/1 because `num_gpu_blocks` is 364/385/393 across those arms rather than `KV_MEM/page` |
-| O-2 | **`.dockerignore` excluded `.env` but not `.env.bench`/`.env.hf`/`.env.long`**, so `COPY . .` baked the owner's env files — and any keys in them — into local images | batch 2 preflight; the built image contained them | **fixed** `9cbf00f` (now `.env*`) | none; confirm on the next build that no `.env*` lands in the image |
+| O-1 | **The launcher seat print — twice wrong, now a bracket.** The original constant (`KV_MEM / ((k+2) × 104988089)`) was right at ~4k prompts and had no context term. The first fix — the fitted `6(k+2) + 2·⌈ctx/864⌉`, page 14,601,709 B — then **failed its own hardware test** (batch 5 Q2): it printed 6 where k=7 seats 7, and 11 where k=3 seats 13, for two named reasons: the pool at k=3 is 404 pages rather than 382 (the engine picks an 816-token block there), and it subtracted attention pages that are not there at ~1k prompts. It now prints a **range** — state-only at the top (`6(k+2)` pages, exact) down to state+attention at the smallest block the engine uses (448) — and names the engine's own `GPU KV cache size` line as the authority | batch 4 Q1, then batch 5 Q2 | **fixed on this branch** (bracket form); `bench/test_resident_print.sh` (21 CPU checks) asserts the range brackets all four measured arms | the pool size and the block are engine-chosen, so env alone cannot give an exact number; a state gauge would remove the range |
+| O-2 | **`.dockerignore` excluded `.env` but not `.env.bench`/`.env.hf`/`.env.long`**, so `COPY . .` baked the owner's env files — and any keys in them — into local images | batch 2 preflight; the built image contained them | **fixed and confirmed** — `9cbf00f` (now `.env*`), and batch 5's rebuild verified nothing `.env*` is baked in | closed |
 | O-3 | **The guard's baseline window cannot see the boot rise, and the rise is not a spill.** Memory profiling runs *before* the "GPU KV cache size" line, so the KV-line-to-first-request window starts above the rise. The step follows `MAX_SEQS` (8.0 MiB at 8, 16.0 at 16, 32.0 at 24), not memory pressure — a `KV_MEM` 1 GiB lower and `SPEC=off` both step identically | batch 3 caveats, then batch 4's `guard-test.txt` replay | **fixed by batch 4**: the guard keeps the brief's floor for measurement spills and adds the pre-profiling level to report the boot step | none — but the boot step should be reported, not treated as a spill |
 | O-4 | **`bench/quality_battery.py` cites "gotcha 10 in the README"** for perplexity headroom, and gotcha 10 is about DeltaNet kernels. The spill is also an order of magnitude bigger than recorded (1,002 MiB vs 410) | batch 3 Q2; [gotchas.md](gotchas.md) 60 | **partly fixed** — gotcha 60 carries the real magnitude and the guard's blind spot; the docstring reference is still stale | point the docstring at gotcha 60 and gotcha 53 |
 | O-5 | **No state gauge on `/metrics`** — but blocks-in-use is obtainable anyway | batch 4 Q1: no state or per-group gauge exists, while `vllm:kv_cache_usage_perc` × (`num_gpu_blocks` − 1) is an exact integer on all 11 dumps, with `num_gpu_blocks` from `vllm:cache_config_info` | **answered** (workaround, not a gauge) | use the product for seat accounting; a first-class state gauge is still the cleaner patch |
@@ -206,12 +208,13 @@ not a per-step reservation.
 | U-4 | [#48375](https://github.com/vllm-project/vllm/pull/48375) / [#43559](https://github.com/vllm-project/vllm/issues/43559) | `MambaManager.find_longest_cache_hit` receives `drop_eagle_block` and never reads it | nothing specific — `mamba-align-checkpoint-order.patch` is in the same function but is a different fix | **unverified**: on our pin the coordinator sets `manager.drop_eagle_checkpoint_block` under `use_eagle`, so it may be handled. Needs a probe: MTP + prefix caching, acceptance against `--no-enable-prefix-caching` |
 | U-5 | — | **FlashInfer + spec decode downgrades cudagraphs to PIECEWISE** (`compilation.py:1462`, `AttentionCGSupport.UNIFORM_SINGLE_TOKEN_DECODE`) | — | measured, 26-29% slower on our workload; an upstream limitation to report rather than work around |
 
-## X — unexplained behaviour worth chasing
+## X — unexplained behaviour (X-3 closed by batch 5)
 
 | id | what | evidence | why it matters |
 |---|---|---|---|
-| X-1 | **`CG=40` changes greedy acceptance**: 3.34 → 3.48 tokens/step at *unchanged* step time (28.9 vs 28.7-29.1 ms), every run | batch 2, "seen that the sessions did not ask for" | a CUDA-graph **capture size** should not change sampled output. Either a numerics difference between capture modes or something subtler — and it is why E5 was never a speed result |
-| X-2 | **`GPU KV cache size` falls with `max_model_len` at a fixed `KV_MEM`**: 27,714 tokens at 8,192 against 63,872 at 57,344, same 5,315,022,028 bytes | batch 2, same section | it quietly undermines any capacity claim made from a short-context row (S3a's, for instance) |
+| ~~X-1~~ | **closed** (batch 5 Q3): `CG=40` changes greedy *numerics*, not speed — the two boots fork from a frozen continuation at different positions, and a forked continuation is different text with a different acceptance. Not an acceptance knob; nothing to report upstream | — | closed |
+| X-2 | **`GPU KV cache size` falls with `max_model_len` at a fixed `KV_MEM`**: 27,714 tokens at 8,192 against 63,872 at 57,344, same 5,315,022,028 bytes | batch 2, same section | partly explained by batch 5: the engine's **block** is what varies (864 at k=7 on int8 KV, 816 at k=3, 448 on shipped bf16), and `num_gpu_blocks` follows it (382 / 404 / 380). Still no full account of the `max_model_len` dependence |
+| ~~X-3~~ | **closed** (batch 5 Q5): the 16-seat C1 loss reproduces at **−3.9%** on matched boots (batch 4's −7.8% used batch 3's 8-seat figure as the other side), and it is almost all acceptance (tokens/step 3.17 against 3.34) rather than step time (32.6 against 32.3 ms). Buffer named: the int4 3D attention scratch, `capacity=128` → `256` query tokens | — | closed; band 2's true C1 cost is ~4%, not 10% |
 | X-3 | **A 16-seat boot costs k=7 single-stream speed:** C1 T=0 is 103.4 on a `MAX_SEQS=16` boot against batch 3's 112.1 on an 8-seat boot, a 7.8% loss, with the N=1 step at 32.7 against 29.5 ms/pass. k=3 (−0.6%) and k=1 (−2.2%) barely move. The one `MAX_SEQS`-sized buffer in the boot log doubles (`int4 3D scratch: capacity=256 query tokens` against 128) | batch 4, "where this contradicts batch 3" | the band table above pays it: band 2's C1 (93.5) carries this loss as well as the k=3 loss, so the real k=3 cost may be nearer 4% than 16% once the boot is matched |
 
 Both are isolatable with `bench/results/2026-10-14-batch3-tools/workload_accept.py` (teacher-forced, so the
@@ -237,7 +240,17 @@ All under `bench/results/`, all committed, all run inside the container:
 | `workload_accept.py` | teacher-forced acceptance on arbitrary prompts (prefix-resync against a frozen continuation), so trajectory divergence is not a variable | `2026-10-14-batch3-tools/`, first used in `2026-10-13-tools/` |
 | `spillwatch.sh` | watches the Windows Shared Usage counter against a loaded-engine floor (see O-3 for its blind spot) | `2026-10-14-batch3-tools/` |
 | `memsum.sh`, `sampler.ps1`, `arm.sh` | floor summary, counter sampling, per-arm boot/measure wrapper | `2026-10-14-tools/`, `2026-10-14-batch2-tools/` |
-| `test_resident_print.sh` | CPU test for the launcher seat print (17 checks, no GPU): the formula against the measurement it came from, both ends, the silent cases, and that `test_bool_knobs.sh` still passes | `bench/` |
+| `test_resident_print.sh` | CPU test for the launcher seat print (21 checks, no GPU) — asserts the printed **range** brackets all four arms batch 5 measured, plus the silent cases and the auditable strings: the formula against the measurement it came from, both ends, the silent cases, and that `test_bool_knobs.sh` still passes | `bench/` |
+
+## Open gate: band 2's precision
+
+The recommendation published in [single-user/README.md](../single-user/README.md) — k=3 for 2-8 concurrent
+streams — rests on GSM8K n=200 (within one question) and perplexity (within 0.07%). Batch 5's attempt to add
+IFBench **produced no result**: it was stopped on the owner's instruction because `xhigh` responses average 7,136
+tokens and were hitting `max_tokens` (204 requests finished, 24 of them `length`), which voids the scores. The gate
+is still open. The number to beat is the shipped profile's own IFBench prompt-level strict; a re-run needs a
+`max_tokens` the workload fits, and client concurrency matched to the resident limit (>4 threads at 4 seats
+preempted 1,017 times in batch 2).
 
 ## C — patches we hold that belong upstream
 
@@ -245,7 +258,10 @@ Not tracked here. They are rows in [PATCHES.md](../PATCHES.md) — 42 with no up
 `feature`, 6 `local`, 5 `own`) — and managing them is routine. Two `fix` rows happen to overlap open upstream
 issues (U-1, U-2 below), which is the only reason they are named on this page at all.
 
-## Measured next: [batch 5](decode-speed-batch5.md)
+## Batches: what is measured
 
-batch 5 covers the levers on this list that cannot be settled by reading — S-11 (four boots), the S-5
-reconnaissance, X-1 if batch 4 skipped it, and the IFBench gate for the band-2 profile.
+[Batch 2](decode-speed-batch2.md) (capacity gate, then the parked arms) - [batch 3](decode-speed-batch3.md) (what
+caps residency) - [batch 4](decode-speed-batch4.md) (the policy table, the seat gauge) - [batch 5](decode-speed-batch5.md)
+(the seat print on hardware, the mamba knobs, CG, the 16-seat cost). Summaries and raw logs:
+[`bench/results/`](../bench/results). Batch 5 **falsified more than it confirmed** - S-3, S-11 and the launcher
+print were all wrong - which is the point of running them.

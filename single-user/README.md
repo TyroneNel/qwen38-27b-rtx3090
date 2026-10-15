@@ -428,7 +428,7 @@ included (`tools` + `tool_choice: "auto"` come back as `tool_calls`).
 | `DRAFT_TOKENS` | 4 (3 for `CTX=long`/`huge`) | speculative depth; 5 and 6 are slower |
 | `SPEC_ATTN` | 1 (`CTX=fast` only) | split-KV Triton attention for the verify step (`patches/spec-decode-attn.patch`); 0 = FlashAttention-2 |
 | `DRAFT_SAMPLE` | `probabilistic` | `greedy` drafts: same speed at T=0, ~15% slower at T>0 |
-| `MAX_SEQS` | 8 | how many requests are *admitted*, not how many the pool can hold — the rest queue, and once the pool is full the engine preempts and recomputes. Residency is set by the configured verify depth: each resident request reserves `k+1` recurrent-state pages before it stores a token of context, so the pool holds ~6 at `DFLASH_TOKENS=7`, ~9 at 3 and ~16 at 1 (measured on the reference 3090, ~1k prompts; fewer as prompts grow — 5 at 4k and 2 at 16k at k=7). `start_qwen.sh` prints the measured number at boot, both ends. See "How many concurrent users" |
+| `MAX_SEQS` | 8 | how many requests are *admitted*, not how many the pool can hold — the rest queue, and once the pool is full the engine preempts and recomputes. Residency is set by the configured verify depth: a resident request reserves `6(k+2)` recurrent-state pages out of the pool before it stores a token of context, so at the shipped pin the pool holds **7** at `DFLASH_TOKENS=7` and **13** at 3 on ~1k-token prompts, falling to 5 and 9 at ~4k and to 2 at 16k (k=7) — context is what moves it, not `MAX_SEQS`. `start_qwen.sh` prints the range at boot. See "How many concurrent users" |
 | `MAX_LEN` | 65536 (`fast`) / 150000 (`long`) | 150k needs `GPU_UTIL` 0.93 |
 | `GPU_UTIL` | 0.93 | soak-tested with a 100k prompt and 4×6k-token generations; batch mode's 0.972 OOMs in the MTP path (docs/gotchas.md, gotcha 4) |
 | `MTP_DRAFT_VOCAB` | 1 | set 0 to draft with the full lm_head (more acceptance, slower per draft); set 0 for Chinese or other traffic outside the list's English/Danish/code corpus (docs/gotchas.md 61) |
@@ -449,7 +449,8 @@ included (`tools` + `tool_choice: "auto"` come back as `tool_calls`).
 `MAX_SEQS` is an admission cap, not a capacity. How many requests the pool actually holds is set by the
 *configured* verify depth `k` (`DFLASH_TOKENS`), so the right k is a function of how many users you serve.
 Measured on the reference 3090 at 250 W, one boot per arm, int8 `CTX=fast`, `KV_MEM` pinned at
-5,315,022,028 B, `MAX_SEQS=16` ([batch 4](../bench/results/2026-10-15-batch4-SUMMARY.md); `MAX_SEQS=16` is
+5,315,022,028 B, `MAX_SEQS=16` ([batch 4](../bench/results/2026-10-15-batch4-SUMMARY.md), whose seat counts
+are at ~4k-token prompts — batch 5 re-measured them at ~1k and got 7 and 13, and both rows are shown; `MAX_SEQS=16` is
 deliberate — at 8 the seat effect is invisible, because eight is all the launcher will admit even when the
 pool holds more):
 
@@ -457,17 +458,18 @@ pool holds more):
 |---|---|---|---|
 | profile | `DFLASH_TOKENS=7` (default) | `DFLASH_TOKENS=3` | `SPEC=off` |
 | C1 T=0 (the cost) | **103.4 tok/s** | 93.5 | 40.7 |
-| resident seats, ~1k prompts | 6 | 9 | 16 |
+| resident seats, ~1k prompts | 7 | 13 | 16 |
+| resident seats, ~4k prompts | 5 | 9 | 16 |
 | decode aggregate @ N=4 | 239.1 | **263.6** | 143.2 |
 | decode aggregate @ N=8 | 176.8 (queueing) | **337.1** | 250.7 |
 | decode aggregate @ N=16 | 156.1 (queueing) | 300.4 (queueing) | **369.2** |
 
 Read it as **speculate deeply for one user, shallowly for a handful, and not at all for a crowd**. The
 boundary between bands is where an arm's own aggregate stops rising, which is the first N above its seat count:
-N=8 for k=7 (6 seats), N=16 for k=3 (9 seats). Above ~9 concurrent, `SPEC=off` — batch mode's shape — is the
+N=8 for k=7 (5 seats at ~4k), N=16 for k=3 (9 seats at ~4k). Above ~9 concurrent, `SPEC=off` — batch mode's shape — is the
 only arm that seats everyone.
 
-`DFLASH_TOKENS=1` is deliberately not a band: it holds 13-14 seats but beats k=3 at no concurrency, because
+`DFLASH_TOKENS=1` is deliberately not a band: it holds 13-14 seats at ~4k but beats k=3 at no concurrency, because
 tokens per step fall faster than seats rise.
 
 The 2-8 band, in one command:
@@ -481,9 +483,11 @@ with N=8 preemptions falling from 23 to 1 — and it costs nothing measurable: G
 perplexity within 0.07% ([batch 2 S1](../bench/results/2026-10-14-S1-capacity/report.md)). It is the same
 attention/KV stack `CTX=long` already ships, just applied to the fast profile.
 
-Two caveats on the table. The measurements are at ~4k-token prompts; shorter prompts hold more seats and move
-both boundaries up. And the cost column is a real trade, not a rounding error: band 2 gives up 10% of
-single-stream speed for 41% more aggregate at N=4 and 91% more at N=8.
+Three caveats on the table. The measurements are at ~4k-token prompts; shorter prompts hold more seats and move
+both boundaries up. The cost column is a real trade, not a rounding error — band 2 gives up 10% of single-stream
+speed for 41% more aggregate at N=4 and 91% more at N=8 — but **most of that 10% is not k's doing**: raising
+`MAX_SEQS` from 8 to 16 costs k=7 about 4% by itself (102.8-106.8 against 108.6-109.6, mostly from a doubled
+attention-scratch buffer), so band 2's cost against an 8-seat k=7 boot is nearer 4% than 10%.
 
 ## Switching modes
 

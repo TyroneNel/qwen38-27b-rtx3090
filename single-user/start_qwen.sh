@@ -447,42 +447,44 @@ if [ "$SPEC" = "dflash2" ]; then
   # bigger batches run piecewise instead of captured: slower, alive. Set CG explicitly to
   # override.
   CG=${CG:-$((MAX_SEQS * (DRAFT_TOKENS + 1) > 64 ? 64 : MAX_SEQS * (DRAFT_TOKENS + 1)))}
-  # Seats are admissions, not residency, and they are a FUNCTION of k and the prompt
-  # length rather than a constant. Measured on the reference 3090 (batch 4 Q1, 2026-10-15,
-  # int8 CTX=fast, KV_MEM pinned): one resident request occupies
-  # 6*(k+2) + 2*ceil(ctx/864) pool pages, with the page 14,601,709 B and the block 864
-  # tokens (the boot's own `mamba_block_size`). The 6*(k+2) is the recurrent state --
-  # exactly 54/30/18 pages at k=7/3/1 -- and the rest is attention KV. At k=7 that reads
-  # 54 / 64 / 91 / 129 pages per request at ~1k / 4k / 16k / 32k prompts, so the same k
-  # costs 2.4x more at 32k than at 1k: the previous form (a flat 104,988,089 B per (k+2),
-  # no context term) was right at about 4k prompts and wrong either side of it -- it said
-  # 5 where a 1k-prompt boot holds 6 and a 32k-prompt boot holds 2.
-  # Both ends are printed because the prompt length cannot be known here. The number is
-  # calibrated at k=7; the measured pool is 364/385/393 pages at k=7/3/1, so reading it as
-  # KV_MEM/page is exact at k=7 and a little high below it -- hence "about". The engine's
-  # own `kv_cache_max_concurrency` label in /metrics is the cross-check after boot, and
-  # agrees with the MAX_LEN figure to within ~5%.
-  # Print what the pool can actually hold so nobody reads MAX_SEQS as a concurrency
-  # setting -- raising it past this queues, and once the pool is full it preempts and
-  # recomputes. CTX=huge is skipped: KVarN's block (128) and page differ and neither term
-  # is measured there, so a figure from the fast-profile fit would not mean anything.
+  # Seats are admissions, not residency. A resident request reserves recurrent-state pages out
+  # of the same pool before it stores a token of context, and the reservation is a FUNCTION of
+  # the configured k -- not a constant. Two rounds of measurement on the reference 3090 pin it
+  # down (batches 4 and 5, bench/results/2026-10-15-batch5-SUMMARY.md):
+  #
+  #   - the state term is exactly 6*(k+2) pool pages (54.00 at k=7, 30.00 at k=3, read off the
+  #     engine's own block accounting at ~1k-token prompts);
+  #   - context adds attention pages on top of it, `2*ceil(ctx/block)`, and **the engine chooses
+  #     the block**: 864 tokens at k=7 on int8 KV, 816 at k=3, 448 on the shipped bf16 KV. It is
+  #     not knowable here, which is why this prints a RANGE rather than a number.
+  #
+  # The previous form was a flat 104,988,089 B per (k+2) with no context term: right at about 4k
+  # prompts, wrong either side of it. The form before this one was the same function with the
+  # block and the page baked in, which overstated the pool at k=3 (404 pages, not 382) and
+  # subtracted phantom attention pages at ~1k, so it printed 6 where k=7 seats 7.
+  #
+  # Upper bound = state only (the pool divided by 6*(k+2)); lower bound adds attention at the
+  # smallest block the engine uses here (448), which is the conservative end. Both are floors of
+  # a kind: the truth is inside, and the engine's own `GPU KV cache size` line and the
+  # `kv_cache_max_concurrency` label in /metrics are the authority after boot.
+  # CTX=huge is skipped -- KVarN's block is 128 and its page differs, and neither term is
+  # measured there, so a range from this fit would not mean anything.
   if [ -n "$KV_MEM" ] && [ "$CTX" != "huge" ]; then
-    RESIDENT_PAGE=14601709        # B per pool page; measured, block_size 864
-    RESIDENT_BLOCK=864            # tokens per pool page; the boot's mamba_block_size
+    RESIDENT_PAGE=14601709        # B per pool page at k=7 on int8 KV; the pool size itself is engine-chosen
+    RESIDENT_BLOCK_MIN=448        # the smallest attention block the engine picks here (shipped bf16 KV)
+    RESIDENT_STATE=$(( 6 * (DRAFT_TOKENS + 2) ))
     RESIDENT_POOL=$(( KV_MEM / RESIDENT_PAGE ))
-    RESIDENT_BASE=$(( 6 * (DRAFT_TOKENS + 2) ))
-    RESIDENT_PER_1K=$(( RESIDENT_BASE + 2 * ((1024 + RESIDENT_BLOCK - 1) / RESIDENT_BLOCK) ))
-    RESIDENT_PER_LEN=$(( RESIDENT_BASE + 2 * ((MAX_LEN + RESIDENT_BLOCK - 1) / RESIDENT_BLOCK) ))
-    RESIDENT_1K=$(( (RESIDENT_POOL - 1) / RESIDENT_PER_1K ))
-    RESIDENT_LEN=$(( (RESIDENT_POOL - 1) / RESIDENT_PER_LEN ))
-    if [ "$RESIDENT_1K" -lt 1 ]; then RESIDENT_1K=1; fi
-    if [ "$RESIDENT_LEN" -lt 1 ]; then RESIDENT_LEN=1; fi
-    if [ "$MAX_SEQS" -gt "$RESIDENT_1K" ]; then
-      echo "[start_qwen] note: the pinned pool holds about $RESIDENT_1K resident requests on" \
-           "short (~1k-token) prompts and about $RESIDENT_LEN at MAX_LEN=$MAX_LEN, at" \
-           "DFLASH_TOKENS=$DRAFT_TOKENS (one request needs $RESIDENT_BASE+2*ceil(ctx/864) of the" \
-           "pool's $RESIDENT_POOL pages, so context is what moves it); MAX_SEQS=$MAX_SEQS admits" \
-           "more than that and the rest queue."
+    RESIDENT_HI=$(( (RESIDENT_POOL - 1) / RESIDENT_STATE ))
+    RESIDENT_LO=$(( (RESIDENT_POOL - 1) / (RESIDENT_STATE + 2 * ((1024 + RESIDENT_BLOCK_MIN - 1) / RESIDENT_BLOCK_MIN)) ))
+    [ "$RESIDENT_HI" -lt 1 ] && RESIDENT_HI=1
+    [ "$RESIDENT_LO" -lt 1 ] && RESIDENT_LO=1
+    if [ "$MAX_SEQS" -gt "$RESIDENT_HI" ]; then
+      if [ "$RESIDENT_LO" -eq "$RESIDENT_HI" ]; then RESIDENT_RANGE="$RESIDENT_HI"; else RESIDENT_RANGE="$RESIDENT_LO to $RESIDENT_HI"; fi
+      echo "[start_qwen] note: the pinned pool holds about $RESIDENT_RANGE resident requests on short" \
+           "(~1k-token) prompts, and fewer as prompts grow -- one request reserves $RESIDENT_STATE of the" \
+           "pool's ~$RESIDENT_POOL pages for recurrent state at DFLASH_TOKENS=$DRAFT_TOKENS, before any" \
+           "attention pages. MAX_SEQS=$MAX_SEQS admits more than that and the rest queue; the engine's own" \
+           "'GPU KV cache size' line is the authority for this pool."
     fi
   fi
   # Above ~12 seats at CTX=huge the seats stop being merely useless and become fatal, and
