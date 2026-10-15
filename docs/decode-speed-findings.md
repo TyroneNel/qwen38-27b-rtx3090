@@ -65,14 +65,22 @@ All under `bench/results/`, all committed, all run inside the container:
 
 ## C — patches we already hold that belong upstream
 
-Not found by this work — the standing backlog in [PATCHES.md](../PATCHES.md), where the `Upstream` column reads
-"none yet". Listed here because two of them overlap **open** upstream issues (U-1, U-2), which makes them the
-cheapest possible PR: the fix is written and somebody else has already filed the report.
+Not found by this work — the standing backlog in [PATCHES.md](../PATCHES.md): rows whose `Upstream` column
+reads "none", i.e. changes we carry that upstream has never taken. **54 rows total, 42 with no
+upstream reference**, of which **17 are `fix`** and **14 are `feature`** (the real
+candidates), 6 are `local` (hardware or environment — they stay by definition) and 5 are
+`own` (fixes to our own features; they ride with them).
 
-`qwen3_5-embed-quant` · `marlin-int8-negative-scales` (**= U-1**) · `hybrid-kv-groups-v2-cudagraph` ·
-`hybrid-sw-block-promote` · `offload-dflash-eagle-groups` · `dflash2-prewarm` · `spec-sampler-prewarm` ·
-`mamba-chunked-prefill-align` · `dflash2-z-adaptive-emitted` · `dspark-draft-quant-config` ·
-`topk-honour-flashinfer-sampler-switch` · plus `mamba-align-checkpoint-order`, tied to unmerged vllm#45238.
+The 17 fixes, each a defect with a named failure mode: `qwen3_5-embed-quant`, `marlin-int8-negative-scales`, `hybrid-kv-groups-v2-cudagraph`, `hybrid-sw-block-promote`, `offload-dflash-eagle-groups`, `dflash2-prewarm`, `spec-sampler-prewarm`, `mamba-chunked-prefill-align`, `dflash2-z-adaptive-emitted`, `dspark-draft-quant-config`, `topk-honour-flashinfer-sampler-switch`, `memory-profile-after-warmup`, `cudagraph-memory-from-allocator`, `marlin-int8-asym-zp`, `compile-key-runtime-knobs`, `spec-attn-smem-fit`, `bench-sse-keepalive`.
+
+Two of these overlap **open** upstream issues (U-1, U-2), which makes them the cheapest possible PR — the fix is
+written and somebody else has already filed the report. Note that U-2's fix does not have its own patch: the
+`_dense_kv_rows` hunk lives inside the `dflash2-lookup-drafting` **feature** patch, so upstreaming it means
+extracting it first.
+
+The 14 features are a different proposition: they are vLLM-shaped (a sort-free small-top-k sampler, a
+split-KV verify attention, an int8 prefill attention, context lookup drafting) and probably wanted, but each one
+is a design conversation rather than a bug report.
 
 ## Recommended order
 
