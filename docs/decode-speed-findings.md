@@ -3,12 +3,53 @@
 The inventory the batch records imply but never collected: what was found, what holds it, what has been done about
 it, and what is still open. Sourced from batches 1-3 on the reference 3090 plus the landscape survey.
 
-**How to use this file.** Every item has an id, the evidence that established it, a status, and the next action.
-Change a status only with evidence — a commit, a result path, or a quoted command output — and put the pointer in
-the item. "Open" means nobody has started; "verified" means we checked and it does not affect us. Related pages:
+**What this file is for.** Speed first, precision second: an item that trades a measured amount of quality for
+throughput belongs here and is worth considering, and one that trades nothing is worth more. The inventory is
+therefore **S — speed levers** (the worklist), **R — refuted** (so nobody re-chases them), then the defects,
+upstream limitations and open questions found on the way. **Patch management is not tracked here** — the changes we
+carry with no upstream reference are rows in [PATCHES.md](../PATCHES.md), neither defects nor speed work, and
+re-cutting them at a pin bump is routine.
+
+**How to use it.** Every item has an id, the evidence that established it, a status, and the next action. Change a
+status only with evidence — a commit, a result path, or a quoted command output — and put the pointer in the item.
+"Open" means nobody has started; "verified" means we checked and it does not affect us. Related pages:
 [landscape](decode-speed-landscape.md) · [batch 2](decode-speed-batch2.md) · [batch 3](decode-speed-batch3.md) ·
 [batch 4](decode-speed-batch4.md) · [PATCHES.md](../PATCHES.md) (the patch ledger — what we ship, not what we
 found).
+
+## S — speed levers, ranked
+
+Measured means a number from the reference 3090 at 250 W; estimated means the gain is inferred from a mechanism or
+from someone else's measurement. "Precision cost" is the second axis, not a blocker.
+
+| id | lever | gain | kind | effort | precision cost |
+|---|---|---|---|---|---|
+| S-1 | **Ship k as a concurrency control**: a k=3 (and k=1) profile instead of k=7 for every load | **measured**: N=4 aggregate +9.2%; N=8 350.1 against 178.5 (k=7's tail row); preemptions 2 → 0; C1 pays 112.1 → 94.1 tok/s | config | low | none |
+| S-2 | **`TRITON_ATTN` + `int8_per_token_head` as the `CTX=fast` default** | **measured**: pool 68,605 → 116,440 tokens (+69.7%), N=8 preemptions 23 → 1, C1 a tie (111.2 vs 111.0) | config | low | none measured (GSM8K n=200 within one question, perplexity within 0.07%) |
+| S-3 | **`CG=40`** | **measured**: +3.3% C1, +4.1% with `CUDAGRAPH_MODE=FULL` — and the mechanism is *acceptance*, 3.34 → 3.48 tokens/step at unchanged step time | config | low | unknown; the mechanism is X-1 |
+| S-4 | **`INT8_ACT=int8` for prefill** | **measured**: prefill 1,437 → 1,845 tok/s at 1k and 1,200 → 1,423 at 51k (+27-30%, +19% at depth), decode unchanged | config | low | +0.9-3.7% perplexity, documented in [optimizations.md](optimizations.md) |
+| S-5 | **Make the state reservation follow the per-step k** (or a ReplaySSM-style rollback that works under speculation) | **estimated**: removes the seats-versus-C1 trade entirely — k=7 speed at 13+ seats | engine work | high | none |
+| S-6 | **DFlash2 selector headroom** | **estimated**: the published oracle acceptance is 6.79 against the achieved 4.27 — up to +59% tokens per verify step | engine work | high | none (lossless by construction) |
+| S-7 | **GQA-packed split-KV verify attention** (24 → 64 CTAs) | **estimated**: 13.9-15.6× per-layer at 38k/100k on A100; our kernel is the current one | kernel work | med | none |
+| S-8 | **Workload-aware k** — per-endpoint rather than one global value | **measured** that the spread is real: gsm8k 5.80, code 4.78, chat 3.50 tokens/step; k=7 is a compromise for all three | config | med | none |
+| S-9 | **FlashInfer cudagraph support for the spec-decode verify shape** | **estimated**: recovers the measured 26-29% PIECEWISE penalty on that path (it may only tie `TRITON_ATTN`) | upstream | med | none |
+| S-10 | **int8-KV prefill attention** (the e4m3→half scale-fold route) | **estimated**: prefill attention 41 → 72 TFLOPS on the b70 port; our 51k prefill row is where the 16 full-attention layers dominate | kernel work | med | none |
+| S-11 | **The unadvertised mamba knobs** (`--mamba-ssu-algorithm`, `--mamba-backend`) | unknown — never tested | config | low | unknown |
+
+S-1 to S-4 are one item type: knobs we already have, measured, not yet shipped. S-5 is the one with no ceiling —
+the only lever that would let one server be fast for one user *and* hold thirteen.
+
+## R — refuted, do not re-chase
+
+| what | why not | evidence |
+|---|---|---|
+| `--max-num-batched-tokens` above 2048 | costs pool (2.4% at 4096) and 8192 refuses to boot; the win belongs to other engines | our [gotchas.md](gotchas.md) 7 and 43 |
+| bf16 recurrent state | brings the fused GDN kernel back and buys nothing: +0.1% C1, 1.9% slower `ms/pass` at N=1 | batch 3 Q2 |
+| `--enable-mamba-shared-prefix-checkpoint`, `--mamba-block-size 8192` | neither changed the block size, the page padding, the pool or the seat count | batch 3 Q3 |
+| a per-step k schedule as a **seat** lever | state is sized for the configured maximum k, so varying k per step frees nothing | batch 3 |
+| FlashInfer as the fast path on this workload | 26-29% slower than the shipped path, entirely from the cudagraph downgrade | batch 2 E2 |
+| fp8 KV for decode speed | a context buy, not a speed one — the A/Bs cost decode | our [reproductions](reproductions/README.md), club-3090 |
+| a 4 GiB bf16 DFlash2 drafter | int4 keeps greedy acceptance (3.34-3.65 against 3.54) and costs ~5% at default sampling | our [drafter/README.md](../drafter/README.md) |
 
 ## O — bugs in our own code
 
@@ -63,34 +104,21 @@ All under `bench/results/`, all committed, all run inside the container:
 | `spillwatch.sh` | watches the Windows Shared Usage counter against a loaded-engine floor (see O-3 for its blind spot) | `2026-10-14-batch3-tools/` |
 | `memsum.sh`, `sampler.ps1`, `arm.sh` | floor summary, counter sampling, per-arm boot/measure wrapper | `2026-10-14-tools/`, `2026-10-14-batch2-tools/` |
 
-## C — patches we already hold that belong upstream
+## C — patches we hold that belong upstream
 
-Not found by this work — the standing backlog in [PATCHES.md](../PATCHES.md): rows whose `Upstream` column
-reads "none", i.e. changes we carry that upstream has never taken. **54 rows total, 42 with no
-upstream reference**, of which **17 are `fix`** and **14 are `feature`** (the real
-candidates), 6 are `local` (hardware or environment — they stay by definition) and 5 are
-`own` (fixes to our own features; they ride with them).
-
-The 17 fixes, each a defect with a named failure mode: `qwen3_5-embed-quant`, `marlin-int8-negative-scales`, `hybrid-kv-groups-v2-cudagraph`, `hybrid-sw-block-promote`, `offload-dflash-eagle-groups`, `dflash2-prewarm`, `spec-sampler-prewarm`, `mamba-chunked-prefill-align`, `dflash2-z-adaptive-emitted`, `dspark-draft-quant-config`, `topk-honour-flashinfer-sampler-switch`, `memory-profile-after-warmup`, `cudagraph-memory-from-allocator`, `marlin-int8-asym-zp`, `compile-key-runtime-knobs`, `spec-attn-smem-fit`, `bench-sse-keepalive`.
-
-Two of these overlap **open** upstream issues (U-1, U-2), which makes them the cheapest possible PR — the fix is
-written and somebody else has already filed the report. Note that U-2's fix does not have its own patch: the
-`_dense_kv_rows` hunk lives inside the `dflash2-lookup-drafting` **feature** patch, so upstreaming it means
-extracting it first.
-
-The 14 features are a different proposition: they are vLLM-shaped (a sort-free small-top-k sampler, a
-split-KV verify attention, an int8 prefill attention, context lookup drafting) and probably wanted, but each one
-is a design conversation rather than a bug report.
+Not tracked here. They are rows in [PATCHES.md](../PATCHES.md) — 42 with no upstream reference (17 `fix`, 14
+`feature`, 6 `local`, 5 `own`) — and managing them is routine. Two `fix` rows happen to overlap open upstream
+issues (U-1, U-2 below), which is the only reason they are named on this page at all.
 
 ## Recommended order
 
-1. **Open the two upstream PRs** (U-1, U-2) — the fixes exist in our tree, the issues are open, and nobody has to
-   design anything. Highest value per hour by a wide margin.
-2. **O-1**, the `RESIDENT` constant — one line, and it currently tells operators they have ~5 seats when they
-   have 7. Better after O-5/Q1 tells us whether a counter exists to calibrate against.
-3. **X-1**, the `CG=40` acceptance shift — if a capture size changes sampled output, that is a silent-correctness
-   class of bug and it deserves a teacher-forced A/B before `CG` is used as a speed knob. Candidate for a fifth
-   question in batch 4.
-4. Then batch 4 as written: Q2's policy table is the deliverable, Q1 answers O-5, Q3/Q4 close the ReplaySSM and
-   `MAX_SEQS=24` cells.
-
+1. **S-1 and S-2 together, as one change.** Both are measured, both are config, neither costs precision: a k=3
+   profile plus the int8-KV/TRITON `CTX=fast` default is the difference between a server that preempts at eight
+   concurrent users and one that holds thirteen without preempting. This is the cheapest real speed on the board.
+2. **S-3, after X-1.** `CG=40` is +3-4% C1 and we do not know why. Confirm the mechanism on a teacher-forced
+   target first — a capture size that changes sampled output is worth understanding before it becomes a default.
+3. **S-4** for any prefill-heavy workload; it is already implemented and documented, just not on by default.
+4. **S-5 or S-6** if the effort is available — the two levers with no ceiling. S-5 removes the seats-versus-C1
+   trade (the thing S-1 can only choose a point on); S-6 raises acceptance rather than step time, and acceptance is
+   where our single-stream numbers live.
+5. **S-7 to S-11** as fill-in work, cheapest first (S-11 is one boot).
