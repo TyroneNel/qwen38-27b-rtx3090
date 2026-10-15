@@ -24,8 +24,12 @@ reports to `cline/gf59cdmh` and push.
    the only long steps.
 3. **No assumptions.** Every fact is a command's output, quoted. "Not verified" is a complete answer.
 4. **No PRs, issues, comments or reviews.** No `gh pr`, `gh issue`, no `gh api` write call.
-5. **No co-authored commits, no watermarks.** One author, no `Co-Authored-By`, no `Signed-off-by`, no tool or agent
-   name, no banners.
+5. **No co-authored commits, no watermarks, and no invented identity.** One author — the repo's configured
+   identity — with no `Co-Authored-By`, no `Signed-off-by`, no tool or agent name, no banners. If `git config
+   user.name` is unset on this checkout, set the repo-local identity (`TyroneNel
+   <71038642+TyroneNel@users.noreply.github.com>`) rather than committing as a placeholder: a non-routable
+   address leaves the commits unattributed and an agent name in the author field is the same watermark this rule
+   forbids elsewhere.
 6. **Only `cline/gf59cdmh`.** Never `main`, never the `upstream` remote, never force-push, never amend a pushed
    commit.
 7. **Leave the machine as you found it.** Containers down, no stray `docker run`, no files outside the repo.
