@@ -28,7 +28,7 @@ from someone else's measurement. "Precision cost" is the second axis, not a bloc
 | S-2 | **`TRITON_ATTN` + `int8_per_token_head` as the `CTX=fast` default** | **measured**: pool 68,605 → 116,440 tokens (+69.7%), N=8 preemptions 23 → 1, C1 a tie (111.2 vs 111.0) | config | low | none measured (GSM8K n=200 within one question, perplexity within 0.07%) |
 | S-3 | **`CG=40`** | **measured**: +3.3% C1, +4.1% with `CUDAGRAPH_MODE=FULL` — and the mechanism is *acceptance*, 3.34 → 3.48 tokens/step at unchanged step time | config | low | unknown; the mechanism is X-1 |
 | S-4 | **`INT8_ACT=int8` for prefill** | **measured**: prefill 1,437 → 1,845 tok/s at 1k and 1,200 → 1,423 at 51k (+27-30%, +19% at depth), decode unchanged | config | low | +0.9-3.7% perplexity, documented in [optimizations.md](optimizations.md) |
-| S-5 | **Make the state reservation follow the per-step k** (or a ReplaySSM-style rollback that works under speculation) | **estimated**: removes the seats-versus-C1 trade entirely — k=7 speed at 13+ seats | engine work | high | none |
+| S-5 | **Journal-and-replay the state instead of holding k+1 pages per request** (ReplaySSM's shape, made spec-decode-safe) | **estimated**: removes the seats-versus-C1 trade entirely — k=7 speed at 13+ seats. **Reframed: "make the reservation follow the per-step k" is impossible** — see the note under this table | engine work | high | none |
 | S-6 | **DFlash2 selector headroom** | **corrected, and much smaller than first written** — the published oracle 6.79-vs-4.27 gap is a 5-layer Qwen3-4B drafter on GSM8K, not ours; our own teacher-forced acceptance on GSM8K is **5.80**, already above the published DFlash2 5.46. The headroom that exists is on *chat* (3.50) | engine work | high | none (lossless by construction) |
 | S-7 | **GQA-packed split-KV verify attention** (24 → 64 CTAs) | **estimated**: 13.9-15.6× per-layer at 38k/100k on A100; our kernel is the current one | kernel work | med | none |
 | S-8 | **Workload-aware k** — per-endpoint rather than one global value | **measured** that the spread is real: gsm8k 5.80, code 4.78, chat 3.50 tokens/step; k=7 is a compromise for all three | config | med | none |
@@ -70,6 +70,35 @@ and it should be picked from the workload's concurrency, not from a benchmark. A
 on aggregate (299.4): past ~13 seats the per-step token count has fallen far enough that more seats stop paying.
 **k=3 is the knee, k=1 is past it** — the same shape our MTP work found at k=4 for a different reason.
 
+### S-5 is not what it looked like (source-level answer, 2026-10-14)
+
+Batch 5 Q2 asked for a feasibility verdict from the pinned source. Reading vLLM 0.31.0 answers it, and it refutes
+the framing that was on this page:
+
+- The per-request state cost is **static and sized from the configured k**:
+  `MambaSpec.max_memory_usage_bytes` returns `page_size_bytes * (2 + num_speculative_blocks +
+  num_prefill_checkpoint_blocks)` in `align` mode, and `page_size_bytes * (1 + num_speculative_blocks)` in `none`
+  (`vllm/v1/kv_cache_interface.py:1048`, `:1083-1094`).
+- The block-table row is likewise a fixed `1 + num_speculative_blocks` positions
+  (`vllm/v1/attention/backends/utils.py:1176-1195`): the kernel gathers the last `1 + num_speculative_blocks`
+  entries of a position-indexed table.
+- `num_speculative_blocks` is a field of the spec, set once when the groups are built. **Nothing in that path
+  knows about a per-step schedule** — which is the source-level explanation of batch 3's measurement that a
+  per-step k frees no seats. Two independent confirmations, one empirical and one structural.
+
+So a schedule cannot lower the reservation, and it should not: the reservation is a **peak** requirement, because
+every step that verifies k+1 positions needs k+1 state pages live to write them into. Covering the largest k any
+step will use is the only correct thing to do — which is exactly what the code does.
+
+The lever that remains is therefore not "follow the per-step k" but **stop keeping k+1 full state pages resident
+per request**: journal the recurrent-state *inputs* for the in-flight block and replay them, writing one
+checkpoint back only on a flush. That is ReplaySSM's design (`use_replayssm`, `replayssm_buffer_len`), and its
+docstring limits it to non-speculative decode — so the work is making that path correct when the k+1 positions are
+known-but-unverified draft tokens. It is a real project with a real payoff (k=7 speed at 13+ seats), and it is now
+the only route to that payoff.
+
+**Verdict: attemptable, but it is a redesign, not a wiring change** — and its shape is ReplaySSM-under-speculation,
+not a per-step reservation.
 ## R — refuted, do not re-chase
 
 | what | why not | evidence |
