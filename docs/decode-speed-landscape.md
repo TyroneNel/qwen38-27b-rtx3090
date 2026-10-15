@@ -3,6 +3,10 @@
 Who else serves this model on this class of card, what they have that we do not, and the experiments that
 would close the gaps. Surveyed 2026-10-13 at vLLM 0.31.0 (our pin).
 
+**How to read this page.** Everything this survey and the batches turned up as a *defect* — ours, upstream's, or
+unexplained — is tracked with ids in [decode-speed-findings.md](decode-speed-findings.md); this page is the
+narrative, that one is the worklist.
+
 **How to read this page.** The survey below was written with no GPU available, so every number in it is
 quoted from the repo that published it, with that repo's protocol attached, and every "expected" column is an
 inference. **It has since been tested on the reference card** — the outcomes are in *What the 3090 measured*

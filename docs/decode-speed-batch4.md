@@ -77,6 +77,18 @@ write the checkpoint back on flush) is aimed at the state traffic that costs us 
   floor from the samples between the engine's KV-cache line and the first request, and require two consecutive
   samples above it before calling a spill. Note in the report whether the guard was fixed or worked around.
 
+## Q5 — optional, if time remains: isolate the `CG=40` acceptance shift
+
+Finding X-1 in [decode-speed-findings.md](decode-speed-findings.md): narrowing the CUDA-graph capture set from 64
+to 40 moved greedy acceptance (3.34 → 3.48 tokens/step) at **unchanged** step time (28.9 vs 28.7-29.1 ms). A
+capture size should not change sampled output.
+
+- Two boots, `CG=64` (default) and `CG=40`, same everything else, k=7, on the teacher-forced harness with a
+  **shared frozen target** — `workload_accept.py` from batch 3, which removes trajectory divergence as a variable.
+- Metric: tokens/step and accept rate on the same sequence, plus `ms/pass`. If the acceptance difference
+  survives a shared target, `CG` is not a speed knob and the difference is worth an upstream report; if it
+  vanishes, batch 2's E5 was measuring trajectory drift and `CG=40` is clean.
+
 ## Budget and order
 
 Q1 ≈ 30 min, Q2 ≈ 60 min, Q3 ≈ 20 min, Q4 ≈ 20 min. Q2 is the deliverable; if time runs short, drop Q3 before
