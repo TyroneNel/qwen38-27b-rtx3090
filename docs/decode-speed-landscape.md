@@ -90,7 +90,8 @@ and its N=8 ladder aggregate read lower than A's in all three pairs (165-188 aga
 tokens did not buy more resident requests, because **the recurrent-state pages are the binding limit, not the KV
 tokens** — the same run measured ~4 resident requests for xhigh IFBench's 7,136-token mean response, and a first
 attempt with 32 client threads preempted 1,017 times on the bf16 base. So the capacity win is real at C1 and on
-preemptions, and is *not* a batch-mode win. That promotes G7 below from a hypothesis to the top open lead.
+preemptions, and is *not* a batch-mode win. That promotes G7 below from a hypothesis to the top open lead. Batch 3 then settled it: residency is set by the configured verify block (7 seats at k=7, 13 at k=3), a
+per-step k schedule does not move it, and the launcher's seat constant is 16-23% low.
 
 **Corrections this batch made to the pages above.** Batch 1's "C1 floor 0.0-0.1% within a boot" held on 5 of 6
 boots; one moved 2.2%, and the cross-boot floor is 3.2%, not the 2% this page claimed. And `CG=40` is not a
@@ -281,15 +282,27 @@ back, before committing to a second quantization path.
 
 ### G7. Recurrent-state residency is what ends speculation at concurrency
 
-**Measured 2026-10-14: this is now the top open lead.** Once the KV pool was doubled, the pool was still the
-binding constraint at N=8 — `run` 6, `kv%` ~100, and a *lower* aggregate than the small-pool arm (165-188 vs
-216-222, tail rows). The limit is the recurrent-state pages, not the KV tokens: ~4 resident requests for a
-7,136-token mean response, and 1,017 preemptions when 32 client threads were pointed at a 4-request server.
-Every concurrency number in this repo is downstream of this. It is the subject of
-[batch 3](decode-speed-batch3.md), which tests the launcher's own seat model (`RESIDENT = KV_MEM /
-((k+2) x 104988089)`, ~6 seats at k=7 and ~10 at k=3) against a held 8-request load, with the engine's
-`Running:` line as the primary metric. Batch 2's k=3 arm read `run` 5 where that model predicts 8, so the
-test has two possible conclusions and both are useful: k is a concurrency control, or the formula is wrong.
+**Measured 2026-10-14, and settled: residency is set by the configured verify block.** Batch 3 ran the
+discriminating test — pool pinned, only `DFLASH_TOKENS` changing — and the engine's own `Running:` line goes
+**7 → 13** seats from k=7 to k=3 (k=1 reaches 16 with 30% of the pool still free), preemptions go **2 → 0** at
+N=8 and **29 → 0** at N=16, and the per-request share of the pool scales as (k+2) predicts: **14.2% / 7.45% /
+4.37%** at k=7/3/1. The launcher's `RESIDENT` formula has the right shape and a constant **16-23% low** (81-88 MB
+per (k+2) unit against its 105 MB), so it prints about 5 seats where 7 fit. Raw logs:
+[batch 3](../bench/results/2026-10-14-batch3-SUMMARY.md).
+
+**The trade, and it is a real one.** Seats are bought with single-stream speed: C1 T=0 reads **112.1 / 94.1 /
+64.7 tok/s at k=7 / 3 / 1**. k=7 is right for one user and wrong for eight, so the knee is a policy choice
+rather than a tuning constant.
+
+**What does *not* buy seats: a per-step k schedule.** Batch 2's dynamic-K arm looked like a seat win and is not
+one — its boot log shows `num_spec_tokens=7`, because state is sized for the *configured* maximum k and a
+schedule only varies k per step. Its +9.2% at N=4 was a compute win. Lowering the configured `DFLASH_TOKENS` at
+boot is the only lever that moves seats.
+
+**What this opens.** The seats-per-k curve is now a known quantity, so a deployment can pick its point on it
+instead of guessing: one user takes k=7, an agent fleet takes k=3 or 1 and pays in C1. The unresolved piece is
+instrumentation — **no boot line reports the state pool**, so seats are still inferred from the `Running:` line
+and the `RESIDENT` constant is unverified against a counter. A state-slot counter is the candidate patch.
 
 
 Three independent measurements land on the same mechanism:
@@ -302,18 +315,21 @@ Three independent measurements land on the same mechanism:
 - deathwing475/vllm-030win, on a 24 GB-class card: **64 MiB of extra residency costs −30% decode**.
 
 ninfer-3090's "ReplaySSM" (cheap save/restore of spec-decode state so MTP survives C8) is the concept behind
-this, but it is **not a lever we can pull**: upstream 0.31.0 has the config fields (`use_replayssm`,
-`replayssm_buffer_len: 16`) and no CLI flag for them on this pin, and the field's own docstring says
-"standard (non-speculative) decode only" — so it is a batch-mode candidate at best. The levers in our tree are
-the verify-history dtype and count (`hybrid-kv-groups-v2-cudagraph`, `mamba-align-checkpoint-order`) and the
-state dtype, which is a live question: the batch-2 boot log shows our `--mamba-ssm-cache-dtype float16` falls
-back off the fused GDN CUDA kernel, which requires BF16 or FP32 state, and bf16 is the same two bytes
-([batch 3](decode-speed-batch3.md) Q2).
+this, and it is **not a lever for us**. Correction to an earlier note on this page: `--use-replayssm` *does*
+appear in `--help=all` on our pin (batch 3 Q4 found it; batch 1's probe missed it). It does not help, because
+its own docstring limits it to Mamba2 **without speculative decoding** — a batch-mode candidate at best, and
+batch mode is not where the seats are short.
 
-**Cheapest experiment.** Measure the pool and the preemption count while a C1-C8 ladder runs with DFlash2
-attached, then repeat with the verify history at fp16 vs bf16 vs int8 and with `--mamba-block-size` raised
-(see G10). Metric: concurrent sequences held, preemptions, and aggregate decode tok/s at C8 — plus acceptance,
-since shrinking history is where a silent quality bug would live.
+The state dtype was the other candidate and it is now closed. Our `--mamba-ssm-cache-dtype float16` does fall
+back off the fused GDN kernel (the whitelist wants BF16 or FP32 state), and bf16 does bring the fused kernel
+back — `GDN decode kernel: cuda` against `triton` — but it buys **+0.1% C1 T=0 and 1.9% slower `ms/pass` at
+N=1**, with quality unchanged (GSM8K 192 vs 193 of 200, perplexity within 0.05%). fp16 stays.
+
+**Closed for now.** The two flags aimed at checkpoint pressure did nothing measurable: neither
+`--enable-mamba-shared-prefix-checkpoint` nor `--mamba-block-size 8192` changed the block size, the page
+padding, the pool size or the seat count (batch 3 Q3 — the finding is the unchanged boot-log lines). What
+remains is the counter above, and then a decision about where on the seats-per-k curve each shipped profile
+should sit.
 
 ### G8. TurboQuant KV has an explicit sm86 path
 
@@ -417,7 +433,8 @@ sweep and the suffix-decoding item stand.
 
 Ranked by expected tokens per second per unit of risk, as written before the run. "Config" means no patch
 is needed on our pin. **The 2026-10-13 measurement supersedes the "expected" column** — rows 1 and 4 came in as
-leads, row 2 as an answer, row 5 as a capacity win rather than a speed one, and row 7 is not applicable (G12).
+leads, row 2 as an answer, row 5 as a capacity win rather than a speed one, and row 7 is not applicable (G12). Batch 2 turned row 1 into a
+result and retracted row 2's `reasoning_effort` recommendation; batch 3 answered row 13.
 
 | # | change | artifact | metric | expected | risk |
 |---|---|---|---|---|---|
@@ -433,7 +450,7 @@ leads, row 2 as an answer, row 5 as a capacity win rather than a speed one, and 
 | 10 | `--mamba-block-size` and boot residency | config | KV tokens, preemptions, TTFT | ~20% more usable pool, fewer preemptions | low |
 | 11 | EXL3 second quantization path | `vllm-exl3` / `trellis-serve` | C1 tok/s on our prompts | up to +28% C1 on a rival engine's row; largest effort | high |
 | 12 | SGLang as a second engine | club-3090 PR #1226 row | ms/step at C1 | +43% C1 on an identical config (their measurement) | high |
-| 13 | Residency/seats (G7): is residency capped by the verify block? | [batch 3](decode-speed-batch3.md), config only | `Running:`/`Waiting:` under a held 8-request load; seats per k | decides whether k is a concurrency control or the launcher formula needs fixing | low |
+| 13 | Residency/seats (G7) | **answered** — [batch 3](../bench/results/2026-10-14-batch3-SUMMARY.md) | `Running:` 7 → 13 seats from k=7 to k=3; C1 pays 112.1 → 94.1 tok/s | both: k is a concurrency control *and* the launcher's constant is 16-23% low | — |
 
 ## What we already lead on
 

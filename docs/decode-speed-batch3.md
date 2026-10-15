@@ -21,6 +21,14 @@ still read 5. Under the model it should have read 8. So either the model over-pr
 is capped by something else entirely (the `align`-mode checkpoint pages, the 2048-token batched-token budget, or
 the graph/runner allocations the launcher warns about).
 
+**Outcome (2026-10-14): Conclusion A — the model holds**, with two corrections to this design that the run had
+to make. (1) The probe as specified cannot discriminate: `MAX_SEQS=8` caps every arm at 8 and k=7 already holds
+7, so the literal rule reads as Conclusion B while the truth is A. The run added uncapped `MAX_SEQS=16` boots to
+get past the cap — they were not in the arms below, and they are where the conclusion comes from. (2) The formula
+errs **low**, not high: a request costs 81-88 MB per (k+2) unit against the launcher's 105 MB, so it prints
+"about 5" seats where 7 fit. Results:
+[../bench/results/2026-10-14-batch3-SUMMARY.md](../bench/results/2026-10-14-batch3-SUMMARY.md).
+
 **Why this is worth a batch.** Every concurrency number in the repo is downstream of this: preemptions, the
 ladder's tail rows, the C8/C16 spread, and the choice of k itself. If the model holds, k is a *concurrency
 control* and the knee should be chosen for seats rather than for compute. If it does not, the launcher's
@@ -51,9 +59,10 @@ One boot per arm, same order every time, with the 8-request probe and `bench/con
   and the N=8/N=16 aggregate rises with it. Then k is a concurrency control, the `RESIDENT` formula is sound, and
   the knee belongs to seats. Report the seats-per-k curve.
 - **Conclusion B — the model is wrong.** `Running:` stays within ±1 across all three arms (5-6 regardless of k).
-  Then residency is not k-limited: the `RESIDENT` print over-predicts and must be fixed, and the report names the
+  Then residency is not k-limited: the `RESIDENT` print is wrong and must be fixed, and the report names the
   next suspect with the evidence that points at it (the `align` checkpoint lines, the batched-token budget, the
-  graph budget).
+  graph budget). Note the direction — batch 3 found the constant 16-23% **low**, i.e. it prints fewer seats than
+  the pool holds.
 - **Inconclusive is allowed** only if the probe cannot hold the load — say why (prompts too long, prefill
   interleave, port).
 

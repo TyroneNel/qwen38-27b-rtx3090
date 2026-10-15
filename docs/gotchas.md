@@ -1493,5 +1493,10 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     perplexity figure from a WSL2 or container boot as suspect until the trace
     says the floor held. This is the same shortfall reached through a different
     door as `bench/quality_battery.py`'s "run with `GPU_UTIL=0.93` for
-    headroom" note; gotcha 53 has the mechanism.
+    headroom" note; gotcha 53 has the mechanism. The spill is bigger than the first measurement
+    suggested: batch 3's bf16/fp16 quality pair peaked at **1,002 MiB (fp16) and 938 MiB
+    (bf16)** against the same 84-92 MiB floor, an order of magnitude past the 156/410 MiB
+    first seen. And the guard has a second failure mode worth knowing about: a floor taken
+    *after* the rise reads the spilled level as normal, which is how three uncapped
+    `MAX_SEQS=16` boots spilled ~16 MiB at memory profiling without being flagged.
 
