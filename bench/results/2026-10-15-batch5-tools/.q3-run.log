@@ -1,0 +1,160 @@
+2026-10-15T16:15:20Z [q3a] first measurement request at 2026-10-15T18:15:20 local
+2026-10-15T16:15:42Z [q3a] docker compose --profile single exec -T single env OUT=/tmp/rb-q3a-1 bash bench/run_benchmarks.sh single
+ROW cohort C1 real prompts T=default | e2e=102.59 tok/s | decode(C/meanTPOT)=106.0 | tok/step=3.11 | meanTTFT=221.75 ms
+ROW cohort C2 real prompts T=default | e2e=148.38 tok/s | decode(C/meanTPOT)=166.8 | tok/step=3.16 | meanTTFT=303.43 ms
+ROW cohort C4 real prompts T=default | e2e=224.33 tok/s | decode(C/meanTPOT)=250.9 | tok/step=3.34 | meanTTFT=485.03 ms
+ROW cohort C8 real prompts T=default | e2e=170.99 tok/s | decode(C/meanTPOT)=249.1 | tok/step=3.01 | meanTTFT=3837.93 ms
+ROW cohort C1 real prompts T=0 | e2e=104.51 tok/s | decode(C/meanTPOT)=108.5 | tok/step=3.34 | meanTTFT=225.25 ms
+ROW cohort C2 real prompts T=0 | e2e=160.45 tok/s | decode(C/meanTPOT)=185.7 | tok/step=3.43 | meanTTFT=339.27 ms
+ROW cohort C4 real prompts T=0 | e2e=213.71 tok/s | decode(C/meanTPOT)=264.9 | tok/step=3.35 | meanTTFT=511.56 ms
+ROW cohort C8 real prompts T=0 | e2e=239.60 tok/s | decode(C/meanTPOT)=348.0 | tok/step=3.57 | meanTTFT=2694.17 ms
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch5-tools/workload_accept.py to hyperqwen-single-1:/tmp/workload_accept.py
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch5-tools/workload_accept.py to hyperqwen-single-1:/tmp/workload_accept.py
+2026-10-15T16:24:36Z [wacc-q3a] first measurement request at 2026-10-15T18:24:36 local
+2026-10-15T16:24:58Z [wacc-q3a] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py q3a --targets /tmp/q3-targets --tasks gsm8k,code,chat,real0,real1,real2,real3,real4,real5,real6,real7 --max-tokens 1024 --chunk 128 --decode-reps 2'
+# start 2026-10-15T16:24:58Z
+# q3a think=False effort=<template default> max_tokens=1024 chunk=128
+WACC q3a gsm8k CAPTURED n=226 -> /tmp/q3-targets/gsm8k.json
+WACC q3a gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=197.9/196.2 tok/s firstbad=None
+WACC q3a code CAPTURED n=1024 -> /tmp/q3-targets/code.json
+WACC q3a code   prompt=98 target=1024 chunks=8/8 steps=220 tok/step=4.741 accept=0.534 freerun_tok/step=4.682 decode_c1=155.8/150.5 tok/s firstbad=None
+WACC q3a chat CAPTURED n=1024 -> /tmp/q3-targets/chat.json
+WACC q3a chat   prompt=49 target=1024 chunks=5/8 steps=172 tok/step=3.715 accept=0.388 freerun_tok/step=3.631 decode_c1=114.6/113.3 tok/s firstbad=252
+WACC q3a real0 CAPTURED n=1024 -> /tmp/q3-targets/real0.json
+WACC q3a real0  prompt=60 target=1024 chunks=6/8 steps=164 tok/step=4.774 accept=0.539 freerun_tok/step=5.054 decode_c1=157.1/160.4 tok/s firstbad=706
+WACC q3a real1 CAPTURED n=1024 -> /tmp/q3-targets/real1.json
+WACC q3a real1  prompt=49 target=1024 chunks=5/8 steps=172 tok/step=3.715 accept=0.388 freerun_tok/step=3.631 decode_c1=115.4/117.3 tok/s firstbad=252
+WACC q3a real2 CAPTURED n=1024 -> /tmp/q3-targets/real2.json
+WACC q3a real2  prompt=68 target=1024 chunks=7/8 steps=476 tok/step=1.882 accept=0.126 freerun_tok/step=1.918 decode_c1=60.8/62.1 tok/s firstbad=687
+WACC q3a real3 CAPTURED n=1024 -> /tmp/q3-targets/real3.json
+WACC q3a real3  prompt=196 target=1024 chunks=7/8 steps=181 tok/step=4.956 accept=0.565 freerun_tok/step=4.914 decode_c1=158.8/150.9 tok/s firstbad=480
+WACC q3a real4 CAPTURED n=1024 -> /tmp/q3-targets/real4.json
+WACC q3a real4  prompt=92 target=1024 chunks=8/8 steps=182 tok/step=5.709 accept=0.673 freerun_tok/step=5.612 decode_c1=181.8/166.2 tok/s firstbad=None
+WACC q3a real5 CAPTURED n=1024 -> /tmp/q3-targets/real5.json
+WACC q3a real5  prompt=55 target=1024 chunks=8/8 steps=176 tok/step=5.932 accept=0.705 freerun_tok/step=5.869 decode_c1=190.2/167.0 tok/s firstbad=None
+WACC q3a real6 CAPTURED n=1024 -> /tmp/q3-targets/real6.json
+WACC q3a real6  prompt=50 target=1024 chunks=6/8 steps=192 tok/step=4.068 accept=0.438 freerun_tok/step=3.872 decode_c1=126.0/118.3 tok/s firstbad=362
+WACC q3a real7 CAPTURED n=439 -> /tmp/q3-targets/real7.json
+WACC q3a real7  prompt=240 target=439 chunks=3/4 steps=76 tok/step=4.132 accept=0.447 freerun_tok/step=4.573 decode_c1=148.6/148.9 tok/s firstbad=272
+# end 2026-10-15T16:31:02Z exit=0
+ hyperqwen-single-1 Copying hyperqwen-single-1:/tmp/q3-targets to bench/results/2026-10-15-Q3-a-cg64/targets
+ hyperqwen-single-1 Copied hyperqwen-single-1:/tmp/q3-targets to bench/results/2026-10-15-Q3-a-cg64/targets
+2026-10-15T16:31:02Z [q3a] docker compose --profile single exec -T single env OUT=/tmp/rb-q3a-2 bash bench/run_benchmarks.sh single
+ROW cohort C1 real prompts T=default | e2e=99.58 tok/s | decode(C/meanTPOT)=102.8 | tok/step=3.12 | meanTTFT=231.81 ms
+ROW cohort C2 real prompts T=default | e2e=144.15 tok/s | decode(C/meanTPOT)=163.4 | tok/step=3.04 | meanTTFT=314.76 ms
+ROW cohort C4 real prompts T=default | e2e=217.11 tok/s | decode(C/meanTPOT)=267.7 | tok/step=3.37 | meanTTFT=455.13 ms
+ROW cohort C8 real prompts T=default | e2e=216.21 tok/s | decode(C/meanTPOT)=299.7 | tok/step=3.09 | meanTTFT=3034.38 ms
+ROW cohort C1 real prompts T=0 | e2e=105.81 tok/s | decode(C/meanTPOT)=109.6 | tok/step=3.34 | meanTTFT=217.05 ms
+ROW cohort C2 real prompts T=0 | e2e=162.76 tok/s | decode(C/meanTPOT)=188.0 | tok/step=3.43 | meanTTFT=328.54 ms
+ROW cohort C4 real prompts T=0 | e2e=216.86 tok/s | decode(C/meanTPOT)=269.0 | tok/step=3.35 | meanTTFT=497.03 ms
+ROW cohort C8 real prompts T=0 | e2e=241.72 tok/s | decode(C/meanTPOT)=361.2 | tok/step=3.46 | meanTTFT=2708.72 ms
+2026-10-15T16:39:57Z [q3a] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --json /tmp/ladder-q3a.json
+# start 2026-10-15T16:39:57Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=1
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       105.5      105.4      38.6      3.43       3.4     32.3        0   20.7    1     4190  106/106/106
+
+| N | 1 |
+|---|---|
+| per-stream tok/s | 105.5 |
+| decode aggregate tok/s | 105 |
+| end-to-end aggregate tok/s | 39 |
+| tok/step | 3.43 |
+| tok/pass | 3.4 |
+| ms/pass | 32.3 |
+| preemptions | 0 |
+
+wrote /tmp/ladder-q3a.json
+# end 2026-10-15T16:40:11Z exit=0
+2026-10-15T16:40:12Z [q3a] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+DOWN_OK
+    2026-10-15T18:33:41 92.2 23269.8
+    2026-10-15T18:34:42 92.2 23269.8
+    2026-10-15T18:35:42 92.2 23269.8
+    2026-10-15T18:36:42 92.2 23269.8
+    2026-10-15T18:37:43 92.2 23269.8
+    2026-10-15T18:38:43 92.2 23269.8
+    2026-10-15T18:39:43 92.2 23269.8
+
+2026-10-15T16:43:12Z [q3b] first measurement request at 2026-10-15T18:43:12 local
+2026-10-15T16:43:34Z [q3b] docker compose --profile single exec -T single env OUT=/tmp/rb-q3b-1 bash bench/run_benchmarks.sh single
+ROW cohort C1 real prompts T=default | e2e=108.85 tok/s | decode(C/meanTPOT)=112.2 | tok/step=3.24 | meanTTFT=213.26 ms
+ROW cohort C2 real prompts T=default | e2e=154.49 tok/s | decode(C/meanTPOT)=172.9 | tok/step=3.22 | meanTTFT=333.11 ms
+ROW cohort C4 real prompts T=default | e2e=208.92 tok/s | decode(C/meanTPOT)=242.6 | tok/step=3.14 | meanTTFT=478.86 ms
+ROW cohort C8 real prompts T=default | e2e=222.92 tok/s | decode(C/meanTPOT)=294.9 | tok/step=3.14 | meanTTFT=3930.14 ms
+ROW cohort C1 real prompts T=0 | e2e=110.68 tok/s | decode(C/meanTPOT)=114.8 | tok/step=3.48 | meanTTFT=219.69 ms
+ROW cohort C2 real prompts T=0 | e2e=174.38 tok/s | decode(C/meanTPOT)=191.6 | tok/step=3.54 | meanTTFT=308.05 ms
+ROW cohort C4 real prompts T=0 | e2e=233.36 tok/s | decode(C/meanTPOT)=274.2 | tok/step=3.47 | meanTTFT=461.38 ms
+ROW cohort C8 real prompts T=0 | e2e=226.71 tok/s | decode(C/meanTPOT)=307.9 | tok/step=3.24 | meanTTFT=2700.77 ms
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch5-tools/workload_accept.py to hyperqwen-single-1:/tmp/workload_accept.py
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch5-tools/workload_accept.py to hyperqwen-single-1:/tmp/workload_accept.py
+ hyperqwen-single-1 Copying bench/results/2026-10-15-Q3-a-cg64/targets to hyperqwen-single-1:/tmp/q3-targets
+ hyperqwen-single-1 Copied bench/results/2026-10-15-Q3-a-cg64/targets to hyperqwen-single-1:/tmp/q3-targets
+2026-10-15T16:52:12Z [wacc-q3b] first measurement request at 2026-10-15T18:52:12 local
+2026-10-15T16:52:35Z [wacc-q3b] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py q3b --targets /tmp/q3-targets --tasks gsm8k,code,chat,real0,real1,real2,real3,real4,real5,real6,real7 --max-tokens 1024 --chunk 128 --decode-reps 2'
+# start 2026-10-15T16:52:35Z
+# q3b think=False effort=<template default> max_tokens=1024 chunk=128
+WACC q3b gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=200.8/202.6 tok/s firstbad=None
+WACC q3b code   prompt=98 target=1024 chunks=7/8 steps=199 tok/step=4.568 accept=0.510 freerun_tok/step=4.703 decode_c1=159.5/157.9 tok/s firstbad=382
+WACC q3b chat   prompt=49 target=1024 chunks=6/8 steps=218 tok/step=3.541 accept=0.363 freerun_tok/step=3.575 decode_c1=117.7/116.3 tok/s firstbad=514
+WACC q3b real0  prompt=60 target=1024 chunks=8/8 steps=205 tok/step=5.073 accept=0.582 freerun_tok/step=5.079 decode_c1=164.8/164.5 tok/s firstbad=None
+WACC q3b real1  prompt=49 target=1024 chunks=6/8 steps=218 tok/step=3.541 accept=0.363 freerun_tok/step=3.575 decode_c1=116.2/116.7 tok/s firstbad=514
+WACC q3b real2  prompt=68 target=1024 chunks=5/8 steps=337 tok/step=1.902 accept=0.129 freerun_tok/step=1.979 decode_c1=64.8/62.1 tok/s firstbad=359
+WACC q3b real3  prompt=196 target=1024 chunks=6/8 steps=160 tok/step=4.850 accept=0.550 freerun_tok/step=4.900 decode_c1=144.0/160.3 tok/s firstbad=243
+WACC q3b real4  prompt=92 target=1024 chunks=8/8 steps=184 tok/step=5.647 accept=0.664 freerun_tok/step=5.612 decode_c1=184.0/162.4 tok/s firstbad=None
+WACC q3b real5  prompt=55 target=1024 chunks=6/8 steps=132 tok/step=5.939 accept=0.706 freerun_tok/step=5.562 decode_c1=182.6/183.1 tok/s firstbad=29
+WACC q3b real6  prompt=50 target=1024 chunks=6/8 steps=193 tok/step=4.036 accept=0.434 freerun_tok/step=4.000 decode_c1=131.2/131.1 tok/s firstbad=47
+WACC q3b real7  prompt=240 target=439 chunks=3/4 steps=80 tok/step=3.875 accept=0.411 freerun_tok/step=4.480 decode_c1=146.6/146.7 tok/s firstbad=272
+# end 2026-10-15T16:57:19Z exit=0
+ hyperqwen-single-1 Copying hyperqwen-single-1:/tmp/q3-targets/result_q3b.json to bench/results/2026-10-15-Q3-b-cg40/raw-wacc-result-q3b.json
+ hyperqwen-single-1 Copied hyperqwen-single-1:/tmp/q3-targets/result_q3b.json to bench/results/2026-10-15-Q3-b-cg40/raw-wacc-result-q3b.json
+2026-10-15T16:57:19Z [q3b] docker compose --profile single exec -T single env OUT=/tmp/rb-q3b-2 bash bench/run_benchmarks.sh single
+ROW cohort C1 real prompts T=default | e2e=104.48 tok/s | decode(C/meanTPOT)=107.6 | tok/step=3.25 | meanTTFT=231.22 ms
+ROW cohort C2 real prompts T=default | e2e=151.99 tok/s | decode(C/meanTPOT)=175.4 | tok/step=3.21 | meanTTFT=340.30 ms
+ROW cohort C4 real prompts T=default | e2e=208.00 tok/s | decode(C/meanTPOT)=252.7 | tok/step=3.18 | meanTTFT=470.56 ms
+ROW cohort C8 real prompts T=default | e2e=201.00 tok/s | decode(C/meanTPOT)=293.7 | tok/step=3.06 | meanTTFT=2435.46 ms
+ROW cohort C1 real prompts T=0 | e2e=110.84 tok/s | decode(C/meanTPOT)=115.2 | tok/step=3.48 | meanTTFT=234.64 ms
+ROW cohort C2 real prompts T=0 | e2e=174.28 tok/s | decode(C/meanTPOT)=192.1 | tok/step=3.54 | meanTTFT=338.39 ms
+ROW cohort C4 real prompts T=0 | e2e=233.24 tok/s | decode(C/meanTPOT)=274.9 | tok/step=3.47 | meanTTFT=507.54 ms
+ROW cohort C8 real prompts T=0 | e2e=195.32 tok/s | decode(C/meanTPOT)=271.9 | tok/step=3.29 | meanTTFT=3736.51 ms
+2026-10-15T17:06:14Z [q3b] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --json /tmp/ladder-q3b.json
+# start 2026-10-15T17:06:14Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=1
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       104.4      104.6      38.5      3.37       3.4     32.1        0   20.7    1     4182  104/104/104
+
+| N | 1 |
+|---|---|
+| per-stream tok/s | 104.4 |
+| decode aggregate tok/s | 105 |
+| end-to-end aggregate tok/s | 39 |
+| tok/step | 3.37 |
+| tok/pass | 3.4 |
+| ms/pass | 32.1 |
+| preemptions | 0 |
+
+wrote /tmp/ladder-q3b.json
+# end 2026-10-15T17:06:29Z exit=0
+2026-10-15T17:06:30Z [q3b] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+DOWN_OK
+    2026-10-15T18:59:35 92.2 23191.8
+    2026-10-15T19:00:35 92.2 23191.8
+    2026-10-15T19:01:35 92.2 23191.8
+    2026-10-15T19:02:36 92.2 23191.8
+    2026-10-15T19:03:36 92.2 23191.8
+    2026-10-15T19:04:36 92.2 23191.8
+    2026-10-15T19:05:37 92.2 23191.8
+
+Q3_DONE

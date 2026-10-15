@@ -1,0 +1,17 @@
+# start 2026-10-15T16:39:57Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=1
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       105.5      105.4      38.6      3.43       3.4     32.3        0   20.7    1     4190  106/106/106
+
+| N | 1 |
+|---|---|
+| per-stream tok/s | 105.5 |
+| decode aggregate tok/s | 105 |
+| end-to-end aggregate tok/s | 39 |
+| tok/step | 3.43 |
+| tok/pass | 3.4 |
+| ms/pass | 32.3 |
+| preemptions | 0 |
+
+wrote /tmp/ladder-q3a.json
+# end 2026-10-15T16:40:11Z exit=0

@@ -1,0 +1,14 @@
+# start 2026-10-15T16:52:35Z
+# q3b think=False effort=<template default> max_tokens=1024 chunk=128
+WACC q3b gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=200.8/202.6 tok/s firstbad=None
+WACC q3b code   prompt=98 target=1024 chunks=7/8 steps=199 tok/step=4.568 accept=0.510 freerun_tok/step=4.703 decode_c1=159.5/157.9 tok/s firstbad=382
+WACC q3b chat   prompt=49 target=1024 chunks=6/8 steps=218 tok/step=3.541 accept=0.363 freerun_tok/step=3.575 decode_c1=117.7/116.3 tok/s firstbad=514
+WACC q3b real0  prompt=60 target=1024 chunks=8/8 steps=205 tok/step=5.073 accept=0.582 freerun_tok/step=5.079 decode_c1=164.8/164.5 tok/s firstbad=None
+WACC q3b real1  prompt=49 target=1024 chunks=6/8 steps=218 tok/step=3.541 accept=0.363 freerun_tok/step=3.575 decode_c1=116.2/116.7 tok/s firstbad=514
+WACC q3b real2  prompt=68 target=1024 chunks=5/8 steps=337 tok/step=1.902 accept=0.129 freerun_tok/step=1.979 decode_c1=64.8/62.1 tok/s firstbad=359
+WACC q3b real3  prompt=196 target=1024 chunks=6/8 steps=160 tok/step=4.850 accept=0.550 freerun_tok/step=4.900 decode_c1=144.0/160.3 tok/s firstbad=243
+WACC q3b real4  prompt=92 target=1024 chunks=8/8 steps=184 tok/step=5.647 accept=0.664 freerun_tok/step=5.612 decode_c1=184.0/162.4 tok/s firstbad=None
+WACC q3b real5  prompt=55 target=1024 chunks=6/8 steps=132 tok/step=5.939 accept=0.706 freerun_tok/step=5.562 decode_c1=182.6/183.1 tok/s firstbad=29
+WACC q3b real6  prompt=50 target=1024 chunks=6/8 steps=193 tok/step=4.036 accept=0.434 freerun_tok/step=4.000 decode_c1=131.2/131.1 tok/s firstbad=47
+WACC q3b real7  prompt=240 target=439 chunks=3/4 steps=80 tok/step=3.875 accept=0.411 freerun_tok/step=4.480 decode_c1=146.6/146.7 tok/s firstbad=272
+# end 2026-10-15T16:57:19Z exit=0

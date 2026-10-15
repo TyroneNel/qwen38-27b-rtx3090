@@ -1,0 +1,6 @@
+tag: hyperqwen:exp-844cd90
+digest: sha256:38d93660fb064e637437ef4325ed66fd9fefe25b7b85a787fa8c08632209a400 (raw-image-q5w.log)
+code commit in the image: 844cd90
+repo HEAD at run time: 33207ed (results-only commits on top of 844cd90)
+boot class: container boot (PowerShell docker compose --profile single up -d --force-recreate --no-deps single), cold weight load
+env: DFLASH_TOKENS=7 KV_MEM=5315022028 MAX_SEQS=16 

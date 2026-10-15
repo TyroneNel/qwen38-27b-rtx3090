@@ -1,0 +1,25 @@
+# start 2026-10-15T16:24:58Z
+# q3a think=False effort=<template default> max_tokens=1024 chunk=128
+WACC q3a gsm8k CAPTURED n=226 -> /tmp/q3-targets/gsm8k.json
+WACC q3a gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=197.9/196.2 tok/s firstbad=None
+WACC q3a code CAPTURED n=1024 -> /tmp/q3-targets/code.json
+WACC q3a code   prompt=98 target=1024 chunks=8/8 steps=220 tok/step=4.741 accept=0.534 freerun_tok/step=4.682 decode_c1=155.8/150.5 tok/s firstbad=None
+WACC q3a chat CAPTURED n=1024 -> /tmp/q3-targets/chat.json
+WACC q3a chat   prompt=49 target=1024 chunks=5/8 steps=172 tok/step=3.715 accept=0.388 freerun_tok/step=3.631 decode_c1=114.6/113.3 tok/s firstbad=252
+WACC q3a real0 CAPTURED n=1024 -> /tmp/q3-targets/real0.json
+WACC q3a real0  prompt=60 target=1024 chunks=6/8 steps=164 tok/step=4.774 accept=0.539 freerun_tok/step=5.054 decode_c1=157.1/160.4 tok/s firstbad=706
+WACC q3a real1 CAPTURED n=1024 -> /tmp/q3-targets/real1.json
+WACC q3a real1  prompt=49 target=1024 chunks=5/8 steps=172 tok/step=3.715 accept=0.388 freerun_tok/step=3.631 decode_c1=115.4/117.3 tok/s firstbad=252
+WACC q3a real2 CAPTURED n=1024 -> /tmp/q3-targets/real2.json
+WACC q3a real2  prompt=68 target=1024 chunks=7/8 steps=476 tok/step=1.882 accept=0.126 freerun_tok/step=1.918 decode_c1=60.8/62.1 tok/s firstbad=687
+WACC q3a real3 CAPTURED n=1024 -> /tmp/q3-targets/real3.json
+WACC q3a real3  prompt=196 target=1024 chunks=7/8 steps=181 tok/step=4.956 accept=0.565 freerun_tok/step=4.914 decode_c1=158.8/150.9 tok/s firstbad=480
+WACC q3a real4 CAPTURED n=1024 -> /tmp/q3-targets/real4.json
+WACC q3a real4  prompt=92 target=1024 chunks=8/8 steps=182 tok/step=5.709 accept=0.673 freerun_tok/step=5.612 decode_c1=181.8/166.2 tok/s firstbad=None
+WACC q3a real5 CAPTURED n=1024 -> /tmp/q3-targets/real5.json
+WACC q3a real5  prompt=55 target=1024 chunks=8/8 steps=176 tok/step=5.932 accept=0.705 freerun_tok/step=5.869 decode_c1=190.2/167.0 tok/s firstbad=None
+WACC q3a real6 CAPTURED n=1024 -> /tmp/q3-targets/real6.json
+WACC q3a real6  prompt=50 target=1024 chunks=6/8 steps=192 tok/step=4.068 accept=0.438 freerun_tok/step=3.872 decode_c1=126.0/118.3 tok/s firstbad=362
+WACC q3a real7 CAPTURED n=439 -> /tmp/q3-targets/real7.json
+WACC q3a real7  prompt=240 target=439 chunks=3/4 steps=76 tok/step=4.132 accept=0.447 freerun_tok/step=4.573 decode_c1=148.6/148.9 tok/s firstbad=272
+# end 2026-10-15T16:31:02Z exit=0

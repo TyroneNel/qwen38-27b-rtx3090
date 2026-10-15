@@ -14,6 +14,8 @@ T=bench/results/2026-10-15-batch5-tools
 A="bash $T/arm.sh"
 DC=(docker compose --profile single)
 IFD=/tmp/IFBench/ifbench/data/IFBench_test.jsonl
+# chained in front of Q4 after Q5-a showed the C1 loss in tokens/step (see q5w.sh)
+bash $T/q5w.sh
 for l in ${@:-q4b q4s}; do
   case $l in
     q4s) id=Q4-shipped; e='s/^DFLASH_TOKENS=.*/DFLASH_TOKENS=7/; /^EXTRA_ARGS=/d; /^MAX_SEQS=/d; /^# the cap lifted/d' ;;

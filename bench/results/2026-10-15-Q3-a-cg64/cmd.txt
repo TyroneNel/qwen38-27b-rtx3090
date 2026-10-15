@@ -1,0 +1,35 @@
+2026-10-15T16:12:33Z [q3a] cp bench/results/2026-10-15-Q3-a-cg64/.env .env
+2026-10-15T16:12:33Z [q3a] sampler: bench/results/2026-10-15-batch5-tools/sampler.ps1 -> bench/results/2026-10-15-Q3-a-cg64/mem-trace-q3a.csv
+2026-10-15T16:12:34Z [q3a] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T16:12:35Z [q3a] spill watch started: bench/results/2026-10-15-batch5-tools/spillwatch.sh
+2026-10-15T16:14:39Z [q3a] KV-cache line at 2026-10-15T16:14:37.016556347Z = 2026-10-15T18:14:37 local
+2026-10-15T16:14:49Z [q3a] healthy after 134 s
+2026-10-15T16:15:20Z [q3a] first measurement request at 2026-10-15T18:15:20 local
+2026-10-15T16:15:26Z [q3a] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=4 (window: KV-cache line 2026-10-15T18:14:37 -> first request 2026-10-15T18:15:20, local time)
+2026-10-15T16:15:42Z [q3a] docker compose --profile single exec -T single env OUT=/tmp/rb-q3a-1 bash bench/run_benchmarks.sh single
+2026-10-15T16:24:36Z [wacc-q3a] first measurement request at 2026-10-15T18:24:36 local
+2026-10-15T16:24:58Z [wacc-q3a] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py q3a --targets /tmp/q3-targets --tasks gsm8k,code,chat,real0,real1,real2,real3,real4,real5,real6,real7 --max-tokens 1024 --chunk 128 --decode-reps 2'
+2026-10-15T16:31:02Z [q3a] docker compose --profile single exec -T single env OUT=/tmp/rb-q3a-2 bash bench/run_benchmarks.sh single
+2026-10-15T16:39:57Z [q3a] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1 --json /tmp/ladder-q3a.json
+2026-10-15T16:40:12Z [q3a] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

@@ -1,0 +1,59 @@
+=== q3b: engine memory lines (raw-boot-q3b.log) ===
+(APIServer pid=1) INFO 10-15 16:40:39 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'po
+(EngineCore pid=138) INFO 10-15 16:40:53 [core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRou
+(EngineCore pid=138) INFO 10-15 16:40:55 [cuda.py:532] Using AttentionBackendEnum.TRITON_ATTN backend.
+(EngineCore pid=138) INFO 10-15 16:42:18 [cuda.py:592] Using TRITON_ATTN attention backend out of potential backends: ['TRITON_ATTN'].
+(EngineCore pid=138) INFO 10-15 16:42:25 [model_runner.py:410] Model loading took 15.44 GiB memory and 90.051760 seconds
+(EngineCore pid=138) INFO 10-15 16:42:30 [gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.95 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control o
+(EngineCore pid=138) INFO 10-15 16:42:30 [kv_cache_utils.py:2659] GPU KV cache size: 110,953 tokens, Maximum concurrency for 65,536 tokens per request: 1.69x
+(EngineCore pid=138) INFO 10-15 16:42:35 [model_runner.py:1102] Graph capturing finished in 3 secs, took 0.12 GiB (driver free-memory delta 0.25 GiB)
+
+=== q3b: nvidia-smi, GPU 0 = 3090 (raw-smi-q3b.log) ===
+# before boot 2026-10-15T16:40:28Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 25.57 W, 70, 210 MHz
+# after boot, before any request 2026-10-15T16:42:41Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 22634 MiB, 1693 MiB, 250.00 W, 24.17 W, 60, 210 MHz
+# after bench q3b-1 2026-10-15T16:52:12Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23186 MiB, 1141 MiB, 250.00 W, 200.96 W, 81, 1620 MHz
+# after bench q3b-2 2026-10-15T17:06:14Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23188 MiB, 1139 MiB, 250.00 W, 198.29 W, 81, 1455 MHz
+# after ladder q3b 2026-10-15T17:06:29Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23420 MiB, 907 MiB, 250.00 W, 237.55 W, 82, 960 MHz
+
+=== q3b: 3090 adapter counters (luid_0x00000000_0x00011456_phys_0) from mem-trace-q3b.csv; KV-cache line 2026-10-15T18:42:30, first request 2026-10-15T18:43:12 (local) ===
+samples=156  max dedicated=23423.8 MiB  max shared=92.2 MiB  F_ctx=84.2 MiB  F_kv=92.2 MiB (floor used)
+  boot: F_kv within 8 MiB of F_ctx (no boot rise beyond a MAX_SEQS=8 boot)
+  measurements: no sample after the first request above F_kv+16 MiB: no spill seen
+  trace (time shared dedicated), every 6th sample:
+    2026-10-15T18:40:29 0.2 4.0
+    2026-10-15T18:41:30 84.2 15223.7
+    2026-10-15T18:42:30 92.2 17761.8
+    2026-10-15T18:43:30 92.2 22637.8
+    2026-10-15T18:44:31 92.2 23189.8
+    2026-10-15T18:45:31 92.2 23189.8
+    2026-10-15T18:46:31 92.2 23189.8
+    2026-10-15T18:47:31 92.2 23189.8
+    2026-10-15T18:48:32 92.2 23189.8
+    2026-10-15T18:49:32 92.2 23189.8
+    2026-10-15T18:50:32 92.2 23189.8
+    2026-10-15T18:51:32 92.2 23189.8
+    2026-10-15T18:52:33 92.2 23189.8
+    2026-10-15T18:53:33 92.2 23189.8
+    2026-10-15T18:54:33 92.2 23191.8
+    2026-10-15T18:55:34 92.2 23191.8
+    2026-10-15T18:56:34 92.2 23191.8
+    2026-10-15T18:57:34 92.2 23191.8
+    2026-10-15T18:58:35 92.2 23191.8
+    2026-10-15T18:59:35 92.2 23191.8
+    2026-10-15T19:00:35 92.2 23191.8
+    2026-10-15T19:01:35 92.2 23191.8
+    2026-10-15T19:02:36 92.2 23191.8
+    2026-10-15T19:03:36 92.2 23191.8
+    2026-10-15T19:04:36 92.2 23191.8
+    2026-10-15T19:05:37 92.2 23191.8
+

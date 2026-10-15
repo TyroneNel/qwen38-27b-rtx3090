@@ -1,0 +1,23 @@
+> boot-log lines that differ between Q3-a-cg64 (MAX_SEQS=8) and Q5-a-k7-s16 (MAX_SEQS=16): grep -aiE 'max_num_seqs|capacity|scratch|buffer|persistent|cudagraph_capture_sizes|graph|KV cache size|Model loading took|torch.compile|memory profiling|Free memory', timestamps/pids/durations stripped, diff (< = MAX_SEQS=8, > = MAX_SEQS=16)
+< [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/159ada67c8ceca9ac89299a231e522182f82a34aedc56d0e323a2ed9413ebf8d/rank_0_0/model
+< [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/6207e4fb0a5ff076c439eec14f083b82455eb4606f2b39bd3f55f7679243abd1/rank_0_0/model
+< [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/71eb529e4f61f852e3452d7735688d0958dbabf40299ad08d509853380785118/rank_0_0/model
+> [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/1d5bcbda200e4cd5046803879179217b5aa4e769e9388ae77198c15895027f48/rank_0_0/model
+> [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/56d95fa12dacbb9ca7b3b039006f4711193c3582a8c2bbcbd6ef8bd79f100d69/rank_0_0/model
+> [decorators.py:312] Directly load AOT compilation from path /cache/.cache/vllm/torch_compile_cache/torch_aot_compile/f960e2db4c2a2bd72cc094ca83e7628fd8a48f63219ce4407369d61827ed8d8f/rank_0_0/model
+< [model_runner.py:410] Model loading took 15.44 GiB memory and 
+> [model_runner.py:410] Model loading took 15.55 GiB memory and 
+< [triton_attn.py:207] int4 3D scratch: capacity=128 query tokens adopted by the metadata builder (derived 128 for this instance; allocated at model load)
+< [triton_attn.py:217] int4 3D scratch: capacity=128 query tokens (min of max_num_batched_tokens=2048, min(max_num_seqs=8, seq_threshold_3D=32) * max_query_len_3d=16); 396288 B/row, 48.38 MiB, allocated at model load (inside the memory profile)
+< [triton_attn.py:217] int4 3D scratch: capacity=128 query tokens (min of max_num_batched_tokens=2048, min(max_num_seqs=8, seq_threshold_3D=32) * max_query_len_3d=16); 528384 B/row, 64.50 MiB, allocated at model load (inside the memory profile)
+> [triton_attn.py:207] int4 3D scratch: capacity=256 query tokens adopted by the metadata builder (derived 256 for this instance; allocated at model load)
+> [triton_attn.py:217] int4 3D scratch: capacity=256 query tokens (min of max_num_batched_tokens=2048, min(max_num_seqs=16, seq_threshold_3D=32) * max_query_len_3d=16); 396288 B/row, 96.75 MiB, allocated at model load (inside the memory profile)
+> [triton_attn.py:217] int4 3D scratch: capacity=256 query tokens (min of max_num_batched_tokens=2048, min(max_num_seqs=16, seq_threshold_3D=32) * max_query_len_3d=16); 528384 B/row, 129.00 MiB, allocated at model load (inside the memory profile)
+
+> identical in both (same filter):
+[core.py:191] Initializing a V1 LLM engine (v0.31.0) with config: model='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', speculative_config=SpeculativeConfig(method='dflash', model='/app/models/Qwen3.8-27B-DFlash2-W4A16', num_spec_tokens=7), tokenizer='/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', s
+[gpu_worker.py:612] Initial free memory 22.76 GiB, reserved 4.95 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of KV cache 
+[kv_cache_utils.py:2659] GPU KV cache size: 110,953 tokens, Maximum concurrency for 65,536 tokens per request: 1.69x
+[model_runner.py:1102] Graph capturing finished in 5 secs, took 0.13 GiB (driver free-memory delta 0.32 GiB)
+[model_runner.py:378] Loading model from scratch...
+[monitor.py:53] torch.compile took  in total
