@@ -29,15 +29,46 @@ from someone else's measurement. "Precision cost" is the second axis, not a bloc
 | S-3 | **`CG=40`** | **measured**: +3.3% C1, +4.1% with `CUDAGRAPH_MODE=FULL` — and the mechanism is *acceptance*, 3.34 → 3.48 tokens/step at unchanged step time | config | low | unknown; the mechanism is X-1 |
 | S-4 | **`INT8_ACT=int8` for prefill** | **measured**: prefill 1,437 → 1,845 tok/s at 1k and 1,200 → 1,423 at 51k (+27-30%, +19% at depth), decode unchanged | config | low | +0.9-3.7% perplexity, documented in [optimizations.md](optimizations.md) |
 | S-5 | **Make the state reservation follow the per-step k** (or a ReplaySSM-style rollback that works under speculation) | **estimated**: removes the seats-versus-C1 trade entirely — k=7 speed at 13+ seats | engine work | high | none |
-| S-6 | **DFlash2 selector headroom** | **estimated**: the published oracle acceptance is 6.79 against the achieved 4.27 — up to +59% tokens per verify step | engine work | high | none (lossless by construction) |
+| S-6 | **DFlash2 selector headroom** | **corrected, and much smaller than first written** — the published oracle 6.79-vs-4.27 gap is a 5-layer Qwen3-4B drafter on GSM8K, not ours; our own teacher-forced acceptance on GSM8K is **5.80**, already above the published DFlash2 5.46. The headroom that exists is on *chat* (3.50) | engine work | high | none (lossless by construction) |
 | S-7 | **GQA-packed split-KV verify attention** (24 → 64 CTAs) | **estimated**: 13.9-15.6× per-layer at 38k/100k on A100; our kernel is the current one | kernel work | med | none |
 | S-8 | **Workload-aware k** — per-endpoint rather than one global value | **measured** that the spread is real: gsm8k 5.80, code 4.78, chat 3.50 tokens/step; k=7 is a compromise for all three | config | med | none |
 | S-9 | **FlashInfer cudagraph support for the spec-decode verify shape** | **estimated**: recovers the measured 26-29% PIECEWISE penalty on that path (it may only tie `TRITON_ATTN`) | upstream | med | none |
 | S-10 | **int8-KV prefill attention** (the e4m3→half scale-fold route) | **estimated**: prefill attention 41 → 72 TFLOPS on the b70 port; our 51k prefill row is where the 16 full-attention layers dominate | kernel work | med | none |
 | S-11 | **The unadvertised mamba knobs** (`--mamba-ssu-algorithm`, `--mamba-backend`) | unknown — never tested | config | low | unknown |
+| S-12 | **`CG=40` default, once X-1 is understood** | see S-3 | config | low | unknown |
 
 S-1 to S-4 are one item type: knobs we already have, measured, not yet shipped. S-5 is the one with no ceiling —
 the only lever that would let one server be fast for one user *and* hold thirteen.
+
+### S-1 and S-2, in shippable form
+
+Both are configuration, so "shipping" them means publishing the recipes rather than changing the launchers. The
+one below is not a proposal — it is the exact `.env` the batch-3 k=3 arm ran, and the numbers beside it are that
+run's. Each band is a `.env` a user can paste today; none of it flips a default.
+
+| band | diff from the shipped `.env` | C1 T=0 | seats (`Running:`) | N=8 aggregate | preemptions |
+|---|---|---|---|---|---|
+| **1 user** (as shipped) | — | **112.1** | 7 | 178.5 (tail row) | 2 |
+| **2-6 users** | `DFLASH_TOKENS=3` + `EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head'` | 94.1 | 13 | **350.1** | **0** |
+| **7-16 users** | as above plus `DFLASH_TOKENS=1` | 64.7 | 16 | 299.4 | 0 |
+
+```dotenv
+# 2-6 concurrent users: the seat/quality/speed point batch 3 measured
+SPEC=dflash2
+PREFIX_CACHE=1
+CTX=fast
+DFLASH_TOKENS=3
+KV_MEM=5583457484          # pin the pool in bytes; GPU_UTIL moves with the KV dtype
+MAX_LEN=65536
+MAX_SEQS=16                # the admission cap: 8 hides the seat effect entirely
+EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head'
+```
+
+Two things the table says that a single number cannot. The **aggregate nearly doubles** from band 1 to band 2
+(178.5 → 350.1) while **single-stream costs 16%** — so the band boundary is a policy decision, not a tuning one,
+and it should be picked from the workload's concurrency, not from a benchmark. And band 3 is *worse* than band 2
+on aggregate (299.4): past ~13 seats the per-step token count has fallen far enough that more seats stop paying.
+**k=3 is the knee, k=1 is past it** — the same shape our MTP work found at k=4 for a different reason.
 
 ## R — refuted, do not re-chase
 
@@ -109,6 +140,11 @@ All under `bench/results/`, all committed, all run inside the container:
 Not tracked here. They are rows in [PATCHES.md](../PATCHES.md) — 42 with no upstream reference (17 `fix`, 14
 `feature`, 6 `local`, 5 `own`) — and managing them is routine. Two `fix` rows happen to overlap open upstream
 issues (U-1, U-2 below), which is the only reason they are named on this page at all.
+
+## Measured next: [batch 5](decode-speed-batch5.md)
+
+batch 5 covers the levers on this list that cannot be settled by reading — S-11 (four boots), the S-5
+reconnaissance, X-1 if batch 4 skipped it, and the IFBench gate for the band-2 profile.
 
 ## Recommended order
 

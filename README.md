@@ -227,6 +227,7 @@ Everything that used to be in this README, in the folder it belongs to.
 | [docs/decode-speed-landscape.md](docs/decode-speed-landscape.md) | What other engines and forks get out of this model on this card, what we were missing, and the measured outcome of each lead — including the three the reference 3090 run retracted. |
 | [docs/decode-speed-experiments.md](docs/decode-speed-experiments.md) | The arm lists run on the reference 3090 — batch 1's seven, then batches 2 and 3 — each with its pass/fail rule decided before the run. Raw logs and per-arm reports sit beside them in [`bench/results/`](bench/results). |
 | [docs/decode-speed-findings.md](docs/decode-speed-findings.md) | The tracker: every bug, upstream limitation and unexplained behaviour the testing turned up, with what holds it, what is fixed, and what is still open. |
+| [docs/decode-speed-batch4.md](docs/decode-speed-batch4.md) · [batch5](docs/decode-speed-batch5.md) | The next two measurement plans: seats as a policy, then the levers that need a GPU. |
 | [docs/quality.md](docs/quality.md) | IFBench, perplexity and GSM8K per configuration. |
 | [docs/long-context.md](docs/long-context.md) | 262k context with the KVarN 4/2-bit KV cache, `CTX=huge` with DFlash2 at 240k, vLLM's own per-token-head KV modes, and the experimental int4 route. |
 | [docs/reproductions/](docs/reproductions/README.md) | Other people's hardware running this stack, reports and full write-ups. |
