@@ -1,0 +1,38 @@
+2026-10-14T23:22:30Z [qB] cp bench/results/2026-10-14-Q2-bf16/.env.qB .env
+2026-10-14T23:22:30Z [qB] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q2-bf16/mem-trace-qB.csv
+2026-10-14T23:22:31Z [qB] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-14T23:27:36Z [qB] healthy after 304 s
+2026-10-14T23:27:36Z [qB] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-14T23:27:36Z [qB] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py qB 1 --n 8
+2026-10-14T23:28:10Z [qB] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py qB 2 --n 8
+2026-10-14T23:28:40Z [qB] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py qB 3 --n 8
+2026-10-14T23:29:08Z [qB] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,8 --json /tmp/ladder-qB.json
+2026-10-14T23:31:00Z [qB] docker compose --profile single exec -T single env OUT=/tmp/rb-qB-1 bash bench/run_benchmarks.sh single
+2026-10-14T23:39:34Z [qB] docker compose --profile single exec -T single env OUT=/tmp/rb-qB-2 bash bench/run_benchmarks.sh single
+2026-10-14T23:48:14Z [gsm-qB] docker compose --profile single exec -T single bash -lc 'mkdir -p /tmp/qd && ln -sfn /app/models/quality-data/gsm8k /app/models/quality-data/wikitext /app/models/quality-data/fineweb2 /tmp/qd/ && cd /app && QUALITY_DATA=/tmp/qd venv/bin/python bench/quality_battery.py q2-qB --gsm-only --gsm-n 200'
+2026-10-14T23:51:23Z [qB] spill guard watch-only on
+2026-10-14T23:51:23Z [ppl-qB] docker compose --profile single exec -T single bash -lc 'mkdir -p /tmp/qd && ln -sfn /app/models/quality-data/gsm8k /app/models/quality-data/wikitext /app/models/quality-data/fineweb2 /tmp/qd/ && cd /app && QUALITY_DATA=/tmp/qd venv/bin/python bench/quality_battery.py q2-qB --ppl-only'
+2026-10-14T23:51:57Z [qB] SPILL detected (watch-only, nothing killed): 2026-10-15T01:51:41 and 2026-10-15T01:51:51 shared=938.2 MiB dedicated=24241.5 MiB floor=84.2 MiB
+2026-10-14T23:52:28Z [qB] spill guard watch-only off
+2026-10-14T23:52:29Z [qB] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

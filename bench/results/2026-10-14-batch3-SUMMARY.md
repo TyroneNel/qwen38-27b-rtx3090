@@ -30,7 +30,21 @@ change since, `2026-10-14-batch3-preflight/image-reuse.txt`). Int8 `CTX=fast` ba
   state pages follow the configured maximum k, so dynamic K buys step time and no seats.
 - **Seats cost single-stream speed.** C1 T=0 reads 112.1 / 94.1 / 64.7 tok/s at k=7/3/1 (−16% at k=3), and C8 T=0
   reads 371.7 / 439.3 / 383.0.
+  reads 371.7 / 439.3 / 383.0.
 
+## Q2: bf16 recurrent state, B loses (`2026-10-14-Q2-{fp16,bf16}/report.md`)
+
+- **The fused kernel appears on B only.** fp16 (qA1, qA2) prints `Falling back to the Triton GDN decode path: …`
+  and `GDN decode kernel: triton`. bf16 (qB) prints `GDN decode kernel: cuda` and no fallback line. The args line
+  confirms `'mamba_ssm_cache_dtype': 'bfloat16'`.
+- **It buys nothing.** C1 T=0 reads 114.2 / 114.4 / 114.3 (A-B-A), +0.1%. N=1 `ms/pass` reads 29.5 / 30.2 /
+  29.8, +1.9% (slower). The rule needed +3% or −3%. The N=8 ladder rows are tail rows on every boot (1
+  preemption, 6 running).
+- **Quality and footprint are identical.** GSM8K reads 192 vs 193/200, and perplexity is within 0.05%. Every boot
+  has a 116,440-token pool, block 864 and `Running: 7 reqs, Waiting: 1 reqs, GPU KV cache usage: 99.2%`.
+- **Perplexity spilled on both arms**, with the guard in watch-only mode for that step: Shared Usage went from
+  92.2 to 1,002.2 MiB on fp16 and from 84.2 to 938.2 MiB on bf16. Gotcha 60 records 410 MiB for int8. All timing
+  and GSM8K ran before it, on the floor.
 ## What could not be established
 
 - The k=1 seat count above 16. `MAX_SEQS=24` spilled at boot: Shared Usage went 90.2 → 122.2 MiB at the

@@ -1,0 +1,12 @@
+# start 2026-10-14T23:31:00Z
+# Wed Oct 14 23:31:01 UTC 2026 mode=single server=127.0.0.1:18020
+ROW cohort C1 real prompts T=default | e2e=110.58 tok/s | decode(C/meanTPOT)=114.0 | tok/step=3.34 | meanTTFT=214.20 ms
+ROW cohort C2 real prompts T=default | e2e=152.58 tok/s | decode(C/meanTPOT)=173.8 | tok/step=3.07 | meanTTFT=326.94 ms
+ROW cohort C4 real prompts T=default | e2e=226.51 tok/s | decode(C/meanTPOT)=265.3 | tok/step=3.28 | meanTTFT=443.35 ms
+ROW cohort C8 real prompts T=default | e2e=238.30 tok/s | decode(C/meanTPOT)=349.7 | tok/step=3.26 | meanTTFT=2523.68 ms
+ROW cohort C1 real prompts T=0 | e2e=110.29 tok/s | decode(C/meanTPOT)=114.5 | tok/step=3.35 | meanTTFT=225.27 ms
+ROW cohort C2 real prompts T=0 | e2e=163.47 tok/s | decode(C/meanTPOT)=188.3 | tok/step=3.31 | meanTTFT=321.31 ms
+ROW cohort C4 real prompts T=0 | e2e=236.08 tok/s | decode(C/meanTPOT)=283.1 | tok/step=3.46 | meanTTFT=459.66 ms
+ROW cohort C8 real prompts T=0 | e2e=258.76 tok/s | decode(C/meanTPOT)=368.2 | tok/step=3.44 | meanTTFT=2611.52 ms
+# raw logs in /tmp/rb-qB-1
+# end 2026-10-14T23:39:34Z exit=0
