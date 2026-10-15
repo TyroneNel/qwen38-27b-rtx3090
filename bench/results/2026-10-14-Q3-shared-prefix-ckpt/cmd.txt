@@ -1,0 +1,31 @@
+2026-10-15T00:16:53Z [q3ckpt] cp bench/results/2026-10-14-Q3-shared-prefix-ckpt/.env.q3ckpt .env
+2026-10-15T00:16:53Z [q3ckpt] sampler: bench/results/2026-10-14-batch3-tools/sampler.ps1 -> bench/results/2026-10-14-Q3-shared-prefix-ckpt/mem-trace-q3ckpt.csv
+2026-10-15T00:16:54Z [q3ckpt] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T00:19:13Z [q3ckpt] healthy after 138 s
+2026-10-15T00:19:14Z [q3ckpt] spill watch started: bench/results/2026-10-14-batch3-tools/spillwatch.sh
+2026-10-15T00:19:14Z [q3ckpt] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q3ckpt 1 --n 8
+2026-10-15T00:19:38Z [q3ckpt] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q3ckpt 2 --n 8
+2026-10-15T00:20:05Z [help-all-q3ckpt] docker compose --profile single exec -T single bash -lc 'cd /app && echo "## vllm serve --help=all | grep -inE replay|mamba|ssm"; venv/bin/vllm serve --help=all 2>&1 | grep -inE "replay|mamba|ssm"; echo "## count of --help=all lines matching replay:"; venv/bin/vllm serve --help=all 2>&1 | grep -ic replay; echo "## replayssm in the installed vllm source"; P=$(venv/bin/python -c "import vllm,os;print(os.path.dirname(vllm.__file__))"); grep -rn -A3 "use_replayssm:" $P --include=*.py | head -20'
+2026-10-15T00:20:32Z [q3ckpt] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-15T00:24:34Z [q4] docker run --rm --entrypoint bash hyperqwen:exp-f1a033e -lc '<print the full --use-replayssm / --replayssm-buffer-len help entries and the cache.py docstring>' (one-shot, self-removing; no GPU, no model)

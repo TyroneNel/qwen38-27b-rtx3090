@@ -10,3 +10,4 @@ sha256:c06b97c7c9eb801341616d1a7a301c963b4c189eeb7bd44d9a91ce77971a5e5b 2026-10-
 
 The preflight's `docker images` also lists ghcr.io/syv-ai/hyperqwen:latest with the same image ID (c06b97c7c9eb):
 one image under two tags.
+2026-10-14T20:50Z one-shot: docker run --rm --entrypoint bash hyperqwen:exp-f1a033e -lc 'grep LOG_STATS_INTERVAL vllm/envs.py; grep Running: v1/metrics/loggers.py' -> 'VLLM_LOG_STATS_INTERVAL: float = 10.0' (envs.py:49), '"Running: %d reqs",' (loggers.py:277). Self-removing, no GPU.

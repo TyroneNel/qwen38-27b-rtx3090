@@ -30,7 +30,6 @@ change since, `2026-10-14-batch3-preflight/image-reuse.txt`). Int8 `CTX=fast` ba
   state pages follow the configured maximum k, so dynamic K buys step time and no seats.
 - **Seats cost single-stream speed.** C1 T=0 reads 112.1 / 94.1 / 64.7 tok/s at k=7/3/1 (−16% at k=3), and C8 T=0
   reads 371.7 / 439.3 / 383.0.
-  reads 371.7 / 439.3 / 383.0.
 
 ## Q2: bf16 recurrent state, B loses (`2026-10-14-Q2-{fp16,bf16}/report.md`)
 
@@ -45,10 +44,39 @@ change since, `2026-10-14-batch3-preflight/image-reuse.txt`). Int8 `CTX=fast` ba
 - **Perplexity spilled on both arms**, with the guard in watch-only mode for that step: Shared Usage went from
   92.2 to 1,002.2 MiB on fp16 and from 84.2 to 938.2 MiB on bf16. Gotcha 60 records 410 MiB for int8. All timing
   and GSM8K ran before it, on the floor.
+
+## Q3: neither checkpoint flag applied (`2026-10-14-Q3-*/report.md`)
+
+- Both flags reach the args line: `'enable_mamba_shared_prefix_checkpoint': True` and `'mamba_block_size': 8192`.
+  Neither changes the attention block (864), the mamba padding (1.09%), the group size (8), the pool (116,440
+  tokens) or the seats (7 running, 1 waiting at 99.2%).
+
+## Q4: the instrumentation
+
+- **`--help=all` exposes `--use-replayssm` and `--replayssm-buffer-len` on this pin.** That contradicts batch 1
+  and G7. The field's docstring still says "Mamba2 decode kernel … standard (non-speculative) decode only", so it
+  is still not a lever for DFlash2.
+- **No boot line reports mamba blocks or state slots** (0 of 12 boot logs). Seats are visible only through
+  `GPU KV cache usage` in the stats line. A direct state-slot counter is the candidate patch.
+
+## Where this contradicts the docs
+
+- `decode-speed-batch3.md`'s Conclusion B text and the brief expect the `RESIDENT` print to over-predict. It
+  under-predicts: it prints 5 at k=7 and the pool holds 7, it says 10.6 at k=3 and the pool holds 13 (uncapped
+  probe). The measured cost is 81-88 MB per (k+2) with ~1.6k tokens of context. The launcher's comment uses
+  104,988,089 B.
+- The launcher's comment says "six resident, the seventh preempted". On the brief's 1.1k-token probe it is 7
+  resident with the eighth waiting. On the ladder's 4k-token prompts it is 6, so the comment holds for 4k prompts.
+- G7 and batch 1: "no CLI flag" for ReplaySSM. The flag exists (Q4).
+- Batch 2's "k=3 arm still read 5" was not a k=3 allocation. It was dynamic K on `num_speculative_tokens=7`.
+
 ## What could not be established
 
 - The k=1 seat count above 16. `MAX_SEQS=24` spilled at boot: Shared Usage went 90.2 → 122.2 MiB at the
   profiling step. The 22.9 figure is the pool share arithmetic, not a held count.
+- Why the fused GDN kernel gives no C1 gain. No kernel profile was taken.
+- Whether the shared-prefix checkpoint flag does anything on shared-prefix traffic. The probe's prompts share no
+  prefix.
 
 ## Seen that the batch did not ask for
 
@@ -58,3 +86,15 @@ change since, `2026-10-14-batch3-preflight/image-reuse.txt`). Int8 `CTX=fast` ba
   20,000 MiB, so the raised level became the floor.
 - **The engine's GPU KV cache size in tokens rises as k falls** at fixed bytes: 116,440 / 131,724 / 141,708. The
   attention block goes 864 / 816 / 800 at the same time.
+- **The perplexity spill is larger than gotcha 60 records:** 1,002 MiB (fp16 state) and 938 MiB (bf16 state) of
+  Shared Usage on the int8 base, against 410 MiB.
+
+## Method notes
+
+- `VLLM_LOG_STATS_INTERVAL=2` was set on every batch-3 boot (in `.env`, identical across arms), so a 512-token
+  wave yields several `Running:` lines.
+- Two one-shot `docker run --rm` commands ran outside the arm boots, with no GPU and no model, to read the image's
+  source. The first, before Q1, checked that `VLLM_LOG_STATS_INTERVAL` exists in `vllm/envs.py` (it does,
+  default 10.0). The second, in Q4, printed the ReplaySSM docstring. Both containers removed themselves.
+- The Q1 k=1 probe wave 2 was cut off by the driver shell's 3600 s limit and rerun on the same boot
+  (`2026-10-14-Q1-k1/cmd.txt`).

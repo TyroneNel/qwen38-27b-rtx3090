@@ -1,0 +1,67 @@
+# start 2026-10-15T00:20:05Z
+## vllm serve --help=all | grep -inE replay|mamba|ssm
+269:  --enable-trace-replay, --no-enable-trace-replay
+621:MambaConfig:
+622:  Configuration for Mamba SSM backends.
+624:  --enable-mamba-cache-stochastic-rounding, --no-enable-mamba-cache-stochastic-rounding
+625:                        Enable stochastic rounding when writing SSM state to
+629:  --mamba-backend MAMBA_BACKEND
+630:                        Mamba SSU backend to use. (default:
+631:                        MambaBackendEnum.TRITON)
+632:  --mamba-cache-philox-rounds MAMBA_CACHE_PHILOX_ROUNDS
+637:  --mamba-ssu-algorithm {auto,horizontal,simple,vertical,None}
+974:  --enable-mamba-shared-prefix-checkpoint, --no-enable-mamba-shared-prefix-checkpoint
+975:                        Also register a Mamba "align" checkpoint at the
+979:                        `mamba_cache_mode` "align", EAGLE on the Mamba group,
+980:                        and a prefix match unit smaller than the Mamba block
+1051:  --mamba-block-size MAMBA_BLOCK_SIZE
+1053:                        for mamba cache. Can be set only when prefix caching
+1056:  --mamba-cache-dtype {auto,bfloat16,float16,float32}
+1057:                        The data type to use for the Mamba cache (both the
+1058:                        conv as well as the ssm state). If set to 'auto', the
+1061:  --mamba-cache-mode {align,all,none}
+1062:                        The cache strategy for Mamba layers:
+1064:                        - "all": cache the mamba state of all tokens at
+1066:                        - "align": only cache the mamba state of the last
+1070:  --mamba-ssm-cache-dtype {auto,bfloat16,float16,float32}
+1071:                        The data type to use for the Mamba cache (ssm state
+1073:                        mamba_cache_dtype). If set to 'auto', the data type
+1074:                        for the ssm state will be determined by
+1075:                        mamba_cache_dtype. (default: auto)
+1083:                        Mamba prefix-cache checkpoints. ``0`` retains only
+1084:                        semantic checkpoints, including the latest replay
+1089:                        densely. Applies only to sliding-window and Mamba
+1126:  --replayssm-buffer-len REPLAYSSM_BUFFER_LEN
+1127:                        ReplaySSM logical history length B for Mamba2. Triton
+1131:  --swa-bounded-replay, --no-swa-bounded-replay
+1136:  --use-replayssm, --no-use-replayssm
+1137:                        Use the ReplaySSM Mamba2 decode kernel: cache recent
+1138:                        SSM inputs and skip the per-step full-state store,
+1140:                        mamba_cache_mode 'none' or 'align' (prefix caching)
+1141:                        and the Triton or FlashInfer mamba backend; standard
+1143:                        are most efficient when mamba_block_size is a multiple
+1144:                        of replayssm_buffer_len, but this is not required.
+## count of --help=all lines matching replay:
+8
+## replayssm in the installed vllm source
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py:213:    use_replayssm: bool = False
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py-214-    """Use the ReplaySSM Mamba2 decode kernel: cache recent SSM inputs and skip
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py-215-    the per-step full-state store, writing the checkpoint back only on flush.
+/app/venv/lib/python3.12/site-packages/vllm/config/cache.py-216-    Requires mamba_cache_mode 'none' or 'align' (prefix caching) and the Triton
+--
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py:3448:        if not self.cache_config.use_replayssm:
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py-3449-            self.cache_config.use_kda_recoverssm = False
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py-3450-            return self
+/app/venv/lib/python3.12/site-packages/vllm/config/vllm.py-3451-        self.cache_config.use_kda_recoverssm = self.num_speculative_tokens > 0
+--
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/warmup/replayssm_warmup.py:80:        if not isinstance(module, MambaMixer2) or not module.use_replayssm:
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/warmup/replayssm_warmup.py-81-            continue
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/warmup/replayssm_warmup.py-82-        assert module.replayssm_buffer_len is not None
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/warmup/replayssm_warmup.py-83-        ring_start = module._replayssm_ring_start
+--
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/mamba_mixer2.py:742:            if self.use_replayssm:
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/mamba_mixer2.py-743-                x_cache, dt_cache, B_cache = self.kv_cache[2:5]
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/mamba_mixer2.py-744-                if self.mamba_config.backend == MambaBackendEnum.FLASHINFER:
+/app/venv/lib/python3.12/site-packages/vllm/model_executor/layers/mamba/mamba_mixer2.py-745-                    ring_start = self._replayssm_ring_start
+--
+# end 2026-10-15T00:20:31Z exit=0

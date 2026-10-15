@@ -1,0 +1,5 @@
+tag: hyperqwen:exp-f1a033e
+digest (image ID, raw-image-q3ckpt.log): sha256:c06b97c7c9eb801341616d1a7a301c963b4c189eeb7bd44d9a91ce77971a5e5b ["hyperqwen:exp-f1a033e","ghcr.io/syv-ai/hyperqwen:latest"]
+code commit in the image: f1a033e (../2026-10-14-batch3-preflight/image-reuse.txt)
+repo HEAD at run time: 92306f2
+boot class: container boot (PowerShell: docker compose --profile single up -d --force-recreate --no-deps single), cold weight load

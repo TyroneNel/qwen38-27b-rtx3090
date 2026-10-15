@@ -1,0 +1,31 @@
+# 2026-10-15T00:24:34Z docker run --rm --entrypoint bash hyperqwen:exp-f1a033e (one-shot, self-removing, no GPU)
+## vllm/config/cache.py
+213:    use_replayssm: bool = False
+214-    """Use the ReplaySSM Mamba2 decode kernel: cache recent SSM inputs and skip
+215-    the per-step full-state store, writing the checkpoint back only on flush.
+216-    Requires mamba_cache_mode 'none' or 'align' (prefix caching) and the Triton
+217-    or FlashInfer mamba backend; standard (non-speculative) decode only. In align
+218-    mode flushes are most efficient when mamba_block_size is a multiple of
+219-    replayssm_buffer_len, but this is not required."""
+220-    use_kda_recoverssm: bool = field(default=False, init=False)
+221-    """Whether Kimi-K3 KDA uses RecoverSSM speculative decode."""
+222-
+223-    # Will be set after profiling.
+224-    num_gpu_blocks: int | None = field(default=None, init=False)
+225-    """The number of blocks to allocate for GPU memory."""
+209:    replayssm_buffer_len: int = Field(default=16, gt=0)
+210-    """ReplaySSM logical history length B for Mamba2. Triton uses B physical
+211-    rows and FlashInfer uses B+1. Kimi-K3 speculative decode does not use B.
+212-    Default 16."""
+213-    use_replayssm: bool = False
+214-    """Use the ReplaySSM Mamba2 decode kernel: cache recent SSM inputs and skip
+215-    the per-step full-state store, writing the checkpoint back only on flush.
+## supports_replayssm
+venv/lib/python3.12/site-packages/vllm/config/model.py:2003:    def supports_replayssm(self) -> bool:
+venv/lib/python3.12/site-packages/vllm/config/model.py:2004:        return self._model_info.supports_replayssm
+venv/lib/python3.12/site-packages/vllm/config/vllm.py:3453:        if self.model_config is not None and not self.model_config.supports_replayssm:
+venv/lib/python3.12/site-packages/vllm/model_executor/models/registry.py:57:    supports_replayssm,
+venv/lib/python3.12/site-packages/vllm/model_executor/models/registry.py:875:    supports_replayssm: bool
+venv/lib/python3.12/site-packages/vllm/model_executor/models/registry.py:904:            supports_replayssm=supports_replayssm(model),
+venv/lib/python3.12/site-packages/vllm/model_executor/models/interfaces.py:1176:    supports_replayssm: ClassVar[Literal[True]] = True
+venv/lib/python3.12/site-packages/vllm/model_executor/models/interfaces.py:1180:def supports_replayssm(model: type[object]) -> TypeIs[type[SupportsReplaySSM]]: ...
