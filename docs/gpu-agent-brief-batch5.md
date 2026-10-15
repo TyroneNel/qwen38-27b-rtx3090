@@ -40,18 +40,28 @@ answer a user could act on before the others are done.
   `prepare`. `docker compose up` must run from PowerShell, not Git Bash.
 - **`MAX_SEQS` hides the seat effect**: 8 admits eight requests and k=7 already holds seven. Every concurrency
   question runs at `MAX_SEQS=16` and states the cap it ran under.
-- Seats follow the **configured** k: k=7 → 7 seats at 112.1 tok/s C1, k=3 → 13 at 94.1, k=1 → 16 at 64.7. The
-  per-request pool share is 14.2 / 7.45 / 4.37%, and the launcher's `RESIDENT` constant is 16-23% low.
+- Seats follow the **configured** k. Batch 4's policy table, ~4k-token prompts on a 256 MiB smaller pool: k=7
+  holds 5 (C1 T=0 103.4), k=3 holds 9 (93.5), k=1 holds 13-14 (63.3), `SPEC=off` holds 16 (40.7). Batch 3's
+  7/13/16 were at the full pin and shorter prompts. The per-request cost is **not** a constant: it is
+  `6(k+2) + 2*ceil(ctx/864)` pool pages, so it grows 2.4× from a 1k to a 32k prompt.
+- The launcher's seat print **is no longer a constant.** It was `KV_MEM / ((k+2) × 104988089)`, which was right
+  at about 4k prompts and wrong either side; it is now the function above, evaluated at a ~1k prompt and at
+  `MAX_LEN`, and it skips `CTX=huge`. Q2 is what verifies it on hardware for the first time.
 - The band-2 profile (`DFLASH_TOKENS=3` + `EXTRA_ARGS='--attention-backend TRITON_ATTN --kv-cache-dtype
-  int8_per_token_head'`, `KV_MEM=5583457484`, `MAX_SEQS=16`) is Q1's baseline: pool 116,440 tokens, preemptions 0,
-  N=8 aggregate 350.1. Its quality gate so far is GSM8K n=200 and perplexity; Q4 adds IFBench.
+  int8_per_token_head'`, `MAX_SEQS=16`) is Q1's baseline. Pool 116,440 tokens at the full `KV_MEM` (batch 2),
+  preemptions 0; N=8 aggregate 337.1 at batch 4's smaller pool. Its quality gate so far is GSM8K n=200 and
+  perplexity; Q4 adds IFBench. It is published for users in [single-user/README.md](../single-user/README.md).
 - The spill oracle is the counter, not free VRAM: idle Shared Usage 0.25 MiB, loaded-engine floor 84-92 MiB.
   Perplexity spills this box badly (up to 1,002 MiB). Reuse `bench/results/2026-10-14-batch3-tools/spillwatch.sh`
   and **take its floor between the engine's KV-cache line and the first request** — the batch-3 version sampled
   after the rise and missed a spill.
 - Noise floors: C1 T=0 within a boot 0.0-0.1%, cross-boot up to 3.2%; teacher-forced tokens/step is noise-free;
   free-run decode ~10%; preempted ladder rows are tail rows, not steady state.
-- Instruments to reuse, not rebuild: `running_probe.py`, `workload_accept.py`, `memsum.sh`/`sampler.ps1`/`arm.sh`
+- Instruments to reuse, not rebuild: the newest is `bench/results/2026-10-15-batch4-tools/` (`running_probe.py`,
+  `spillwatch.sh`, `memsum.sh`, `arm.sh`), then `2026-10-14-batch3-tools/` (`running_probe.py`,
+  `workload_accept.py`, `spillwatch.sh`) and `2026-10-14-batch2-tools/`.
+- Image: `hyperqwen:exp-f1a033e` — but **this branch changed `single-user/start_qwen.sh`**, so Step 1 is a real
+  check this time and a rebuild is expected.
 ## Step 0 — preflight (10 minutes)
 
 ```powershell
@@ -74,8 +84,9 @@ Untracked owner files (`.env.*`, `docker-compose.override.local.yml`) stay untou
 git diff --stat <image-commit>..HEAD -- . ':(exclude)docs' ':(exclude)bench/results'
 ```
 
-Nothing printed means reuse the batch-3 image; record its digest, do not rebuild. Anything printed means rebuild
-once, tag `hyperqwen:exp-<short-sha>`, record the digest.
+Batch 4 reused `hyperqwen:exp-f1a033e` when this printed `README.md` only. **This branch changed
+`single-user/start_qwen.sh`**, so a diff that includes it means REBUILD — Q2 exists to test that print, and an
+old image would test the constant it replaced. Either way, tag `hyperqwen:exp-<short-sha>` and record the digest.
 
 ## Step 2 — Q2, the launcher seat print on hardware (about 60 minutes) — run this first
 
@@ -134,8 +145,8 @@ One directory per arm under `bench/results/<YYYY-MM-DD>-<arm-id>/`: `.env` (with
 `DFLASH_TOKENS`, `MAX_SEQS` and `EXTRA_ARGS`), `cmd.txt`, `image.txt` (tag, digest, commit, boot class), `mem.txt`
 (free VRAM after boot, the Shared Usage trace, and the floor you took it against), `raw-*.log` verbatim including
 the `Running:` samples and the kernel lines, `report.md` with the arms side by side, the metric named, the raw
-numbers, the delta, the verdict, and one line on what was verified versus assumed. Q2's answer goes in
-`bench/results/<date>-batch5-S5-recon/` as prose with the quoted code. Then
+numbers, the delta, the verdict, and one line on what was verified versus assumed. Q2's report carries the
+printed pair, the observed seats and `num_gpu_blocks` at both depths, and the per-end error. Then
 `bench/results/<date>-batch5-SUMMARY.md`, whose first line is the one-sentence answer to Q2 (does the printed bound hold), followed by Q1.
 
 ```powershell
@@ -181,5 +192,3 @@ No default flips, no engine patches, no new image unless the non-docs files chan
 **R — refuted** table (batched-token budget above 2048, bf16 state, the checkpoint flags, a per-step k schedule as
 a seat lever, FlashInfer as the fast path, the 4 GiB bf16 drafter), no `prepare`, no soak, no `verify.sh`, no
 quality claim from n=50, no PR, no issue, no comment, no watermark, no co-author trailer.
-  under `bench/results/2026-10-15-batch4-tools/` (newest: `running_probe.py`, `spillwatch.sh`, `memsum.sh`, `arm.sh`), `2026-10-14-batch3-tools/` and `2026-10-14-batch2-tools/`.
-- Image: `hyperqwen:exp-f1a033e` unless Step 1 says the branch's non-docs files changed.
