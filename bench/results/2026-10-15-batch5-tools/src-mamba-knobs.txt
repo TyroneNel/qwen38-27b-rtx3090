@@ -1,0 +1,92 @@
+> grep -rn mamba_config/MambaBackendEnum consumers (vllm 0.31.0 in hyperqwen:exp-844cd90)
+./config/vllm.py:1487:            self.mamba_config.enable_stochastic_rounding
+./config/vllm.py:3464:            if self.mamba_config.enable_stochastic_rounding:
+./config/vllm.py:3485:            if self.mamba_config.backend != MambaBackendEnum.TRITON:
+./config/vllm.py:3492:        elif self.mamba_config.backend == MambaBackendEnum.FLASHINFER:
+./config/vllm.py:3498:        elif self.mamba_config.backend != MambaBackendEnum.TRITON:
+./model_executor/warmup/replayssm_warmup.py:12:from vllm.model_executor.layers.mamba.ops.ssu_dispatch import (
+./model_executor/warmup/replayssm_warmup.py:28:        and config.mamba_config.backend == MambaBackendEnum.FLASHINFER
+./model_executor/warmup/replayssm_warmup.py:72:    from vllm.model_executor.layers.mamba.ops.ssu_dispatch import (
+./model_executor/layers/mamba/mamba_utils.py:243:        if backend == MambaBackendEnum.FLASHINFER:
+./model_executor/layers/mamba/mamba_mixer2.py:45:from vllm.model_executor.layers.mamba.ops.ssu_dispatch import (
+./model_executor/layers/mamba/mamba_mixer2.py:744:                if self.mamba_config.backend == MambaBackendEnum.FLASHINFER:
+./model_executor/layers/mamba/mamba_mixer2.py:1077:                if self.mamba_config.backend == MambaBackendEnum.FLASHINFER:
+./model_executor/layers/mamba/mamba_mixer2.py:1102:                            self.mamba_config.enable_stochastic_rounding
+./model_executor/layers/mamba/mamba_mixer2.py:1105:                            self.mamba_config.stochastic_rounding_philox_rounds
+./model_executor/layers/mamba/mamba_mixer2.py:1129:                            self.mamba_config.enable_stochastic_rounding
+./model_executor/layers/mamba/mamba_mixer2.py:1132:                            self.mamba_config.stochastic_rounding_philox_rounds
+./model_executor/layers/mamba/mamba_mixer2.py:1187:                backend=self.mamba_config.backend,
+./model_executor/layers/mamba/mamba_mixer2.py:1215:            and layer.mamba_config.backend == MambaBackendEnum.FLASHINFER
+./model_executor/layers/mamba/ops/ssu_dispatch.py:206:            enable_stochastic_rounding=self._mamba_config.enable_stochastic_rounding,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:207:            cache_philox_rounds=self._mamba_config.stochastic_rounding_philox_rounds,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:229:        return self._mamba_config.ssu_algorithm or "auto"
+./model_executor/layers/mamba/ops/ssu_dispatch.py:257:            if self._mamba_config.enable_stochastic_rounding
+./model_executor/layers/mamba/ops/ssu_dispatch.py:281:            philox_rounds=self._mamba_config.stochastic_rounding_philox_rounds or 10,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:352:    MambaBackendEnum.TRITON: TritonSSUBackend,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:353:    MambaBackendEnum.FLASHINFER: FlashInferSSUBackend,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:354:    MambaBackendEnum.CPU: CPUSSUBackend,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:478:    backend = mamba_config.backend
+./model_executor/layers/mamba/ops/ssu_dispatch.py:480:    if backend == MambaBackendEnum.TRITON:
+./model_executor/layers/mamba/ops/ssu_dispatch.py:488:            backend = MambaBackendEnum.CPU
+./model_executor/layers/mamba/ops/ssu_dispatch.py:496:        MambaBackendEnum.TRITON,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:497:        MambaBackendEnum.FLASHINFER,
+./model_executor/layers/mamba/ops/ssu_dispatch.py:507:    if use_replayssm and backend == MambaBackendEnum.FLASHINFER:
+./model_executor/layers/mamba/mamba_mixer.py:34:from vllm.model_executor.layers.mamba.ops.ssu_dispatch import selective_state_update
+./model_executor/models/nemotron_h.py:817:                backend=vllm_config.mamba_config.backend,
+./v1/attention/backends/mamba_attn.py:120:            and vllm_config.mamba_config.backend == MambaBackendEnum.FLASHINFER
+./v1/worker/gpu/model_runner.py:44:from vllm.model_executor.layers.mamba.ops.ssu_dispatch import (
+./v1/worker/gpu_model_runner.py:65:from vllm.model_executor.layers.mamba.ops.ssu_dispatch import (
+
+> grep -n mamba_config/ssu/MambaBackend in the GDN layer files
+model_executor/layers/mamba/gdn/kimi_gdn_linear_attn.py:200:            # Inductor correctness issue seen with the row-strided G view.
+model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py:624:        See https://github.com/vllm-project/vllm/issues/35924
+(end)
+
+> sed -n 64,84p config/mamba.py
+        return value
+
+    def validate_ssu_algorithm(self) -> None:
+        if self.ssu_algorithm is None:
+            return
+        valid_algorithms = get_args(MambaSSUAlgorithm)
+        if self.ssu_algorithm not in valid_algorithms:
+            valid = ", ".join(valid_algorithms)
+            raise ValueError(
+                f"Unknown Mamba SSU algorithm: '{self.ssu_algorithm}'. "
+                f"Valid options are: {valid}"
+            )
+        if self.backend != MambaBackendEnum.FLASHINFER:
+            raise ValueError(
+                "Mamba SSU algorithm selection is only supported with the "
+                "FlashInfer backend. Please set `--mamba-backend flashinfer`, "
+                "or omit `--mamba-ssu-algorithm`."
+            )
+
+    def __post_init__(self):
+        self.validate_ssu_algorithm()
+
+> sed -n 510,533p model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py
+        self.gdn_prefill_backend = self.chunk_gated_delta_rule.gdn_prefill_backend
+        self._prefill_kernels_warmed_up = False
+        self.enable_packed_recurrent_decode = (
+            envs.VLLM_ENABLE_FLA_PACKED_RECURRENT_DECODE
+        )
+        self.gdn_decode_kernel = envs.VLLM_GDN_DECODE_KERNEL.strip().lower()
+        if self.gdn_decode_kernel == "cuda" and current_platform.is_cuda_alike():
+            reason = self._fused_gdn_decode_unsupported_reason(vllm_config)
+            if reason is not None:
+                if "VLLM_GDN_DECODE_KERNEL" in os.environ:
+                    raise ValueError(
+                        f"VLLM_GDN_DECODE_KERNEL=cuda is not supported: {reason}"
+                    )
+                logger.info_once(
+                    "Falling back to the Triton GDN decode path: %s", reason
+                )
+                self.gdn_decode_kernel = "triton"
+        elif current_platform.is_cpu():
+            self.gdn_decode_kernel = "CPU"
+        elif current_platform.is_xpu():
+            self.gdn_decode_kernel = "XPU"
+
+        self.enable_fused_gdn_decode = self.gdn_decode_kernel == "cuda"
+        logger.info_once("GDN decode kernel: %s", self.gdn_decode_kernel)

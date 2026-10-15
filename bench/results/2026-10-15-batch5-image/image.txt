@@ -1,0 +1,11 @@
+image tag: hyperqwen:exp-844cd90 (also ghcr.io/syv-ai/hyperqwen:latest, same ID; built locally by `docker compose build single`, not pulled)
+image ID: sha256:38d93660fb064e637437ef4325ed66fd9fefe25b7b85a787fa8c08632209a400 (image-inspect.txt)
+commit built from: 844cd90 (HEAD of cline/gf59cdmh at build time, tracked tree clean)
+why rebuilt: Step 1's diff lists single-user/start_qwen.sh (+36/-14, the seat print Q2 tests) (reuse-check.txt).
+build: build.log. Layers 1-6 (apt, venv, pip requirements) CACHED from the 2026-10-14 build, so the vLLM inside is
+  the same resolve (`Version: 0.31.0`, image-inspect.txt); COPY . . and the patch/kvarn/verify-install/mq3d step reran
+  (54.5 s). Exit 0.
+checks on the built image (image-inspect.txt): `grep -c RESIDENT_PAGE=14601709 single-user/start_qwen.sh` = 1 (the new
+  print is in the image); `ls -a /app | grep -c ^.env` = 0 (O-2: no .env* baked in).
+previous image: hyperqwen:exp-f1a033e = sha256:c06b97c7c9eb... still present; ghcr.io/syv-ai/hyperqwen:latest moved
+  from c06b97c7c9eb to 38d93660fb06 by the build (the compose service's image name).

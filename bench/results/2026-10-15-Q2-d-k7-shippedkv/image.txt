@@ -1,0 +1,6 @@
+tag: hyperqwen:exp-844cd90
+digest: sha256:38d93660fb064e637437ef4325ed66fd9fefe25b7b85a787fa8c08632209a400 (raw-image-q2d.log)
+code commit in the image: 844cd90 (../2026-10-15-batch5-image/image.txt)
+repo HEAD at run time: 844cd90
+boot class: container boot (PowerShell: docker compose --profile single up -d --force-recreate --no-deps single), cold weight load
+arm: shipped KV (no EXTRA_ARGS) k=7 KV_MEM=5583457484 MAX_SEQS=16

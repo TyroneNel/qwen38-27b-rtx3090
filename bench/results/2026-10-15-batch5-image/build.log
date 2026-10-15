@@ -1,0 +1,212 @@
+# 2026-10-15T11:56:12Z docker compose build single (HEAD 844cd90)
+docker :  Image ghcr.io/syv-ai/hyperqwen:latest Building 
+At line:1 char:32
++ ... t-Location G:\dev\HyperQwen; docker compose build single 2>&1 | Out-S ...
++                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Image ghcr.io/...atest Building :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+#1 [internal] load local bake definitions
+#1 reading from stdin 913B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 2.29kB 0.0s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/nvidia/cuda:13.0.3-base-ubuntu24.04
+#3 ...
+
+#4 [auth] nvidia/cuda:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/nvidia/cuda:13.0.3-base-ubuntu24.04
+#3 DONE 1.8s
+
+#5 [internal] load .dockerignore
+#5 transferring context: 584B done
+#5 DONE 0.0s
+
+#6 [1/9] FROM docker.io/nvidia/cuda:13.0.3-base-ubuntu24.04@sha256:7c7413a56200486f71f181cad9310f6fd31b6bb21816ade15fc9c1e1e927a5c1
+#6 resolve docker.io/nvidia/cuda:13.0.3-base-ubuntu24.04@sha256:7c7413a56200486f71f181cad9310f6fd31b6bb21816ade15fc9c1e1e927a5c1 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 416.83kB 0.0s done
+#7 DONE 0.0s
+
+#8 [5/9] COPY docker/requirements.txt docker/requirements.txt
+#8 CACHED
+
+#9 [2/9] RUN apt-get update && apt-get install -y --no-install-recommends       python3.12 python3.12-venv python3.12-dev       cuda-nvcc-13-0 cuda-cudart-dev-13-0 libcurand-dev-13-0       build-essential patch curl ca-certificates     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [3/9] WORKDIR /app
+#10 CACHED
+
+#11 [4/9] RUN python3.12 -m venv venv && venv/bin/pip install --upgrade pip
+#11 CACHED
+
+#12 [6/9] RUN venv/bin/pip install -r docker/requirements.txt
+#12 CACHED
+
+#13 [7/9] COPY . .
+#13 DONE 0.2s
+
+#14 [8/9] RUN set -e; SP=$(venv/bin/python -c 'import vllm, os; print(os.path.dirname(vllm.__file__))' | tail -n1);     bash patches/apply.sh "$SP";     bash kvarn/install.sh;     bash verify.sh --install;     venv/bin/python bench/mq3d_scratch_pool_test.py
+#14 2.949 Using 'pin_memory=False' as WSL is detected. This may slow down performance.
+#14 6.423 == qwen3_5-embed-quant.patch
+#14 6.429 == marlin-int8-layer-select.patch
+#14 6.434 == marlin-int8-negative-scales.patch
+#14 6.437 == qwen3_5-mtp-draft-vocab.patch
+#14 6.443 == vllm-pr50021-gdn-spec-bounds.patch
+#14 6.453 == sampler-small-topk-fast-softmax.patch
+#14 6.458 == spec-decode-attn.patch
+#14 6.462 == speed-knobs-envs.patch
+#14 6.466 == hybrid-kv-groups-v2-cudagraph.patch
+#14 6.475 == dflash2-lookup-drafting.patch
+#14 6.478 == hybrid-sw-block-promote.patch
+#14 6.484 == spec-decode-int8-kv.patch
+#14 6.488 == vision-tower-cpu-offload.patch
+#14 6.491 == int4-kv-per-token-head.patch
+#14 6.495 == marlin-repack-staged-sm80.patch
+#14 6.501 == offload-dflash-eagle-groups.patch
+#14 6.504 == dflash2-ngram-chains.patch
+#14 6.509 == offload-wsl2-devptr.patch
+#14 6.512 == spec-decode-int4-kv-mq3d.patch
+#14 6.516 == dflash2-prewarm.patch
+#14 6.519 == marlin-tune-table.patch
+#14 6.524 == prefill-attn-int8.patch
+#14 6.528 == spec-sampler-prewarm.patch
+#14 6.532 == mamba-align-checkpoint-order.patch
+#14 6.536 == spec-decode-scratch-token-units.patch
+#14 6.540 == mamba-chunked-prefill-align.patch
+#14 6.543 == spec-decode-scratch-within-budget.patch
+#14 6.547 == dflash2-z-adaptive-emitted.patch
+#14 6.551 == dspark-draft-quant-config.patch
+#14 6.555 == engine-completion-log.patch
+#14 6.560 == engine-stall-sentinel.patch (1 hunk(s) at an offset)
+#14 6.565 == triton-spec-attn-fp8-kv.patch (1 hunk(s) at an offset)
+#14 6.568 == topk-honour-flashinfer-sampler-switch.patch
+#14 6.572 == memory-profile-after-warmup.patch
+#14 6.576 == cudagraph-memory-from-allocator.patch
+#14 6.580 == bench-probe-errors.patch
+#14 6.585 == serve-404-served-names.patch
+#14 6.590 == serve-model-path-match.patch
+#14 6.594 == tokenize-v1-route.patch
+#14 6.597 == marlin-int8-asym-zp.patch
+#14 6.601 == compile-key-runtime-knobs.patch (1 hunk(s) at an offset)
+#14 6.605 == auth-deny-default.patch
+#14 6.609 == spec-attn-smem-fit.patch
+#14 6.613 == bench-sse-keepalive.patch
+#14 6.617 == sampler-warmup-cuda.patch
+#14 6.621 == pinned-kv-empty-cache.patch
+#14 6.625 == api-root-health.patch
+#14 6.629 == qwen3_5-embed-uva.patch (1 hunk(s) at an offset)
+#14 6.639 == vllm-pr40371-prompt-progress.patch
+#14 6.644 == vllm-pr61050-lru-running-prefix.patch
+#14 10.30 == kvarn-0.31.0.patch (2 hunk(s) at an offset)
+#14 10.30 == kvarn-v2-runner-0.31.0.patch (1 hunk(s) at an offset)
+#14 10.31 == kvarn-recycled-pages-0.31.0.patch (1 hunk(s) at an offset)
+#14 10.32 == kvarn-fp16-dequant-0.31.0.patch (2 hunk(s) at an offset)
+#14 11.71 Using 'pin_memory=False' as WSL is detected. This may slow down performance.
+#14 18.59 W1015 11:56:35.542000 404 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+#14 19.33 KVarN backend: KVARN
+#14 19.33 tile bytes 26880 -> per token per head 210 B (fp8: 256 B)
+#14 20.16 kvarn installed
+#14 20.16 == environment
+#14 20.16   PASS  python: /app/venv/bin/python
+#14 23.63   PASS  vllm 0.31.0
+#14 27.11   PASS  vllm package at /app/venv/lib/python3.12/site-packages/vllm
+#14 27.26   PASS  python module triton
+#14 32.81   PASS  python module compressed_tensors
+#14 36.36   PASS  flashinfer usable by vLLM (nvcc or flashinfer-cubin present)
+#14 36.36 == vLLM patches (order: patches/series)
+#14 36.45   PASS  patches/series lists all 50 patches
+#14 36.46   PASS  qwen3_5-embed-quant.patch applied (content check; hunks overlap another patch)
+#14 36.46   PASS  marlin-int8-layer-select.patch applied
+#14 36.46   PASS  marlin-int8-negative-scales.patch applied
+#14 36.46   PASS  qwen3_5-mtp-draft-vocab.patch applied
+#14 36.46   PASS  vllm-pr50021-gdn-spec-bounds.patch applied
+#14 36.47   PASS  sampler-small-topk-fast-softmax.patch applied
+#14 36.48   PASS  spec-decode-attn.patch applied (content check; hunks overlap another patch)
+#14 36.50   PASS  speed-knobs-envs.patch applied (content check; hunks overlap another patch)
+#14 36.50   PASS  hybrid-kv-groups-v2-cudagraph.patch applied
+#14 36.51   PASS  dflash2-lookup-drafting.patch applied (content check; hunks overlap another patch)
+#14 36.52   PASS  hybrid-sw-block-promote.patch applied
+#14 36.53   PASS  spec-decode-int8-kv.patch applied (content check; hunks overlap another patch)
+#14 36.53   PASS  vision-tower-cpu-offload.patch applied
+#14 36.53   PASS  int4-kv-per-token-head.patch applied
+#14 36.53   PASS  marlin-repack-staged-sm80.patch applied
+#14 36.54   PASS  offload-dflash-eagle-groups.patch applied
+#14 36.55   PASS  dflash2-ngram-chains.patch applied (content check; hunks overlap another patch)
+#14 36.55   PASS  offload-wsl2-devptr.patch applied
+#14 36.57   PASS  spec-decode-int4-kv-mq3d.patch applied (content check; hunks overlap another patch)
+#14 36.57   PASS  dflash2-prewarm.patch applied
+#14 36.57   PASS  marlin-tune-table.patch applied
+#14 36.57   PASS  prefill-attn-int8.patch applied
+#14 36.57   PASS  spec-sampler-prewarm.patch applied
+#14 36.57   PASS  mamba-align-checkpoint-order.patch applied
+#14 36.61   PASS  spec-decode-scratch-token-units.patch applied (superseded by spec-decode-scratch-within-budget.patch, which is applied)
+#14 36.61   PASS  mamba-chunked-prefill-align.patch applied
+#14 36.62   PASS  spec-decode-scratch-within-budget.patch applied
+#14 36.62   PASS  dflash2-z-adaptive-emitted.patch applied
+#14 36.62   PASS  dspark-draft-quant-config.patch applied
+#14 36.62   PASS  engine-completion-log.patch applied
+#14 36.62   PASS  engine-stall-sentinel.patch applied
+#14 36.64   PASS  triton-spec-attn-fp8-kv.patch applied (content check; hunks overlap another patch)
+#14 36.64   PASS  topk-honour-flashinfer-sampler-switch.patch applied
+#14 36.64   PASS  memory-profile-after-warmup.patch applied
+#14 36.64   PASS  cudagraph-memory-from-allocator.patch applied
+#14 36.64   PASS  bench-probe-errors.patch applied
+#14 36.64   PASS  serve-404-served-names.patch applied
+#14 36.64   PASS  serve-model-path-match.patch applied
+#14 36.65   PASS  tokenize-v1-route.patch applied
+#14 36.65   PASS  marlin-int8-asym-zp.patch applied
+#14 36.65   PASS  compile-key-runtime-knobs.patch applied
+#14 36.66   PASS  auth-deny-default.patch applied (content check; hunks overlap another patch)
+#14 36.66   PASS  spec-attn-smem-fit.patch applied
+#14 36.66   PASS  bench-sse-keepalive.patch applied
+#14 36.67   PASS  sampler-warmup-cuda.patch applied
+#14 36.67   PASS  pinned-kv-empty-cache.patch applied
+#14 36.67   PASS  api-root-health.patch applied
+#14 36.67   PASS  qwen3_5-embed-uva.patch applied
+#14 36.67   PASS  vllm-pr40371-prompt-progress.patch applied
+#14 36.67   PASS  vllm-pr61050-lru-running-prefix.patch applied
+#14 40.04   PASS  int8 layer-select env vars registered in envs.py (live registry)
+#14 40.04 == KVarN (optional, kvarn/)
+#14 40.06   PASS  the KVARN list in patches/apply.sh names all 4 kvarn/ patches
+#14 40.07   PASS  kvarn-0.31.0.patch applied
+#14 40.07   PASS  kvarn-v2-runner-0.31.0.patch applied (SPEC=dflash2 + CTX=huge available)
+#14 40.07   PASS  kvarn-recycled-pages-0.31.0.patch applied (no late KVarN flush into mamba state, #208)
+#14 40.07   PASS  kvarn-fp16-dequant-0.31.0.patch applied (KVARN_FP16_DEQUANT registered in envs.py)
+#14 47.01   PASS  KVarN backend importable (KV=kvarn / CTX=huge available)
+#14 47.01 
+#14 47.01 verify: OK (0 failures)
+#14 48.07 Using 'pin_memory=False' as WSL is detected. This may slow down performance.
+#14 52.60 W1015 11:57:09.547000 818 torch/utils/cpp_extension.py:178] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+#14 53.46 Failed to import from vllm._C: ModuleNotFoundError("No module named 'vllm._C'")
+#14 53.58 POOL UNIT TEST OK: 9 assertions
+#14 53.58 NEGATIVE CONTROL (exclusive=False on the second builder shares): True
+#14 DONE 54.5s
+
+#15 [9/9] RUN mkdir -p /cache /app/models && chmod 1777 /cache
+#15 DONE 0.2s
+
+#16 exporting to image
+#16 exporting layers
+#16 exporting layers 1.6s done
+#16 exporting manifest sha256:2811a85402a9909ee23b19f412406405ab7c31b74341c7f6a1e4952bb99ff3c5 done
+#16 exporting config sha256:5f8d4bdb24436982f367597697e88239dd692a6f17c01908e31b23be52a6635f 0.0s done
+#16 exporting attestation manifest sha256:7c5dfba25628635c04c02ef618098a58b4f93d4180086e831eb14a103802cf60 0.0s done
+#16 exporting manifest list sha256:38d93660fb064e637437ef4325ed66fd9fefe25b7b85a787fa8c08632209a400 0.0s done
+#16 naming to ghcr.io/syv-ai/hyperqwen:latest done
+#16 unpacking to ghcr.io/syv-ai/hyperqwen:latest
+#16 unpacking to ghcr.io/syv-ai/hyperqwen:latest 0.4s done
+#16 DONE 2.1s
+
+#17 resolving provenance for metadata file
+#17 DONE 0.0s
+ Image ghcr.io/syv-ai/hyperqwen:latest Built 
+
+# 2026-10-15T11:57:13Z exit=0

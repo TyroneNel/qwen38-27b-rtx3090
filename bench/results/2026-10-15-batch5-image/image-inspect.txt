@@ -1,0 +1,6 @@
+> docker image inspect hyperqwen:exp-844cd90 --format '{{.Id}} {{json .RepoTags}} {{.Created}}'
+sha256:38d93660fb064e637437ef4325ed66fd9fefe25b7b85a787fa8c08632209a400 ["hyperqwen:exp-844cd90","ghcr.io/syv-ai/hyperqwen:latest"] 2026-10-15T11:57:11.605421014Z
+> docker run --rm --entrypoint bash hyperqwen:exp-844cd90 -c 'grep -c RESIDENT_PAGE=14601709 single-user/start_qwen.sh; ls -a /app | grep -c ^.env; venv/bin/pip show vllm | grep Version'
+1
+0
+Version: 0.31.0

@@ -1,0 +1,37 @@
+> python 2026-10-15-batch5-tools/q2_analyze.py 2026-10-15-Q2-a-k7:q2a 2026-10-15-Q2-b-k3:q2b 2026-10-15-Q2-c-k7-cut1g:q2c 2026-10-15-Q2-d-k7-shippedkv:q2d
+## q2a (2026-10-15-Q2-a-k7)
+printed: 1k=6 MAX_LEN=1 (MAX_LEN 65536, k=7, base 54, pool 382 pages)
+engine: GPU KV cache size: 116,440 tokens, Maximum concurrency for 65,536 tokens per request: 1.78x
+  w1 n=16 prompt_tokens~1049-1051 HELD max Running=7 lines={'Running: 7 reqs, Waiting: 9 reqs, GPU KV cache usage: 99.2%': 3, 'Running: 3 reqs, Waiting: 13 reqs, GPU KV cache usage: 42.5%': 1, 'Running: 4 reqs, Waiting: 12 reqs, GPU KV cache usage: 58.3%': 1}
+     /metrics peak: num_gpu_blocks=382 kv_cache_max_concurrency=1.7767441860465116 usage=0.9921259842519685 blocks=378.0000 running=7 blocks/req=54.00 preemptions=0.0 errors=0
+  w2 n=6 prompt_tokens~32817-32817 HELD max Running=2 lines={'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 68.2%': 4, 'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 61.9%': 2, 'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 64.0%': 2}
+     /metrics peak: num_gpu_blocks=382 kv_cache_max_concurrency=1.7767441860465116 usage=0.6771653543307087 blocks=258.0000 running=2 blocks/req=129.00 preemptions=0.0 errors=0
+  w3 n=3 prompt_tokens~61461-61461 HELD max Running=1 lines={'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 51.2%': 3, 'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 51.4%': 2}
+     /metrics peak: num_gpu_blocks=382 kv_cache_max_concurrency=1.7767441860465116 usage=0.5118110236220472 blocks=195.0000 running=1 blocks/req=195.00 preemptions=0.0 errors=0
+## q2b (2026-10-15-Q2-b-k3)
+printed: 1k=11 MAX_LEN=2 (MAX_LEN 65536, k=3, base 30, pool 382 pages)
+engine: GPU KV cache size: 131,724 tokens, Maximum concurrency for 65,536 tokens per request: 2.01x
+  w1 n=16 prompt_tokens~1049-1051 HELD max Running=13 lines={'Running: 13 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.8%': 6, 'Running: 3 reqs, Waiting: 13 reqs, GPU KV cache usage: 22.3%': 1, 'Running: 6 reqs, Waiting: 10 reqs, GPU KV cache usage: 46.2%': 1}
+     /metrics peak: num_gpu_blocks=404 kv_cache_max_concurrency=2.009950248756219 usage=0.967741935483871 blocks=390.0000 running=13 blocks/req=30.00 preemptions=0.0 errors=0
+  w2 n=6 prompt_tokens~32817-32817 HELD max Running=3 lines={'Running: 3 reqs, Waiting: 3 reqs, GPU KV cache usage: 81.9%': 3, 'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 48.6%': 2, 'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 51.6%': 2}
+     /metrics peak: num_gpu_blocks=404 kv_cache_max_concurrency=2.009950248756219 usage=0.8114143920595533 blocks=327.0000 running=3 blocks/req=109.00 preemptions=0.0 errors=0
+  w3 n=3 prompt_tokens~61461-61461 HELD max Running=2 lines={'Running: 2 reqs, Waiting: 1 reqs, GPU KV cache usage: 88.8%': 3, 'Running: 2 reqs, Waiting: 1 reqs, GPU KV cache usage: 62.5%': 2, 'Running: 2 reqs, Waiting: 1 reqs, GPU KV cache usage: 66.5%': 2}
+     /metrics peak: num_gpu_blocks=404 kv_cache_max_concurrency=2.009950248756219 usage=0.8883374689826302 blocks=358.0000 running=2 blocks/req=179.00 preemptions=0.0 errors=0
+## q2c (2026-10-15-Q2-c-k7-cut1g)
+printed: 1k=5 MAX_LEN=1 (MAX_LEN 65536, k=7, base 54, pool 308 pages)
+engine: GPU KV cache size: 93,884 tokens, Maximum concurrency for 65,536 tokens per request: 1.43x
+  w1 n=16 prompt_tokens~1049-1051 HELD max Running=5 lines={'Running: 5 reqs, Waiting: 11 reqs, GPU KV cache usage: 87.9%': 2, 'Running: 3 reqs, Waiting: 13 reqs, GPU KV cache usage: 52.8%': 1, 'Running: 5 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.9%': 1}
+     /metrics peak: num_gpu_blocks=308 kv_cache_max_concurrency=1.4325581395348836 usage=0.8794788273615635 blocks=270.0000 running=5 blocks/req=54.00 preemptions=0.0 errors=0
+  w2 n=6 prompt_tokens~32817-32817 HELD max Running=2 lines={'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 84.7%': 4, 'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 73.0%': 2, 'Running: 2 reqs, Waiting: 4 reqs, GPU KV cache usage: 78.2%': 2}
+     /metrics peak: num_gpu_blocks=308 kv_cache_max_concurrency=1.4325581395348836 usage=0.8403908794788274 blocks=258.0000 running=2 blocks/req=129.00 preemptions=0.0 errors=0
+  w3 n=3 prompt_tokens~61461-61461 HELD max Running=1 lines={'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 63.5%': 2, 'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 63.8%': 1}
+     /metrics peak: num_gpu_blocks=308 kv_cache_max_concurrency=1.4325581395348836 usage=0.6351791530944626 blocks=195.0000 running=1 blocks/req=195.00 preemptions=0.0 errors=0
+## q2d (2026-10-15-Q2-d-k7-shippedkv)
+printed: 1k=6 MAX_LEN=1 (MAX_LEN 65536, k=7, base 54, pool 382 pages)
+engine: GPU KV cache size: 68,605 tokens, Maximum concurrency for 65,536 tokens per request: 1.05x
+  w1 n=16 prompt_tokens~1049-1051 HELD max Running=6 lines={'Running: 4 reqs, Waiting: 12 reqs, GPU KV cache usage: 66.5%': 1, 'Running: 6 reqs, Waiting: 10 reqs, GPU KV cache usage: 93.4%': 1, 'Running: 6 reqs, Waiting: 10 reqs, GPU KV cache usage: 90.2%': 1}
+     /metrics peak: num_gpu_blocks=380 kv_cache_max_concurrency=1.046831955922865 usage=0.9102902374670184 blocks=345.0000 running=6 blocks/req=57.50 preemptions=0.0 errors=0
+  w2 n=6 prompt_tokens~32817-32817 HELD max Running=1 lines={'Running: 1 reqs, Waiting: 5 reqs, GPU KV cache usage: 53.8%': 2, 'Running: 1 reqs, Waiting: 5 reqs, GPU KV cache usage: 53.3%': 1, 'Running: 1 reqs, Waiting: 5 reqs, GPU KV cache usage: 53.0%': 1}
+     /metrics peak: num_gpu_blocks=380 kv_cache_max_concurrency=1.046831955922865 usage=0.5382585751978892 blocks=204.0000 running=1 blocks/req=204.00 preemptions=0.0 errors=0
+  w3 n=3 prompt_tokens~61461-61461 HELD max Running=1 lines={'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 87.1%': 1, 'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 86.8%': 1, 'Running: 1 reqs, Waiting: 2 reqs, GPU KV cache usage: 89.2%': 1}
+     /metrics peak: num_gpu_blocks=380 kv_cache_max_concurrency=1.046831955922865 usage=0.8759894459102903 blocks=332.0000 running=1 blocks/req=332.00 preemptions=0.0 errors=0

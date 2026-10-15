@@ -1,0 +1,7 @@
+# 2026-10-15T11:56:12Z docker compose build single (HEAD 844cd90); reason: Step 1 diff lists single-user/start_qwen.sh
+ .dockerignore                |  4 ++-
+ README.md                    |  4 +++
+ bench/test_resident_print.sh | 84 ++++++++++++++++++++++++++++++++++++++++++++
+ single-user/README.md        | 43 ++++++++++++++++++++++-
+ single-user/start_qwen.sh    | 50 ++++++++++++++++++--------
+ 5 files changed, 169 insertions(+), 16 deletions(-)
