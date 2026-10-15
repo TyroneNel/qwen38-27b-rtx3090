@@ -96,6 +96,13 @@ from someone else's measurement. "Precision cost" is the second axis, not a bloc
 S-1 to S-4 are one item type: knobs we already have, measured, not yet shipped. S-5 is the one with no ceiling —
 the only lever that would let one server be fast for one user *and* hold thirteen.
 
+**The formula's farthest validated point** (batch 4 Q4): k=1 at `MAX_SEQS=24` seats **21** —
+`Running: 21 reqs, Waiting: 3 reqs` — which is 18.0 blocks per request against the formula's 21.8, so it holds at
+24 as well. That boot's 90.2 → 122.2 MiB Shared Usage step is batch 3's "32 MiB spill" reproduced with 256 MiB
+more headroom, which confirms it is the `MAX_SEQS`-scaled boot step (8 / 16 / 32 MiB at 8 / 16 / 24) and not
+memory pressure: batch 3's "could not measure" was that step, and the pre-cut neither removed nor needed to
+remove it.
+
 ### S-1 and S-2, in shippable form
 
 Both are configuration, so "shipping" them means publishing the recipes rather than changing the launchers. This
@@ -154,12 +161,16 @@ step will use is the only correct thing to do — which is exactly what the code
 The lever that remains is therefore not "follow the per-step k" but **stop keeping k+1 full state pages resident
 per request**: journal the recurrent-state *inputs* for the in-flight block and replay them, writing one
 checkpoint back only on a flush. That is ReplaySSM's design (`use_replayssm`, `replayssm_buffer_len`), and its
-docstring limits it to non-speculative decode — so the work is making that path correct when the k+1 positions are
-known-but-unverified draft tokens. It is a real project with a real payoff (k=7 speed at 13+ seats), and it is now
-the only route to that payoff.
+docstring limits it to non-speculative decode. Batch 4 Q3 closed the shortcut: the flag is **refused outright
+for this architecture** (`--use-replayssm is not supported for architecture 'Qwen3_5ForConditionalGeneration'`),
+so ReplaySSM cannot be enabled for this checkpoint at all — not even in batch mode. The mechanism therefore has
+to be **built**, not switched on: journal the state inputs for the in-flight block, replay them, write one
+checkpoint on flush, and make that correct when the k+1 positions are known-but-unverified draft tokens. That is
+a real project with a real payoff (k=7 speed at 13+ seats), and it is the only route to that payoff.
 
 **Verdict: attemptable, but it is a redesign, not a wiring change** — and its shape is ReplaySSM-under-speculation,
 not a per-step reservation.
+
 ## R — refuted, do not re-chase
 
 | what | why not | evidence |
@@ -168,6 +179,7 @@ not a per-step reservation.
 | bf16 recurrent state | brings the fused GDN kernel back and buys nothing: +0.1% C1, 1.9% slower `ms/pass` at N=1 | batch 3 Q2 |
 | `--enable-mamba-shared-prefix-checkpoint`, `--mamba-block-size 8192` | neither changed the block size, the page padding, the pool or the seat count | batch 3 Q3 |
 | a per-step k schedule as a **seat** lever | state is sized for the configured maximum k, so varying k per step frees nothing | batch 3 |
+| `--use-replayssm` | the flag reaches the engine (`'use_replayssm': True` in the args line) and validation then refuses it: `Value error, --use-replayssm is not supported for architecture 'Qwen3_5ForConditionalGeneration'`. The engine never boots — **the last upstream state knob is closed for this checkpoint** | batch 4 Q3 |
 | FlashInfer as the fast path on this workload | 26-29% slower than the shipped path, entirely from the cudagraph downgrade | batch 2 E2 |
 | fp8 KV for decode speed | a context buy, not a speed one — the A/Bs cost decode | our [reproductions](reproductions/README.md), club-3090 |
 | a 4 GiB bf16 DFlash2 drafter | int4 keeps greedy acceptance (3.34-3.65 against 3.54) and costs ~5% at default sampling | our [drafter/README.md](../drafter/README.md) |
