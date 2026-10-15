@@ -1,0 +1,27 @@
+2026-10-15T13:32:32Z [q1c] cp bench/results/2026-10-15-Q1-c-ssu-vertical/.env .env
+2026-10-15T13:32:32Z [q1c] sampler: bench/results/2026-10-15-batch5-tools/sampler.ps1 -> bench/results/2026-10-15-Q1-c-ssu-vertical/mem-trace-q1c.csv
+2026-10-15T13:32:32Z [q1c] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T13:32:33Z [q1c] spill watch started: bench/results/2026-10-15-batch5-tools/spillwatch.sh
+2026-10-15T13:32:49Z [q1c] container state: 1 running
+2026-10-15T13:33:02Z [q1c] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

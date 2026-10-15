@@ -1,0 +1,35 @@
+2026-10-15T13:05:23Z [q1a1] cp bench/results/2026-10-15-Q1-a1-baseline/.env .env
+2026-10-15T13:05:23Z [q1a1] sampler: bench/results/2026-10-15-batch5-tools/sampler.ps1 -> bench/results/2026-10-15-Q1-a1-baseline/mem-trace-q1a1.csv
+2026-10-15T13:05:23Z [q1a1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T13:05:24Z [q1a1] spill watch started: bench/results/2026-10-15-batch5-tools/spillwatch.sh
+2026-10-15T13:07:33Z [q1a1] KV-cache line at 2026-10-15T13:07:31.273234714Z = 2026-10-15T15:07:31 local
+2026-10-15T13:07:43Z [q1a1] healthy after 139 s
+2026-10-15T13:08:14Z [q1a1] first measurement request at 2026-10-15T15:08:14 local
+2026-10-15T13:08:15Z [q1a1] guard floors: FLOORS F_ctx=86.2 F_kv=102.2 n_kv=4 (window: KV-cache line 2026-10-15T15:07:31 -> first request 2026-10-15T15:08:14, local time)
+2026-10-15T13:08:15Z [q1a1] BOOT RISE (recorded, not blocking): BOOTRISE q1a1 FLOORS F_ctx=86.2 F_kv=102.2 n_kv=4: the boot rose 16.0 MiB above the CUDA-context level before the first request
+2026-10-15T13:08:36Z [q1a1] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q1a1 1 --n 16 --ctx-tokens 1024
+2026-10-15T13:09:19Z [q1a1] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4,8,16 --json /tmp/ladder-q1a1.json
+2026-10-15T13:14:27Z [q1a1] docker compose --profile single exec -T single env OUT=/tmp/rb-q1a1-1 bash bench/run_benchmarks.sh single
+2026-10-15T13:22:57Z [q1a1] docker compose --profile single exec -T single env OUT=/tmp/rb-q1a1-2 bash bench/run_benchmarks.sh single
+2026-10-15T13:31:36Z [q1a1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

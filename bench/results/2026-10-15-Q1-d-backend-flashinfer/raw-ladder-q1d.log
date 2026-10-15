@@ -1,0 +1,21 @@
+# start 2026-10-15T13:37:07Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=1,4,8,16
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1        97.8       97.3      37.8      2.90       2.9     29.5        0   13.4    1     4142  98/98/98
+ 4        37.7      264.8      49.2      2.80      11.1     41.9        0   43.2    4    12035  18/42/64
+ 8        19.3      342.5      50.8      2.80      21.9     63.8        0   82.9    8    21324  8/15/46
+16        13.0      306.6*     48.9      2.90      18.2     59.3        2   99.8   10    42526  5/8/50
+
+* no instant at which all N streams were decoding: the pool could not hold them, so that row is a tail measurement, not a steady state.
+| N | 1 | 4 | 8 | 16 |
+|---|---|---|---|---|
+| per-stream tok/s | 97.8 | 37.7 | 19.3 | 13.0 |
+| decode aggregate tok/s | 97 | 265 | 343 | 307 |
+| end-to-end aggregate tok/s | 38 | 49 | 51 | 49 |
+| tok/step | 2.90 | 2.80 | 2.80 | 2.90 |
+| tok/pass | 2.9 | 11.1 | 21.9 | 18.2 |
+| ms/pass | 29.5 | 41.9 | 63.8 | 59.3 |
+| preemptions | 0 | 0 | 0 | 2 |
+
+wrote /tmp/ladder-q1d.json
+# end 2026-10-15T13:42:12Z exit=0

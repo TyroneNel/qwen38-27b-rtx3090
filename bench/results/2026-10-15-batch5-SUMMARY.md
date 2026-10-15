@@ -24,9 +24,19 @@ All four boots ran at `MAX_SEQS=16` and `MAX_LEN=65536`.
 - **Computed, not booted:** a default-KV user at `MAX_LEN=32768` would be printed 2 against a measured fit of 1.
 - **No preemption, no measurement spill**, on any of the 12 waves.
 
-## Q1: the mamba knobs
+## Q1: no mamba knob engages on this model, and none helps (`2026-10-15-Q1-*/report.md`)
 
-Pending at the time of the Q2 push.
+- **Profile:** band 2 at the full pin, `MAX_SEQS=16`. Order a1 → b → c → d → bf → cf → a2.
+- **`--mamba-ssu-algorithm horizontal|vertical` (b, c): refused at validation.**
+  `ValueError: Mamba SSU algorithm selection is only supported with the FlashInfer backend.`
+- **`--mamba-backend flashinfer`, alone (d) or with either algorithm (bf, cf): applied to nothing.**
+  - The args show `'mamba_backend': 'flashinfer'`.
+  - The kernel lines are identical to the baseline: `GDN decode kernel: triton`, 132 JIT compile keys.
+  - In the 0.31.0 source only Mamba2 layers and ReplaySSM read these settings; the GDN layers never do.
+- **Speed:**
+  - C1 T=0 decode is 91.5-91.8 on all five booted arms.
+  - N=8 is 342.5 (d) against 336.9 / 338.4 (a1 / a2), +1.4%, from tokens/step, at a *higher* 63.8 ms/pass.
+  - No arm reaches the 3% bar, so there was no GSM8K smoke.
 
 ## Q3, Q4, Q5
 

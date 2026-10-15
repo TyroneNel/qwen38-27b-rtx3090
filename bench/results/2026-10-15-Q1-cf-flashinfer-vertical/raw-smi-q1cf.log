@@ -1,0 +1,12 @@
+# before boot 2026-10-15T14:20:05Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 24.70 W, 70, 210 MHz
+# after boot, before any request 2026-10-15T14:22:21Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23074 MiB, 1253 MiB, 250.00 W, 23.24 W, 60, 210 MHz
+# after bench q1cf-1 2026-10-15T14:31:41Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23732 MiB, 595 MiB, 250.00 W, 198.09 W, 79, 1560 MHz
+# after bench q1cf-2 2026-10-15T14:40:17Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 23732 MiB, 595 MiB, 250.00 W, 207.56 W, 79, 1890 MHz

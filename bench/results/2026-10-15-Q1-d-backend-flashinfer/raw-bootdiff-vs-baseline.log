@@ -1,0 +1,31 @@
+> diff <q1a1 boot lines> <q1d boot lines>   (timestamps, pids, durations and rates stripped)
+2c2
+< JIT kernel warmup (132 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (132 compile keys):  50%|█████     | 2/4 [00:00<00:00, , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00,  , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00,  , _DecoratedTritonJitKernel (24 keys)]
+---
+> JIT kernel warmup (132 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (132 compile keys):  50%|█████     | 2/4 [00:00<00:00, , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00,  , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00, , _DecoratedTritonJitKernel (24 keys)]
+> grep -o mamba args from raw-boot-q1d.log
+'mamba_backend': 'flashinfer'
+GDN decode kernel: triton
+JIT kernel warmup (132 compile keys)
+> diff <q1a1 boot lines> <q1bf boot lines>   (timestamps, pids, durations and rates stripped)
+(identical)
+> grep -o mamba args from raw-boot-q1bf.log
+'mamba_backend': 'flashinfer'
+'mamba_ssu_algorithm': 'horizontal'
+GDN decode kernel: triton
+JIT kernel warmup (132 compile keys)
+> diff <q1a1 boot lines> <q1cf boot lines>   (timestamps, pids, durations and rates stripped)
+2c2
+< JIT kernel warmup (132 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (132 compile keys):  50%|█████     | 2/4 [00:00<00:00, , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00,  , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00,  , _DecoratedTritonJitKernel (24 keys)]
+---
+> JIT kernel warmup (132 compile keys):   0%|          | 0/4 [00:00<?, ?kernel/s]JIT kernel warmup (132 compile keys):  50%|█████     | 2/4 [00:00<00:00, , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00,  , _DecoratedTritonJitKernel (24 keys)]JIT kernel warmup (132 compile keys): 100%|██████████| 4/4 [00:00<00:00, , _DecoratedTritonJitKernel (24 keys)]
+> grep -o mamba args from raw-boot-q1cf.log
+'mamba_backend': 'flashinfer'
+'mamba_ssu_algorithm': 'vertical'
+GDN decode kernel: triton
+JIT kernel warmup (132 compile keys)
+> diff <q1a1 boot lines> <q1a2 boot lines>   (timestamps, pids, durations and rates stripped)
+(identical)
+> grep -o mamba args from raw-boot-q1a2.log
+GDN decode kernel: triton
+JIT kernel warmup (132 compile keys)

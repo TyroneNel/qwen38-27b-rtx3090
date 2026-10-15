@@ -1,0 +1,33 @@
+2026-10-15T14:20:05Z [q1cf] cp bench/results/2026-10-15-Q1-cf-flashinfer-vertical/.env .env
+2026-10-15T14:20:05Z [q1cf] sampler: bench/results/2026-10-15-batch5-tools/sampler.ps1 -> bench/results/2026-10-15-Q1-cf-flashinfer-vertical/mem-trace-q1cf.csv
+2026-10-15T14:20:06Z [q1cf] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T14:20:07Z [q1cf] spill watch started: bench/results/2026-10-15-batch5-tools/spillwatch.sh
+2026-10-15T14:22:10Z [q1cf] KV-cache line at 2026-10-15T14:22:07.364898338Z = 2026-10-15T16:22:07 local
+2026-10-15T14:22:21Z [q1cf] healthy after 134 s
+2026-10-15T14:22:51Z [q1cf] first measurement request at 2026-10-15T16:22:51 local
+2026-10-15T14:22:57Z [q1cf] guard floors: FLOORS F_ctx=86.2 F_kv=102.2 n_kv=5 (window: KV-cache line 2026-10-15T16:22:07 -> first request 2026-10-15T16:22:51, local time)
+2026-10-15T14:22:57Z [q1cf] BOOT RISE (recorded, not blocking): BOOTRISE q1cf FLOORS F_ctx=86.2 F_kv=102.2 n_kv=5: the boot rose 16.0 MiB above the CUDA-context level before the first request
+2026-10-15T14:23:13Z [q1cf] docker compose --profile single exec -T single env OUT=/tmp/rb-q1cf-1 bash bench/run_benchmarks.sh single
+2026-10-15T14:31:41Z [q1cf] docker compose --profile single exec -T single env OUT=/tmp/rb-q1cf-2 bash bench/run_benchmarks.sh single
+2026-10-15T14:40:18Z [q1cf] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
