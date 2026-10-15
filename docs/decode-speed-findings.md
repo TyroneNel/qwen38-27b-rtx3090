@@ -1,21 +1,77 @@
-# Findings: bugs, fixes and patches from the decode-speed work
+# Decode-speed programme: findings, open work, and how to pick it up
 
-The inventory the batch records imply but never collected: what was found, what holds it, what has been done about
-it, and what is still open. Sourced from batches 1-3 on the reference 3090 plus the landscape survey.
+**What this is.** The running record of a measured effort to make this stack serve Qwen3.8-27B faster on one RTX
+3090 at 250 W. Four batches have run on a real card. Every number here is either a measurement whose raw logs are
+committed under [`bench/results/`](../bench/results), or an item explicitly marked as unmeasured. Speed comes
+first and precision second: a lever that trades a measured amount of quality for throughput belongs here, and one
+that trades nothing is worth more.
 
-**What this file is for.** Speed first, precision second: an item that trades a measured amount of quality for
-throughput belongs here and is worth considering, and one that trades nothing is worth more. The inventory is
-therefore **S — speed levers** (the worklist), **R — refuted** (so nobody re-chases them), then the defects,
-upstream limitations and open questions found on the way. **Patch management is not tracked here** — the changes we
-carry with no upstream reference are rows in [PATCHES.md](../PATCHES.md), neither defects nor speed work, and
-re-cutting them at a pin bump is routine.
+**Where it stands, in three lines.**
 
-**How to use it.** Every item has an id, the evidence that established it, a status, and the next action. Change a
-status only with evidence — a commit, a result path, or a quoted command output — and put the pointer in the item.
-"Open" means nobody has started; "verified" means we checked and it does not affect us. Related pages:
-[landscape](decode-speed-landscape.md) · [batch 2](decode-speed-batch2.md) · [batch 3](decode-speed-batch3.md) ·
-[batch 4](decode-speed-batch4.md) · [PATCHES.md](../PATCHES.md) (the patch ledger — what we ship, not what we
-found).
+- **The speed levers that need no code are measured and ready**: a k=7 / k=3 / `SPEC=off` band table by
+  concurrency (S-1) on an int8-KV `CTX=fast` base (S-2), worth +41% aggregate at N=4 and +91% at N=8. Published as
+  "How many concurrent users" in [single-user/README.md](../single-user/README.md).
+- **The levers that remain need engine work**, and the list is short: S-5 (journal-and-replay state under
+  speculation) and S-6 (drafter acceptance on chat) are the only two with real headroom. What looked promising and
+  is not is in **R — refuted** below.
+- **Acceptance is a property of the workload, not our drafter**: 5.80 tokens/step on GSM8K, 4.78 code, 3.50 chat.
+  The deficiency this programme started from was our benchmark protocol, not the stack.
+
+## Start here, if you are a new agent
+
+**What is asked of you.** One item from *Open work* below, run as a batch: arms, a metric, and a pass/fail rule
+decided *before* the run. Batches 2-5 are the template — [the plan](decode-speed-batch5.md) and
+[the paste-ready brief](gpu-agent-brief-batch5.md).
+
+**Read in this order.** This page's **S** and **R** sections (what is known, and what not to re-chase), then the
+batch plan you are running, then the brief, then `bench/results/` for the arm you are repeating.
+
+**The rules that make a result usable.** Not style preferences — each has cost a batch something.
+
+1. **`MAX_SEQS` hides the seat effect.** At 8 the launcher admits eight requests and k=7 already holds seven, so a
+   seat question measured at `MAX_SEQS=8` reads as "no difference" when the difference is real. Run seat and
+   concurrency work at `MAX_SEQS=16` and state the cap in the report.
+2. **Discard the first measurement after every boot** (JIT warmup reads 30-50% low), and **one boot per arm**
+   unless the effect is inside 10% — then interleave A-B-A. Boot-to-boot spread is 0-3.2% for C1 T=0 and ~10% for
+   free-run decode.
+3. **Prefer the noise-free metric.** Teacher-forced tokens/step on a frozen target (`workload_accept.py`)
+   reproduces to three decimals between passes; free-run decode does not. C1 T=0 is 0.0-0.1% *within* a boot.
+4. **A spilled run keeps its tokens/step and loses its tok/s.** Watch the Windows Shared Usage counter against the
+   loaded-engine floor (84-92 MiB) — and take that floor *between* the engine's KV-cache line and the first
+   request, or a boot rise will be read as clean.
+5. **Preempted ladder rows are tail rows, not steady state.** `conc_ladder.py` says so itself ("no instant at
+   which all N streams were decoding"); quote it as a queue measurement or not at all.
+6. **A knob that changes no log line did not apply.** Quote the engine's args line and its kernel/block lines
+   before believing any arm.
+7. **No default flips from an experiment.** A batch produces evidence and a one-line recommendation; a default
+   change is a reviewed edit afterwards.
+8. **Results-only commits, to `cline/gf59cdmh`.** No PRs, issues, comments, watermarks or co-author trailers; one
+   author, the repo's configured identity. Push after each batch. Raw logs beside every number.
+
+**The map.** Which file is what, so you do not have to infer it.
+
+| file | what it is |
+|---|---|
+| this page | the worklist: speed levers, refuted ideas, defects, open items |
+| [decode-speed-landscape.md](decode-speed-landscape.md) | the survey that started it: what other engines get, gap by gap, with each gap's measured outcome |
+| [batch2](decode-speed-batch2.md) … [batch5](decode-speed-batch5.md) | the plans: arms, metrics, pass rules |
+| [gpu-agent-brief\*.md](gpu-agent-brief-batch5.md) | the paste-ready briefs, one per batch |
+| [`bench/results/*-SUMMARY.md`](../bench/results) | what each batch actually measured, raw logs beside it |
+| [PATCHES.md](../PATCHES.md) | the patch ledger — what we ship, unrelated to the items here |
+
+## Open work, ranked
+
+1. **Ship the bands (S-1 + S-2).** Measured end to end; the recipe is in
+   [single-user/README.md](../single-user/README.md). What remains is whether the 2-8-stream band becomes a
+   *default* somewhere — a product call.
+2. **O-1**, the launcher seat print: implemented on this branch as the measured function. The remaining work is
+   the state-slot counter that would make it exact rather than fitted (O-5).
+3. **X-3**, the 16-seat C1 loss: a `MAX_SEQS=16` boot costs k=7 7.8% of single-stream speed, and one
+   `MAX_SEQS`-sized buffer doubles in the logs. If it can be sized independently, band 2 gets cheaper.
+4. **Batch 5**, for the cheap unknowns it still holds: the unadvertised mamba knobs (four boots), the `CG=40`
+   mechanism (X-1), and the IFBench gate band 2 should have before it is recommended rather than measured.
+5. **S-5 and S-6** — the two levers with no ceiling, both engine projects. S-5 is now specified precisely; the
+   per-step-k framing is dead and journal-and-replay is the route (see the note under the S table).
 
 ## S — speed levers, ranked
 
@@ -120,7 +176,7 @@ not a per-step reservation.
 
 | id | what | evidence | status | next action |
 |---|---|---|---|---|
-| O-1 | **The `RESIDENT` constant is wrong in principle, not just in value.** `single-user/start_qwen.sh` budgets `104988089` bytes per (k+2) unit. The measured cost is 87.6 / 82.8 / 81.1 MB per (k+2) — 20-29% lower — **and it grows with context**: k=7 costs 54 / 64 / 91 / 129 blocks per request at ~1k / 4k / 16k / 32k prompts, 2.4× from end to end. The state term is exactly `6(k+2)` blocks; the rest is `2·⌈ctx/block⌉` | batch 3 seats, then batch 4 Q1's block accounting | **open** | replace the constant with the function: seats ≈ `(num_gpu_blocks − 1) / (6(k+2) + 2·⌈ctx/block⌉)`. A corrected constant would still mislead at 32k |
+| O-1 | **The `RESIDENT` constant is wrong in principle, not just in value.** `single-user/start_qwen.sh` budgets `104988089` bytes per (k+2) unit. The measured cost is 87.6 / 82.8 / 81.1 MB per (k+2) — 20-29% lower — **and it grows with context**: k=7 costs 54 / 64 / 91 / 129 blocks per request at ~1k / 4k / 16k / 32k prompts, 2.4× from end to end. The state term is exactly `6(k+2)` blocks; the rest is `2·⌈ctx/block⌉` | batch 3 seats, then batch 4 Q1's block accounting | **fixed on this branch** — the print is now the measured function (`6(k+2) + 2*ceil(ctx/864)` pages of a 14,601,709 B pool page), printing both ends (a ~1k prompt and `MAX_LEN`), and `CTX=huge` is skipped because its block and page are unmeasured. Covered by `bench/test_resident_print.sh` (17 CPU checks, no GPU) | the exact version still needs a state-slot counter (O-5); the current fit is calibrated at k=7 and reads ~10-20% high at k=3/1 because `num_gpu_blocks` is 364/385/393 across those arms rather than `KV_MEM/page` |
 | O-2 | **`.dockerignore` excluded `.env` but not `.env.bench`/`.env.hf`/`.env.long`**, so `COPY . .` baked the owner's env files — and any keys in them — into local images | batch 2 preflight; the built image contained them | **fixed** `9cbf00f` (now `.env*`) | none; confirm on the next build that no `.env*` lands in the image |
 | O-3 | **The guard's baseline window cannot see the boot rise, and the rise is not a spill.** Memory profiling runs *before* the "GPU KV cache size" line, so the KV-line-to-first-request window starts above the rise. The step follows `MAX_SEQS` (8.0 MiB at 8, 16.0 at 16, 32.0 at 24), not memory pressure — a `KV_MEM` 1 GiB lower and `SPEC=off` both step identically | batch 3 caveats, then batch 4's `guard-test.txt` replay | **fixed by batch 4**: the guard keeps the brief's floor for measurement spills and adds the pre-profiling level to report the boot step | none — but the boot step should be reported, not treated as a spill |
 | O-4 | **`bench/quality_battery.py` cites "gotcha 10 in the README"** for perplexity headroom, and gotcha 10 is about DeltaNet kernels. The spill is also an order of magnitude bigger than recorded (1,002 MiB vs 410) | batch 3 Q2; [gotchas.md](gotchas.md) 60 | **partly fixed** — gotcha 60 carries the real magnitude and the guard's blind spot; the docstring reference is still stale | point the docstring at gotcha 60 and gotcha 53 |
@@ -169,6 +225,7 @@ All under `bench/results/`, all committed, all run inside the container:
 | `workload_accept.py` | teacher-forced acceptance on arbitrary prompts (prefix-resync against a frozen continuation), so trajectory divergence is not a variable | `2026-10-14-batch3-tools/`, first used in `2026-10-13-tools/` |
 | `spillwatch.sh` | watches the Windows Shared Usage counter against a loaded-engine floor (see O-3 for its blind spot) | `2026-10-14-batch3-tools/` |
 | `memsum.sh`, `sampler.ps1`, `arm.sh` | floor summary, counter sampling, per-arm boot/measure wrapper | `2026-10-14-tools/`, `2026-10-14-batch2-tools/` |
+| `test_resident_print.sh` | CPU test for the launcher seat print (17 checks, no GPU): the formula against the measurement it came from, both ends, the silent cases, and that `test_bool_knobs.sh` still passes | `bench/` |
 
 ## C — patches we hold that belong upstream
 
@@ -180,18 +237,3 @@ issues (U-1, U-2 below), which is the only reason they are named on this page at
 
 batch 5 covers the levers on this list that cannot be settled by reading — S-11 (four boots), the S-5
 reconnaissance, X-1 if batch 4 skipped it, and the IFBench gate for the band-2 profile.
-
-## Recommended order
-
-1. **Ship the policy bands (S-1 + S-2).** Batch 4 measured them end to end, so this is now a documentation change
-   plus three `.env` recipes, not an experiment: k=7 at one stream, k=3 at 2-8, `SPEC=off` above ~9. This is the
-   largest measured speed gain available and it needs no code.
-2. **O-1, generated as a function** rather than a constant, using batch 4 Q1's `num_gpu_blocks` accounting. The
-   constant misleads most at 32k prompts, which is exactly where an operator is deciding whether they can afford a
-   long-context profile.
-3. **X-3**, the 16-seat C1 loss — 7.8% for a buffer that doubles. If it can be sized independently of
-   `MAX_SEQS`, band 2 gets cheaper and the k=3 cost narrows.
-4. **Batch 5** for the cheap unknowns it still holds: the unadvertised mamba knobs (four boots), the `CG=40`
-   mechanism, and the IFBench gate the band-2 profile should have before it is recommended rather than measured.
-5. **S-5 as the redesign it is.** The per-step-k framing is dead (see the note above); the route to k=7 speed at
-   13+ seats is journal-and-replay under speculation, which is a project.

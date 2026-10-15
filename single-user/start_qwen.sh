@@ -447,20 +447,42 @@ if [ "$SPEC" = "dflash2" ]; then
   # bigger batches run piecewise instead of captured: slower, alive. Set CG explicitly to
   # override.
   CG=${CG:-$((MAX_SEQS * (DRAFT_TOKENS + 1) > 64 ? 64 : MAX_SEQS * (DRAFT_TOKENS + 1)))}
-  # Seats are admissions, not residency. Every RESIDENT request needs 1+k recurrent-state
-  # slots out of the same pool before it stores one token of context: 0.88 GiB at
-  # DFLASH_TOKENS=7 and 1.66 GiB at 15 (gotcha 33), i.e. ~0.098 GiB per (k+2), which the
-  # ramp in bench/conc_ladder.py confirms live (15.8% of the CTX=fast pool per request,
-  # six resident, the seventh preempted). Print what the pool can actually hold so nobody
-  # reads MAX_SEQS as a concurrency setting -- raising it past this queues, and once the
-  # pool is full it preempts and recomputes.
-  if [ -n "$KV_MEM" ]; then
-    RESIDENT=$(( KV_MEM / ((DRAFT_TOKENS + 2) * 104988089) ))
-    [ "$RESIDENT" -lt 1 ] && RESIDENT=1
-    if [ "$MAX_SEQS" -gt "$RESIDENT" ]; then
-      echo "[start_qwen] note: the pinned pool holds about $RESIDENT resident requests at" \
-           "DFLASH_TOKENS=$DRAFT_TOKENS (state pages), fewer with long prompts;" \
-           "MAX_SEQS=$MAX_SEQS admits more than that and the rest queue."
+  # Seats are admissions, not residency, and they are a FUNCTION of k and the prompt
+  # length rather than a constant. Measured on the reference 3090 (batch 4 Q1, 2026-10-15,
+  # int8 CTX=fast, KV_MEM pinned): one resident request occupies
+  # 6*(k+2) + 2*ceil(ctx/864) pool pages, with the page 14,601,709 B and the block 864
+  # tokens (the boot's own `mamba_block_size`). The 6*(k+2) is the recurrent state --
+  # exactly 54/30/18 pages at k=7/3/1 -- and the rest is attention KV. At k=7 that reads
+  # 54 / 64 / 91 / 129 pages per request at ~1k / 4k / 16k / 32k prompts, so the same k
+  # costs 2.4x more at 32k than at 1k: the previous form (a flat 104,988,089 B per (k+2),
+  # no context term) was right at about 4k prompts and wrong either side of it -- it said
+  # 5 where a 1k-prompt boot holds 6 and a 32k-prompt boot holds 2.
+  # Both ends are printed because the prompt length cannot be known here. The number is
+  # calibrated at k=7; the measured pool is 364/385/393 pages at k=7/3/1, so reading it as
+  # KV_MEM/page is exact at k=7 and a little high below it -- hence "about". The engine's
+  # own `kv_cache_max_concurrency` label in /metrics is the cross-check after boot, and
+  # agrees with the MAX_LEN figure to within ~5%.
+  # Print what the pool can actually hold so nobody reads MAX_SEQS as a concurrency
+  # setting -- raising it past this queues, and once the pool is full it preempts and
+  # recomputes. CTX=huge is skipped: KVarN's block (128) and page differ and neither term
+  # is measured there, so a figure from the fast-profile fit would not mean anything.
+  if [ -n "$KV_MEM" ] && [ "$CTX" != "huge" ]; then
+    RESIDENT_PAGE=14601709        # B per pool page; measured, block_size 864
+    RESIDENT_BLOCK=864            # tokens per pool page; the boot's mamba_block_size
+    RESIDENT_POOL=$(( KV_MEM / RESIDENT_PAGE ))
+    RESIDENT_BASE=$(( 6 * (DRAFT_TOKENS + 2) ))
+    RESIDENT_PER_1K=$(( RESIDENT_BASE + 2 * ((1024 + RESIDENT_BLOCK - 1) / RESIDENT_BLOCK) ))
+    RESIDENT_PER_LEN=$(( RESIDENT_BASE + 2 * ((MAX_LEN + RESIDENT_BLOCK - 1) / RESIDENT_BLOCK) ))
+    RESIDENT_1K=$(( (RESIDENT_POOL - 1) / RESIDENT_PER_1K ))
+    RESIDENT_LEN=$(( (RESIDENT_POOL - 1) / RESIDENT_PER_LEN ))
+    if [ "$RESIDENT_1K" -lt 1 ]; then RESIDENT_1K=1; fi
+    if [ "$RESIDENT_LEN" -lt 1 ]; then RESIDENT_LEN=1; fi
+    if [ "$MAX_SEQS" -gt "$RESIDENT_1K" ]; then
+      echo "[start_qwen] note: the pinned pool holds about $RESIDENT_1K resident requests on" \
+           "short (~1k-token) prompts and about $RESIDENT_LEN at MAX_LEN=$MAX_LEN, at" \
+           "DFLASH_TOKENS=$DRAFT_TOKENS (one request needs $RESIDENT_BASE+2*ceil(ctx/864) of the" \
+           "pool's $RESIDENT_POOL pages, so context is what moves it); MAX_SEQS=$MAX_SEQS admits" \
+           "more than that and the rest queue."
     fi
   fi
   # Above ~12 seats at CTX=huge the seats stop being merely useless and become fatal, and

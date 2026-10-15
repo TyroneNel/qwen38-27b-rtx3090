@@ -428,7 +428,7 @@ included (`tools` + `tool_choice: "auto"` come back as `tool_calls`).
 | `DRAFT_TOKENS` | 4 (3 for `CTX=long`/`huge`) | speculative depth; 5 and 6 are slower |
 | `SPEC_ATTN` | 1 (`CTX=fast` only) | split-KV Triton attention for the verify step (`patches/spec-decode-attn.patch`); 0 = FlashAttention-2 |
 | `DRAFT_SAMPLE` | `probabilistic` | `greedy` drafts: same speed at T=0, ~15% slower at T>0 |
-| `MAX_SEQS` | 8 | how many requests are *admitted*, not how many the pool can hold: each resident request needs k+1 recurrent-state slots (0.88 GiB at DFlash2 k=7 — seven residents with short prompts, five at 4k, two at 16k), and the launcher prints the number at boot |
+| `MAX_SEQS` | 8 | how many requests are *admitted*, not how many the pool can hold — the rest queue, and once the pool is full the engine preempts and recomputes. Residency is set by the configured verify depth: each resident request reserves `k+1` recurrent-state pages before it stores a token of context, so the pool holds ~6 at `DFLASH_TOKENS=7`, ~9 at 3 and ~16 at 1 (measured on the reference 3090, ~1k prompts; fewer as prompts grow — 5 at 4k and 2 at 16k at k=7). `start_qwen.sh` prints the measured number at boot, both ends. See "How many concurrent users" |
 | `MAX_LEN` | 65536 (`fast`) / 150000 (`long`) | 150k needs `GPU_UTIL` 0.93 |
 | `GPU_UTIL` | 0.93 | soak-tested with a 100k prompt and 4×6k-token generations; batch mode's 0.972 OOMs in the MTP path (docs/gotchas.md, gotcha 4) |
 | `MTP_DRAFT_VOCAB` | 1 | set 0 to draft with the full lm_head (more acceptance, slower per draft); set 0 for Chinese or other traffic outside the list's English/Danish/code corpus (docs/gotchas.md 61) |
@@ -443,6 +443,47 @@ included (`tools` + `tool_choice: "auto"` come back as `tool_calls`).
 | `SSE_KEEP_ALIVE` | 30 | seconds between SSE `: keep-alive` comment lines on a streaming response, so an idle stream survives a proxy read timeout during a long prefill (Bifrost's default is 120 s; a 90K cold prefill takes ~105 s and sends nothing until it finishes). `0` passes the interval vLLM reads as off; empty drops the flag entirely, which is what a vLLM tree without `patches/sse-keep-alive.patch` needs |
 | `PORT` | 18020 | |
 | `PRINT_ARGV` | 0 | 1 = print the `vllm serve` argv, one argument per line, and exit 0 instead of starting the server. Every profile check, default and warning runs first, so it is a dry run that needs no GPU |
+
+## How many concurrent users, and which k
+
+`MAX_SEQS` is an admission cap, not a capacity. How many requests the pool actually holds is set by the
+*configured* verify depth `k` (`DFLASH_TOKENS`), so the right k is a function of how many users you serve.
+Measured on the reference 3090 at 250 W, one boot per arm, int8 `CTX=fast`, `KV_MEM` pinned at
+5,315,022,028 B, `MAX_SEQS=16` ([batch 4](../bench/results/2026-10-15-batch4-SUMMARY.md); `MAX_SEQS=16` is
+deliberate — at 8 the seat effect is invisible, because eight is all the launcher will admit even when the
+pool holds more):
+
+| | **1 stream** | **2-8 streams** | **9+ streams** |
+|---|---|---|---|
+| profile | `DFLASH_TOKENS=7` (default) | `DFLASH_TOKENS=3` | `SPEC=off` |
+| C1 T=0 (the cost) | **103.4 tok/s** | 93.5 | 40.7 |
+| resident seats, ~1k prompts | 6 | 9 | 16 |
+| decode aggregate @ N=4 | 239.1 | **263.6** | 143.2 |
+| decode aggregate @ N=8 | 176.8 (queueing) | **337.1** | 250.7 |
+| decode aggregate @ N=16 | 156.1 (queueing) | 300.4 (queueing) | **369.2** |
+
+Read it as **speculate deeply for one user, shallowly for a handful, and not at all for a crowd**. The
+boundary between bands is where an arm's own aggregate stops rising, which is the first N above its seat count:
+N=8 for k=7 (6 seats), N=16 for k=3 (9 seats). Above ~9 concurrent, `SPEC=off` — batch mode's shape — is the
+only arm that seats everyone.
+
+`DFLASH_TOKENS=1` is deliberately not a band: it holds 13-14 seats but beats k=3 at no concurrency, because
+tokens per step fall faster than seats rise.
+
+The 2-8 band, in one command:
+
+```bash
+printf 'SPEC=dflash2\nPREFIX_CACHE=1\nDFLASH_TOKENS=3\nMAX_SEQS=16\nEXTRA_ARGS="--attention-backend TRITON_ATTN --kv-cache-dtype int8_per_token_head"\n' >> .env
+```
+
+The `EXTRA_ARGS` pair is what makes the pool hold **116,440 tokens instead of 68,605** at the same `KV_MEM`,
+with N=8 preemptions falling from 23 to 1 — and it costs nothing measurable: GSM8K n=200 within one question,
+perplexity within 0.07% ([batch 2 S1](../bench/results/2026-10-14-S1-capacity/report.md)). It is the same
+attention/KV stack `CTX=long` already ships, just applied to the fast profile.
+
+Two caveats on the table. The measurements are at ~4k-token prompts; shorter prompts hold more seats and move
+both boundaries up. And the cost column is a real trade, not a rounding error: band 2 gives up 10% of
+single-stream speed for 41% more aggregate at N=4 and 91% more at N=8.
 
 ## Switching modes
 
