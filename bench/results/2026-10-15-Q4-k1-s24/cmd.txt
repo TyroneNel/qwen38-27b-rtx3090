@@ -1,0 +1,34 @@
+2026-10-15T11:19:07Z [q4k1s24] cp bench/results/2026-10-15-Q4-k1-s24/.env.q4k1s24 .env
+2026-10-15T11:19:07Z [q4k1s24] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-15-Q4-k1-s24/mem-trace-q4k1s24.csv
+2026-10-15T11:19:08Z [q4k1s24] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T11:19:09Z [q4k1s24] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-15T11:21:17Z [q4k1s24] KV-cache line at 2026-10-15T11:21:13.605460026Z = 2026-10-15T13:21:13 local
+2026-10-15T11:21:22Z [q4k1s24] healthy after 133 s
+2026-10-15T11:21:52Z [q4k1s24] first measurement request at 2026-10-15T13:21:52 local
+2026-10-15T11:21:58Z [q4k1s24] guard floors: FLOORS F_ctx=90.2 F_kv=122.2 n_kv=4 (window: KV-cache line 2026-10-15T13:21:13 -> first request 2026-10-15T13:21:52, local time)
+2026-10-15T11:21:58Z [q4k1s24] BOOT RISE (recorded, not blocking): BOOTRISE q4k1s24 FLOORS F_ctx=90.2 F_kv=122.2 n_kv=4: the boot rose 32.0 MiB above the CUDA-context level before the first request
+2026-10-15T11:22:14Z [q4k1s24] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q4k1s24 1 --n 24 --ctx-tokens 1024
+2026-10-15T11:23:11Z [q4k1s24] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q4k1s24 2 --n 24 --ctx-tokens 4096
+2026-10-15T11:26:05Z [q4k1s24] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 8,16,24 --json /tmp/ladder-q4k1s24.json
+2026-10-15T11:34:10Z [q4k1s24] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

@@ -40,9 +40,25 @@ Recommendation: serve one stream at k=7, 2-8 concurrent streams at k=3, and more
   The evidence supports a function, seats ≈ (`num_gpu_blocks` − 1) ÷ (6(k+2) + 2·⌈ctx / block⌉), not a corrected
   constant.
 
-## Q3 and Q4
+## Q3: ReplaySSM fails, because the engine refuses it for this model (`2026-10-15-Q3-replayssm/report.md`)
 
-Pending at the time of the Q1+Q2 push; see the sections below once they are added.
+- **The test:** `SPEC=off` plus `--use-replayssm`, against Q2's `SPEC=off` boot.
+- **The flag reached the engine.** The args line reads `'use_replayssm': True`.
+- **Validation then refused it:** `Value error, --use-replayssm is not supported for architecture
+  'Qwen3_5ForConditionalGeneration'`. The engine never booted.
+- **Result:** no profile on this pin can engage it for this checkpoint. The last upstream state knob is closed.
+
+## Q4: k=1 seats 21 at `MAX_SEQS=24`; the guard is fixed (`2026-10-15-Q4-k1-s24/report.md`)
+
+- **Seats:** `Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%` at 24 × ~1k prompts. That is 18.0 blocks per
+  request, and the Q1 formula predicts 21.8.
+- **At ~4k prompts:** 13-14 running, with 42 preemptions in the wave. The ladder's N=24 row runs 13 (TAIL, 299.4), the
+  same as at `MAX_SEQS=16`.
+- **No measurement spill.** The boot step was 90.2 → 122.2 MiB, which is batch 3's "32 MiB spill" reproduced with
+  256 MiB more headroom. So it was the `MAX_SEQS`-scaled step, not a spill.
+- **The guard is fixed, not worked around.**
+  - **Measurement spills:** the brief's floor (KV-cache line → first request, two consecutive samples).
+  - **Boot step:** a pre-profiling reference that the brief's window cannot provide.
 
 ## Where this contradicts batch 3, the docs or the launcher, with numbers
 

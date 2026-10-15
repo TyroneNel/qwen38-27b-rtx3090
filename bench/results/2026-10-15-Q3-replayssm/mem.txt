@@ -1,0 +1,15 @@
+=== q3rssm: engine memory lines (raw-boot-q3rssm.log) ===
+(APIServer pid=1) INFO 10-15 11:18:36 [api_utils.py:286] non-default args: {'model_tag': '/app/models/Qwen3.8-27B-W4A16-AutoRound-fast', 'enable_auto_tool_choice': True, 'tool_call_parser': 'qwen3_coder', 'tool_strict_level': 'parameter', 'enable_prompt_tokens_details': True, 'sse_keep_alive_interval': 30, 'host': '0.0.0.0', 'po
+
+=== q3rssm: nvidia-smi, GPU 0 = 3090 (raw-smi-q3rssm.log) ===
+# before boot 2026-10-15T11:18:25Z
+memory.total [MiB], memory.used [MiB], memory.free [MiB], power.limit [W], power.draw [W], temperature.gpu, clocks.current.sm [MHz]
+24576 MiB, 0 MiB, 24326 MiB, 250.00 W, 23.27 W, 62, 210 MHz
+
+=== q3rssm: 3090 adapter counters (luid_0x00000000_0x00011456_phys_0) from mem-trace-q3rssm.csv; KV-cache line , first request  (local) ===
+samples=3  max dedicated=4.1 MiB  max shared=0.2 MiB  F_ctx=-1.0 MiB  F_kv=-1.0 MiB (floor used)
+  boot: F_kv within 8 MiB of F_ctx (no boot rise beyond a MAX_SEQS=8 boot)
+  measurements: no sample after the first request above F_kv+16 MiB: no spill seen
+  trace (time shared dedicated), every 6th sample:
+    2026-10-15T13:18:27 0.2 4.0
+

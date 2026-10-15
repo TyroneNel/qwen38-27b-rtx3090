@@ -1,0 +1,175 @@
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+q3 boot failed
+2026-10-15T11:18:55Z [q3rssm] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+DOWN_OK
+
+=== q3rssm: 3090 adapter counters (luid_0x00000000_0x00011456_phys_0) from mem-trace-q3rssm.csv; KV-cache line , first request  (local) ===
+samples=3  max dedicated=4.1 MiB  max shared=0.2 MiB  F_ctx=-1.0 MiB  F_kv=-1.0 MiB (floor used)
+  boot: F_kv within 8 MiB of F_ctx (no boot rise beyond a MAX_SEQS=8 boot)
+  measurements: no sample after the first request above F_kv+16 MiB: no spill seen
+  trace (time shared dedicated), every 6th sample:
+    2026-10-15T13:18:27 0.2 4.0
+
+2026-10-15T11:21:52Z [q4k1s24] first measurement request at 2026-10-15T13:21:52 local
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch4-tools/running_probe.py to hyperqwen-single-1:/tmp/running_probe.py
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch4-tools/running_probe.py to hyperqwen-single-1:/tmp/running_probe.py
+2026-10-15T11:22:14Z [q4k1s24] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q4k1s24 1 --n 24 --ctx-tokens 1024
+# wave 1  n=24 ctx~1024  t0=2026-10-15T11:22:15.021439Z t1=2026-10-15T11:23:07.749815Z  held (last submit -> first stream done) = 2026-10-15T11:22:15.033864Z -> 2026-10-15T11:22:54.901239Z
+# docker compose logs --timestamps --since 2026-10-15T11:22:15.021439Z --until 2026-10-15T11:23:07.749815Z single | grep 'Running:'
+HELD    single-1  | 2026-10-15T11:22:19.934462849Z Avg prompt throughput: 1053.6 tokens/s, Avg generation throughput: 2.0 tokens/s, Running: 4 reqs, Waiting: 20 reqs, GPU KV cache usage: 19.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:21.934979483Z Avg prompt throughput: 1053.7 tokens/s, Avg generation throughput: 3.0 tokens/s, Running: 6 reqs, Waiting: 18 reqs, GPU KV cache usage: 29.1%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:23.935433969Z Avg prompt throughput: 526.4 tokens/s, Avg generation throughput: 4.5 tokens/s, Running: 7 reqs, Waiting: 17 reqs, GPU KV cache usage: 33.7%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:25.936184806Z Avg prompt throughput: 1579.9 tokens/s, Avg generation throughput: 13.5 tokens/s, Running: 10 reqs, Waiting: 14 reqs, GPU KV cache usage: 47.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:27.936237066Z Avg prompt throughput: 1054.0 tokens/s, Avg generation throughput: 9.0 tokens/s, Running: 12 reqs, Waiting: 12 reqs, GPU KV cache usage: 56.6%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:29.936460815Z Avg prompt throughput: 1582.3 tokens/s, Avg generation throughput: 21.5 tokens/s, Running: 15 reqs, Waiting: 9 reqs, GPU KV cache usage: 70.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:31.937496777Z Avg prompt throughput: 527.2 tokens/s, Avg generation throughput: 12.5 tokens/s, Running: 16 reqs, Waiting: 8 reqs, GPU KV cache usage: 75.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:33.938442721Z Avg prompt throughput: 1052.5 tokens/s, Avg generation throughput: 14.5 tokens/s, Running: 18 reqs, Waiting: 6 reqs, GPU KV cache usage: 84.2%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:35.938947993Z Avg prompt throughput: 526.4 tokens/s, Avg generation throughput: 15.5 tokens/s, Running: 19 reqs, Waiting: 5 reqs, GPU KV cache usage: 88.8%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:37.939687195Z Avg prompt throughput: 2109.3 tokens/s, Avg generation throughput: 313.4 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:39.940562652Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 553.2 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:41.941334323Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 542.3 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:43.801405119Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 545.7 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:45.802146908Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 541.8 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:47.802985446Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 535.8 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:49.802893569Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 530.5 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:51.803054500Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 534.0 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:22:53.803819854Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 510.8 tokens/s, Running: 21 reqs, Waiting: 3 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:22:55.804878417Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 314.8 tokens/s, Running: 20 reqs, Waiting: 2 reqs, GPU KV cache usage: 91.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:22:57.805434008Z Avg prompt throughput: 1053.7 tokens/s, Avg generation throughput: 39.0 tokens/s, Running: 21 reqs, Waiting: 0 reqs, GPU KV cache usage: 96.4%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:22:59.805557311Z Avg prompt throughput: 527.4 tokens/s, Avg generation throughput: 346.5 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 50.5%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:23:01.806284510Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 231.4 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:23:03.807655895Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 191.4 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:23:05.808717032Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 193.9 tokens/s, Running: 3 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.8%, Prefix cache hit rate: 0.0%
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch4-tools/running_probe.py to hyperqwen-single-1:/tmp/running_probe.py
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch4-tools/running_probe.py to hyperqwen-single-1:/tmp/running_probe.py
+2026-10-15T11:23:11Z [q4k1s24] docker compose --profile single exec -T single venv/bin/python /tmp/running_probe.py q4k1s24 2 --n 24 --ctx-tokens 4096
+# wave 2  n=24 ctx~4096  t0=2026-10-15T11:23:11.374174Z t1=2026-10-15T11:26:01.945700Z  held (last submit -> first stream done) = 2026-10-15T11:23:11.387282Z -> 2026-10-15T11:24:59.832734Z
+# docker compose logs --timestamps --since 2026-10-15T11:23:11.374174Z --until 2026-10-15T11:26:01.945700Z single | grep 'Running:'
+HELD    single-1  | 2026-10-15T11:23:17.670110209Z Avg prompt throughput: 2067.2 tokens/s, Avg generation throughput: 0.5 tokens/s, Running: 2 reqs, Waiting: 22 reqs, GPU KV cache usage: 16.6%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:19.670453950Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 1.0 tokens/s, Running: 3 reqs, Waiting: 21 reqs, GPU KV cache usage: 21.7%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:21.670407747Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 1.0 tokens/s, Running: 3 reqs, Waiting: 21 reqs, GPU KV cache usage: 24.7%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:23.670768374Z Avg prompt throughput: 2067.2 tokens/s, Avg generation throughput: 1.5 tokens/s, Running: 3 reqs, Waiting: 21 reqs, GPU KV cache usage: 26.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:25.670475639Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 2.0 tokens/s, Running: 4 reqs, Waiting: 20 reqs, GPU KV cache usage: 29.6%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:27.671042339Z Avg prompt throughput: 2066.9 tokens/s, Avg generation throughput: 5.5 tokens/s, Running: 5 reqs, Waiting: 19 reqs, GPU KV cache usage: 36.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:29.671539532Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 3.0 tokens/s, Running: 5 reqs, Waiting: 19 reqs, GPU KV cache usage: 39.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:31.671543520Z Avg prompt throughput: 2066.5 tokens/s, Avg generation throughput: 3.5 tokens/s, Running: 5 reqs, Waiting: 19 reqs, GPU KV cache usage: 40.3%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:33.671747093Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 4.0 tokens/s, Running: 6 reqs, Waiting: 18 reqs, GPU KV cache usage: 43.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:35.671571973Z Avg prompt throughput: 2067.7 tokens/s, Avg generation throughput: 4.5 tokens/s, Running: 6 reqs, Waiting: 18 reqs, GPU KV cache usage: 45.2%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:37.671591162Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 9.0 tokens/s, Running: 7 reqs, Waiting: 17 reqs, GPU KV cache usage: 53.3%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:39.672106996Z Avg prompt throughput: 2066.9 tokens/s, Avg generation throughput: 5.0 tokens/s, Running: 7 reqs, Waiting: 17 reqs, GPU KV cache usage: 54.6%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:41.672843144Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 5.5 tokens/s, Running: 8 reqs, Waiting: 16 reqs, GPU KV cache usage: 58.2%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:43.526646272Z Avg prompt throughput: 2065.6 tokens/s, Avg generation throughput: 6.0 tokens/s, Running: 8 reqs, Waiting: 16 reqs, GPU KV cache usage: 59.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:45.526719615Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 6.5 tokens/s, Running: 9 reqs, Waiting: 15 reqs, GPU KV cache usage: 64.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:47.526416010Z Avg prompt throughput: 2067.8 tokens/s, Avg generation throughput: 13.5 tokens/s, Running: 9 reqs, Waiting: 15 reqs, GPU KV cache usage: 68.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:49.526693636Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 7.5 tokens/s, Running: 10 reqs, Waiting: 14 reqs, GPU KV cache usage: 72.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:51.526626158Z Avg prompt throughput: 2066.6 tokens/s, Avg generation throughput: 8.5 tokens/s, Running: 10 reqs, Waiting: 14 reqs, GPU KV cache usage: 73.7%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:53.527153382Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 9.0 tokens/s, Running: 11 reqs, Waiting: 13 reqs, GPU KV cache usage: 78.8%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:55.527750664Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 8.5 tokens/s, Running: 11 reqs, Waiting: 13 reqs, GPU KV cache usage: 81.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:57.528332320Z Avg prompt throughput: 2065.9 tokens/s, Avg generation throughput: 9.0 tokens/s, Running: 11 reqs, Waiting: 13 reqs, GPU KV cache usage: 83.2%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:23:59.529136157Z Avg prompt throughput: 2066.6 tokens/s, Avg generation throughput: 19.5 tokens/s, Running: 12 reqs, Waiting: 12 reqs, GPU KV cache usage: 88.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:01.530033177Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 93.1%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:03.531172760Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 10.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 96.2%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:05.531924940Z Avg prompt throughput: 2065.7 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 97.4%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:07.533142172Z Avg prompt throughput: 2065.2 tokens/s, Avg generation throughput: 289.3 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 92.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:09.533520765Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 388.9 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 92.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:11.534331231Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 386.4 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 92.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:13.390288058Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 388.4 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 92.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:15.390828769Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 246.9 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 92.6%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:17.391135545Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 39.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 96.9%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:19.391505510Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 143.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 91.3%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:21.392216849Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 90.8%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:23.392649404Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 90.3%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:25.393575378Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 39.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 97.7%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:27.394337234Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 39.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:29.395145694Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:31.395772312Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 65.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:33.396818919Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:35.397446399Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 51.5 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:37.398878466Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:39.399195635Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:41.399087488Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:43.252770659Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:45.252624584Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:47.253372362Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 65.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:49.254160257Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:51.255123010Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:53.255918972Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:55.256401321Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:57.256650653Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 52.0 tokens/s, Running: 14 reqs, Waiting: 10 reqs, GPU KV cache usage: 98.0%, Prefix cache hit rate: 0.0%
+HELD    single-1  | 2026-10-15T11:24:59.256992312Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 65.0 tokens/s, Running: 13 reqs, Waiting: 11 reqs, GPU KV cache usage: 89.5%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:01.257128315Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 24.5 tokens/s, Running: 13 reqs, Waiting: 10 reqs, GPU KV cache usage: 93.4%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:03.258107410Z Avg prompt throughput: 2066.4 tokens/s, Avg generation throughput: 12.5 tokens/s, Running: 14 reqs, Waiting: 9 reqs, GPU KV cache usage: 96.9%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:05.258895980Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 25.5 tokens/s, Running: 12 reqs, Waiting: 10 reqs, GPU KV cache usage: 82.9%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:07.258726066Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 12.0 tokens/s, Running: 14 reqs, Waiting: 8 reqs, GPU KV cache usage: 95.2%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:09.259062260Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 23.0 tokens/s, Running: 13 reqs, Waiting: 8 reqs, GPU KV cache usage: 95.9%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:11.259787444Z Avg prompt throughput: 2066.8 tokens/s, Avg generation throughput: 11.5 tokens/s, Running: 13 reqs, Waiting: 8 reqs, GPU KV cache usage: 94.9%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:13.144082428Z Avg prompt throughput: 2066.6 tokens/s, Avg generation throughput: 24.0 tokens/s, Running: 13 reqs, Waiting: 7 reqs, GPU KV cache usage: 90.6%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:15.144072213Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 11.5 tokens/s, Running: 12 reqs, Waiting: 7 reqs, GPU KV cache usage: 84.9%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:17.144547332Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 13 reqs, Waiting: 6 reqs, GPU KV cache usage: 91.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:19.145104056Z Avg prompt throughput: 2065.9 tokens/s, Avg generation throughput: 11.5 tokens/s, Running: 12 reqs, Waiting: 6 reqs, GPU KV cache usage: 86.2%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:21.145592466Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 22.0 tokens/s, Running: 13 reqs, Waiting: 5 reqs, GPU KV cache usage: 94.4%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:23.146523482Z Avg prompt throughput: 2066.6 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 13 reqs, Waiting: 5 reqs, GPU KV cache usage: 95.7%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:25.147392804Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 12 reqs, Waiting: 5 reqs, GPU KV cache usage: 87.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:27.147451453Z Avg prompt throughput: 2066.4 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 13 reqs, Waiting: 4 reqs, GPU KV cache usage: 91.3%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:29.147473654Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 21.5 tokens/s, Running: 13 reqs, Waiting: 3 reqs, GPU KV cache usage: 92.6%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:31.148945284Z Avg prompt throughput: 2065.0 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 13 reqs, Waiting: 3 reqs, GPU KV cache usage: 93.9%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:33.149865884Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 11.5 tokens/s, Running: 12 reqs, Waiting: 3 reqs, GPU KV cache usage: 87.5%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:35.150103153Z Avg prompt throughput: 2067.3 tokens/s, Avg generation throughput: 21.5 tokens/s, Running: 12 reqs, Waiting: 2 reqs, GPU KV cache usage: 87.2%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:37.150286838Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 10.0 tokens/s, Running: 13 reqs, Waiting: 1 reqs, GPU KV cache usage: 92.3%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:39.150948193Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 10.5 tokens/s, Running: 13 reqs, Waiting: 1 reqs, GPU KV cache usage: 95.4%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:41.151287679Z Avg prompt throughput: 2067.2 tokens/s, Avg generation throughput: 11.0 tokens/s, Running: 12 reqs, Waiting: 1 reqs, GPU KV cache usage: 89.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:43.014908643Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 10.5 tokens/s, Running: 13 reqs, Waiting: 0 reqs, GPU KV cache usage: 93.4%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:45.015530423Z Avg prompt throughput: 2066.7 tokens/s, Avg generation throughput: 22.5 tokens/s, Running: 12 reqs, Waiting: 0 reqs, GPU KV cache usage: 88.3%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:47.016534463Z Avg prompt throughput: 2066.4 tokens/s, Avg generation throughput: 182.4 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 78.6%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:49.017431436Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 338.9 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 78.6%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:51.018131836Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 346.9 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 78.6%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:53.018262733Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 351.5 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 78.6%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:55.019131876Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 340.9 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 77.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:57.019455239Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 340.9 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 75.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:25:59.020308996Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 351.8 tokens/s, Running: 11 reqs, Waiting: 0 reqs, GPU KV cache usage: 75.8%, Prefix cache hit rate: 0.0%
+outside single-1  | 2026-10-15T11:26:01.021282780Z Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 330.9 tokens/s, Running: 9 reqs, Waiting: 0 reqs, GPU KV cache usage: 62.0%, Prefix cache hit rate: 0.0%
+2026-10-15T11:26:05Z [q4k1s24] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 8,16,24 --json /tmp/ladder-q4k1s24.json
+# start 2026-10-15T11:26:05Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=8,16,24
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 8        17.5      299.0      50.0      1.81      14.4     48.1        0   60.7    8    21165  7/14/39
+16        12.1      172.5*     49.9      1.84       6.2     36.2        0   97.4   13    40001  4/7/51
+24         8.4      299.4*     51.4      1.85      18.1     60.3        0   97.4   13    59121  4/5/31
+
+* no instant at which all N streams were decoding: the pool could not hold them, so that row is a tail measurement, not a steady state.
+| N | 8 | 16 | 24 |
+|---|---|---|---|
+| per-stream tok/s | 17.5 | 12.1 | 8.4 |
+| decode aggregate tok/s | 299 | 173 | 299 |
+| end-to-end aggregate tok/s | 50 | 50 | 51 |
+| tok/step | 1.81 | 1.84 | 1.85 |
+| tok/pass | 14.4 | 6.2 | 18.1 |
+| ms/pass | 48.1 | 36.2 | 60.3 |
+| preemptions | 0 | 0 | 0 |
+
+wrote /tmp/ladder-q4k1s24.json
+# end 2026-10-15T11:34:09Z exit=0
+2026-10-15T11:34:10Z [q4k1s24] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+DOWN_OK
+    2026-10-15T13:27:11 122.2 23785.9
+    2026-10-15T13:28:12 122.2 23785.9
+    2026-10-15T13:29:12 122.2 23785.9
+    2026-10-15T13:30:12 122.2 23785.9
+    2026-10-15T13:31:12 122.2 23785.9
+    2026-10-15T13:32:13 122.2 23785.9
+    2026-10-15T13:33:13 122.2 23785.9
+
+Q34_DONE
