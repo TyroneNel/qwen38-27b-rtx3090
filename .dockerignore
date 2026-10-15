@@ -3,7 +3,9 @@
 venv
 hfvenv
 models
-.env
+# every .env variant, not just .env: `COPY . .` otherwise bakes the owner's
+# .env.bench/.env.hf/.env.long - and any key in them - into a local image
+.env*
 api_key.txt
 *.log
 __pycache__

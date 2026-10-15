@@ -102,8 +102,9 @@ Then write the conclusion, and write it as one of the two the batch doc defines:
 - **Conclusion A — the model holds:** `Running:` rises by 3 or more from k=7 to k=3, preemptions fall toward 0,
   and the N=8/N=16 aggregate rises. Include the seats-per-k curve.
 - **Conclusion B — the model is wrong:** `Running:` stays within ±1 across all three arms. Say so plainly, name
-  the next suspect the evidence points at, and note that the launcher's `RESIDENT` print over-predicts and should
-  be corrected.
+  the next suspect the evidence points at, and note that the launcher's `RESIDENT` print is wrong and should be
+  corrected — the run found it errs **low** (it prints about 5 seats where 7 fit), which is the opposite of what
+  this rule assumed.
 - "Inconclusive" only if the probe could not hold the load — then say exactly what prevented it.
 
 If the two metrics disagree, the log line wins and both go in the report.

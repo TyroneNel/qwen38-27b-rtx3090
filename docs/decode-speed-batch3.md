@@ -21,6 +21,10 @@ still read 5. Under the model it should have read 8. So either the model over-pr
 is capped by something else entirely (the `align`-mode checkpoint pages, the 2048-token batched-token budget, or
 the graph/runner allocations the launcher warns about).
 
+**Neither, as it turned out — the probe was capped.** `MAX_SEQS=8` admits eight requests and k=7 already holds
+seven, so the k=3 arm ran all eight with `Waiting: 0` and 40% of the pool free: the gain was there, the probe
+could not show it. A third possibility belongs on that list, and it is the one that was true.
+
 **Outcome (2026-10-14): Conclusion A — the model holds**, with two corrections to this design that the run had
 to make. (1) The probe as specified cannot discriminate: `MAX_SEQS=8` caps every arm at 8 and k=7 already holds
 7, so the literal rule reads as Conclusion B while the truth is A. The run added uncapped `MAX_SEQS=16` boots to

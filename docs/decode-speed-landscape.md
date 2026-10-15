@@ -300,7 +300,9 @@ schedule only varies k per step. Its +9.2% at N=4 was a compute win. Lowering th
 boot is the only lever that moves seats.
 
 **What this opens.** The seats-per-k curve is now a known quantity, so a deployment can pick its point on it
-instead of guessing: one user takes k=7, an agent fleet takes k=3 or 1 and pays in C1. The unresolved piece is
+instead of guessing: one user takes k=7, an agent fleet takes k=3 or 1 and pays in C1. Turning that into shipped
+profiles is [batch 4](decode-speed-batch4.md) — the policy table (which k wins at each concurrency, and where
+`SPEC=off` takes over) plus the two instrumentation questions. The unresolved piece is
 instrumentation — **no boot line reports the state pool**, so seats are still inferred from the `Running:` line
 and the `RESIDENT` constant is unverified against a counter. A state-slot counter is the candidate patch.
 
@@ -451,6 +453,7 @@ result and retracted row 2's `reasoning_effort` recommendation; batch 3 answered
 | 11 | EXL3 second quantization path | `vllm-exl3` / `trellis-serve` | C1 tok/s on our prompts | up to +28% C1 on a rival engine's row; largest effort | high |
 | 12 | SGLang as a second engine | club-3090 PR #1226 row | ms/step at C1 | +43% C1 on an identical config (their measurement) | high |
 | 13 | Residency/seats (G7) | **answered** — [batch 3](../bench/results/2026-10-14-batch3-SUMMARY.md) | `Running:` 7 → 13 seats from k=7 to k=3; C1 pays 112.1 → 94.1 tok/s | both: k is a concurrency control *and* the launcher's constant is 16-23% low | — |
+| 14 | Seats as policy: which k per concurrency band, and can seats be read directly? | [batch 4](decode-speed-batch4.md), config only | aggregate tok/s and preemptions per k per C; `/metrics` for a state gauge | decides what the shipped profiles should use between one user and a full batch | low |
 
 ## What we already lead on
 

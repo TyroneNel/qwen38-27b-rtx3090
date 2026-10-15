@@ -80,6 +80,11 @@ knob. Keep the full JSON in the arm's `.env` so the arm stays reproducible.
 - Record tokens/step as well: batch 1 saw it fall (3.50 → 2.95) while the aggregate rose, which is the expected
   trade and worth showing.
 
+**What this arm did not buy (found in batch 3).** B booted with `num_spec_tokens=7` — the schedule varies k per
+step, but the recurrent-state reservation is sized for the *configured* maximum, so the arm bought no extra
+seats. Its +9.2% at N=4 was a compute win. Lowering the configured `DFLASH_TOKENS` at boot is the only lever
+that moves seats, and that is [batch 3](decode-speed-batch3.md).
+
 **S2b — graph capture size.** A = shipped `CG` (resolves to 64). B = `CG=40`. Interleaved A-B-A.
 - Pass = at least 3% on C1 T=0 with the narrower capture set confirmed in the boot log, and graph MiB recorded.
   Batch 1 read +3.3% once, without A-B-A.
