@@ -1,0 +1,36 @@
+2026-10-15T17:33:22Z [q4b] cp bench/results/2026-10-15-Q4-band2/.env .env
+2026-10-15T17:33:22Z [q4b] sampler: bench/results/2026-10-15-batch5-tools/sampler.ps1 -> bench/results/2026-10-15-Q4-band2/mem-trace-q4b.csv
+2026-10-15T17:33:22Z [q4b] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-15T17:33:25Z [q4b] spill watch started: bench/results/2026-10-15-batch5-tools/spillwatch.sh
+2026-10-15T17:35:27Z [q4b] KV-cache line at 2026-10-15T17:35:24.800796814Z = 2026-10-15T19:35:24 local
+2026-10-15T17:35:38Z [q4b] healthy after 133 s
+2026-10-15T17:36:09Z [q4b] first measurement request at 2026-10-15T19:36:09 local (IFBench)
+2026-10-15T17:36:10Z [q4b] guard floors: FLOORS F_ctx=86.2 F_kv=102.2 n_kv=5 (window: KV-cache line 2026-10-15T19:35:24 -> first request 2026-10-15T19:36:09, local time)
+2026-10-15T17:36:10Z [q4b] BOOT RISE (recorded, not blocking): BOOTRISE q4b FLOORS F_ctx=86.2 F_kv=102.2 n_kv=5: the boot rose 16.0 MiB above the CUDA-context level before the first request
+2026-10-15T17:36:32Z [ifbench-setup-q4b] first measurement request at 2026-10-15T19:36:32 local
+2026-10-15T17:36:54Z [ifbench-setup-q4b] docker compose --profile single exec -T single bash -lc 'bash /tmp/ifbench_setup.sh'
+2026-10-15T17:37:45Z [ifbench-gen-q4b] first measurement request at 2026-10-15T19:37:45 local
+2026-10-15T17:38:07Z [ifbench-gen-q4b] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py q4b --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-q4b --max-tokens 16384 --conc 4'
+2026-10-15T19:01:01Z [q4b] IFBench stopped on the owner's instruction ("the IfBench is hitting token limit. results are void, stop skip IFBench"): generation killed mid-run, nothing scored; counters at stop in raw-ifbench-metrics-at-stop-q4b.log. Q4-shipped never booted.
+2026-10-15T19:01:02Z [q4b] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 

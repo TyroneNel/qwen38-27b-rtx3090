@@ -60,9 +60,13 @@ All four boots ran at `MAX_SEQS=16` and `MAX_LEN=65536`.
 - **The buffer is named:** the int4 3D scratch, `capacity=128` → `256` query tokens (48.38 + 64.50 → 96.75 + 129.00
   MiB). It is the only `MAX_SEQS`-scaled allocation that differs between the boot logs.
 
-## Q4: IFBench, band 2 against the shipped profile
+## Q4: IFBench, band 2 against the shipped profile: stopped, no result (`2026-10-15-Q4-band2/report.md`)
 
-Running at the time of the Q3/Q5 push.
+- **Stopped on the owner's instruction:** "the IfBench is hitting token limit. results are void, stop skip IFBench".
+- **What had run:** the band-2 arm, with 204 requests finished (180 `stop`, 24 `length` at `max_tokens` 16384) and
+  0 preemptions at 4 threads.
+- **Nothing scored**, and the shipped arm never booted.
+- **Band 2's precision gate** is still GSM8K n=200 plus perplexity.
 
 ## Method notes
 

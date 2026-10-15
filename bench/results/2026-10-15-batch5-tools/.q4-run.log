@@ -1,0 +1,75 @@
+2026-10-15T17:09:59Z [q5w] first measurement request at 2026-10-15T19:09:59 local
+2026-10-15T17:10:21Z [q5w] docker compose --profile single exec -T single env OUT=/tmp/rb-q5w-1 bash bench/run_benchmarks.sh single
+ROW cohort C1 real prompts T=default | e2e=103.32 tok/s | decode(C/meanTPOT)=107.1 | tok/step=3.02 | meanTTFT=214.81 ms
+ROW cohort C2 real prompts T=default | e2e=168.31 tok/s | decode(C/meanTPOT)=187.6 | tok/step=3.46 | meanTTFT=312.65 ms
+ROW cohort C4 real prompts T=default | e2e=214.99 tok/s | decode(C/meanTPOT)=266.7 | tok/step=3.33 | meanTTFT=563.05 ms
+ROW cohort C8 real prompts T=default | e2e=227.76 tok/s | decode(C/meanTPOT)=344.5 | tok/step=3.31 | meanTTFT=2981.46 ms
+ROW cohort C1 real prompts T=0 | e2e=102.33 tok/s | decode(C/meanTPOT)=106.2 | tok/step=3.17 | meanTTFT=225.51 ms
+ROW cohort C2 real prompts T=0 | e2e=162.97 tok/s | decode(C/meanTPOT)=183.2 | tok/step=3.30 | meanTTFT=296.55 ms
+ROW cohort C4 real prompts T=0 | e2e=234.08 tok/s | decode(C/meanTPOT)=267.4 | tok/step=3.37 | meanTTFT=473.40 ms
+ROW cohort C8 real prompts T=0 | e2e=229.73 tok/s | decode(C/meanTPOT)=355.2 | tok/step=3.41 | meanTTFT=2727.29 ms
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch5-tools/workload_accept.py to hyperqwen-single-1:/tmp/workload_accept.py
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch5-tools/workload_accept.py to hyperqwen-single-1:/tmp/workload_accept.py
+ hyperqwen-single-1 Copying bench/results/2026-10-15-Q3-a-cg64/targets to hyperqwen-single-1:/tmp/q3-targets
+ hyperqwen-single-1 Copied bench/results/2026-10-15-Q3-a-cg64/targets to hyperqwen-single-1:/tmp/q3-targets
+2026-10-15T17:19:05Z [wacc-q5w] first measurement request at 2026-10-15T19:19:05 local
+2026-10-15T17:19:28Z [wacc-q5w] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/workload_accept.py q5w --targets /tmp/q3-targets --tasks gsm8k,code,chat,real0,real1,real2,real3,real4,real5,real6,real7 --max-tokens 1024 --chunk 128 --decode-reps 2'
+# start 2026-10-15T17:19:28Z
+# q5w think=False effort=<template default> max_tokens=1024 chunk=128
+WACC q5w gsm8k  prompt=99 target=226 chunks=2/2 steps=39 tok/step=5.795 accept=0.685 freerun_tok/step=5.795 decode_c1=205.4/205.9 tok/s firstbad=None
+WACC q5w code   prompt=98 target=1024 chunks=5/8 steps=146 tok/step=4.404 accept=0.486 freerun_tok/step=4.703 decode_c1=143.5/161.0 tok/s firstbad=382
+WACC q5w chat   prompt=49 target=1024 chunks=4/8 steps=136 tok/step=3.757 accept=0.394 freerun_tok/step=3.571 decode_c1=119.8/106.9 tok/s firstbad=252
+WACC q5w real0  prompt=60 target=1024 chunks=7/8 steps=184 tok/step=4.962 accept=0.566 freerun_tok/step=5.020 decode_c1=165.2/144.5 tok/s firstbad=812
+WACC q5w real1  prompt=49 target=1024 chunks=4/8 steps=136 tok/step=3.757 accept=0.394 freerun_tok/step=3.571 decode_c1=117.5/107.7 tok/s firstbad=252
+WACC q5w real2  prompt=68 target=1024 chunks=4/8 steps=301 tok/step=1.708 accept=0.101 freerun_tok/step=2.042 decode_c1=67.7/64.5 tok/s firstbad=170
+WACC q5w real3  prompt=196 target=1024 chunks=7/8 steps=190 tok/step=4.758 accept=0.537 freerun_tok/step=4.947 decode_c1=165.2/166.2 tok/s firstbad=243
+WACC q5w real4  prompt=92 target=1024 chunks=8/8 steps=187 tok/step=5.567 accept=0.652 freerun_tok/step=5.582 decode_c1=160.0/186.1 tok/s firstbad=None
+WACC q5w real5  prompt=55 target=1024 chunks=7/8 steps=154 tok/step=5.935 accept=0.705 freerun_tok/step=5.879 decode_c1=197.3/171.0 tok/s firstbad=274
+WACC q5w real6  prompt=50 target=1024 chunks=6/8 steps=190 tok/step=4.100 accept=0.443 freerun_tok/step=3.943 decode_c1=131.5/131.4 tok/s firstbad=73
+WACC q5w real7  prompt=240 target=439 chunks=3/4 steps=79 tok/step=3.987 accept=0.427 freerun_tok/step=4.354 decode_c1=145.9/145.8 tok/s firstbad=288
+# end 2026-10-15T17:24:05Z exit=0
+ hyperqwen-single-1 Copying hyperqwen-single-1:/tmp/q3-targets/result_q5w.json to bench/results/2026-10-15-Q5-a2-k7-s16-wacc/raw-wacc-result-q5w.json
+ hyperqwen-single-1 Copied hyperqwen-single-1:/tmp/q3-targets/result_q5w.json to bench/results/2026-10-15-Q5-a2-k7-s16-wacc/raw-wacc-result-q5w.json
+2026-10-15T17:24:05Z [q5w] docker compose --profile single exec -T single env OUT=/tmp/rb-q5w-2 bash bench/run_benchmarks.sh single
+ROW cohort C1 real prompts T=default | e2e=103.63 tok/s | decode(C/meanTPOT)=107.2 | tok/step=3.17 | meanTTFT=221.43 ms
+ROW cohort C2 real prompts T=default | e2e=157.43 tok/s | decode(C/meanTPOT)=183.5 | tok/step=3.29 | meanTTFT=304.80 ms
+ROW cohort C4 real prompts T=default | e2e=208.40 tok/s | decode(C/meanTPOT)=249.4 | tok/step=3.16 | meanTTFT=465.16 ms
+ROW cohort C8 real prompts T=default | e2e=180.34 tok/s | decode(C/meanTPOT)=266.1 | tok/step=3.23 | meanTTFT=5046.71 ms
+ROW cohort C1 real prompts T=0 | e2e=102.91 tok/s | decode(C/meanTPOT)=106.8 | tok/step=3.17 | meanTTFT=230.93 ms
+ROW cohort C2 real prompts T=0 | e2e=163.44 tok/s | decode(C/meanTPOT)=184.0 | tok/step=3.30 | meanTTFT=313.63 ms
+ROW cohort C4 real prompts T=0 | e2e=231.13 tok/s | decode(C/meanTPOT)=271.2 | tok/step=3.38 | meanTTFT=465.18 ms
+ROW cohort C8 real prompts T=0 | e2e=213.99 tok/s | decode(C/meanTPOT)=322.7 | tok/step=3.38 | meanTTFT=3050.22 ms
+2026-10-15T17:33:08Z [q5w] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+DOWN_OK
+    2026-10-15T19:26:21 102.2 23449.8
+    2026-10-15T19:27:22 102.2 23449.8
+    2026-10-15T19:28:22 102.2 23449.8
+    2026-10-15T19:29:22 102.2 23449.8
+    2026-10-15T19:30:23 102.2 23449.8
+    2026-10-15T19:31:23 102.2 23449.8
+    2026-10-15T19:32:23 102.2 23449.8
+
+Q5W_DONE
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch5-tools/ifbench_setup.sh to hyperqwen-single-1:/tmp/ifbench_setup.sh
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch5-tools/ifbench_setup.sh to hyperqwen-single-1:/tmp/ifbench_setup.sh
+ hyperqwen-single-1 Copying bench/results/2026-10-15-batch5-tools/ifbench_gen.py to hyperqwen-single-1:/tmp/ifbench_gen.py
+ hyperqwen-single-1 Copied bench/results/2026-10-15-batch5-tools/ifbench_gen.py to hyperqwen-single-1:/tmp/ifbench_gen.py
+2026-10-15T17:36:32Z [ifbench-setup-q4b] first measurement request at 2026-10-15T19:36:32 local
+2026-10-15T17:36:54Z [ifbench-setup-q4b] docker compose --profile single exec -T single bash -lc 'bash /tmp/ifbench_setup.sh'
+# start 2026-10-15T17:36:54Z
+/tmp/ifb/lib/python3.12/site-packages/nltk/downloader.py:1076: UserWarning: NLTK will not authorize the non-private download directory '/tmp/nltk_data': it (or an ancestor) is world- or group-writable, so another local user could plant files there. Choose a private location such as ~/nltk_data.
+  for msg in self.incr_download(info_or_id, download_dir, force):
+IFBench 1c40f0c10d9b5c5c2f10a175a28007ebb64f7f4d installed: Version: 0.2.0
+-rw-rw-r-- 1 root root 421499 Sep  9 10:10 IFBench_test.jsonl
+-rw-rw-r-- 1 root root 621872 Sep  9 10:10 sample_output.jsonl
+-rw-rw-r-- 1 root root 421502 Sep  9 10:10 IFBench_test.jsonl
+299 /tmp/IFBench/ifbench/data/IFBench_test.jsonl
+# end 2026-10-15T17:37:45Z exit=0
+2026-10-15T17:37:45Z [ifbench-gen-q4b] first measurement request at 2026-10-15T19:37:45 local
+2026-10-15T17:38:07Z [ifbench-gen-q4b] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/ifbench_gen.py q4b --data /tmp/IFBench/ifbench/data/IFBench_test.jsonl --out /tmp/ifb-q4b --max-tokens 16384 --conc 4'
