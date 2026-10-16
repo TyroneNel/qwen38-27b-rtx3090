@@ -352,8 +352,15 @@ Note on §3.3: the `min(max_num_seqs, 32) × 16` rows rule is the repo's `spec-d
   - **#55601:** the related fix ([vllm#55601](https://github.com/vllm-project/vllm/pull/55601), merged after 0.31.0)
     addresses a group whose block is smaller than `mamba_block_size`. Every group here is 448, the same as the
     mamba block.
-  - **Test:** a hardware check on the default config is in
-    `bench/results/2026-10-16-issue60174-prefix-cache/` on branch `issue-60174-check`.
+  - **Tested: not affected on the default config** (`bench/results/2026-10-16-issue60174-prefix-cache/`, branch
+    `issue-60174-check`, commit `70469df`). The run sent 4 replay passes of 5 turns each, all in one boot, with
+    19,712-20,608 cached tokens on every follow-up turn.
+    - **No collapse:** every reply is coherent, and the longest single-token run is 2.
+    - **Acceptance:** 4.09-4.42 warm against 4.60 cold.
+    - **T=0 replies:** identical to their salted cold twins on 4 of 5 turns.
+
+    The int8 `CTX=long` profile was not tested. Its drafter may inherit a quantized KV dtype, which is the issue's
+    trigger.
 - **[HyperQwen#329](https://github.com/syv-ai/HyperQwen/pull/329)** (`DYNAMIC_K`) and
   **[#330](https://github.com/syv-ai/HyperQwen/pull/330)** (`conc_ladder --salt`) are open upstream. #329 states "It
   adds no seats", which is cause 1.
