@@ -1,5 +1,8 @@
 # DYNAMIC_K A/B on the 3090, launcher default dflash2 config (2026-10-16)
 
+> **Superseded by `../2026-10-16-dynamic-k-ab-salted/` (PASS).** With fixed prompts and 6 reps over 4 interleaved
+> boots, N=1 is -1.0% and N=4 is +7.7%. The N=1 gap below came from prompt content.
+
 **Verdict: INCONCLUSIVE.** B's N=4 decode aggregate is +12.4% over the mean of A and A2, and ms/pass (-28.2%) and
 tok/step (-17.8%) both drop, so the schedule took effect and raised N=4 throughput. It is not PASS because B's N=1
 per-stream tok/s is +10.3% over the A/A2 mean, outside the 3% band. It is not FAIL because N=4 is well above +1%.

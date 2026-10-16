@@ -1,0 +1,132 @@
+2026-10-16T07:24:58Z [A1] cp bench/results/2026-10-16-dynamic-k-ab-salted/.env.A .env
+2026-10-16T07:24:58Z [A1] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab-salted/mem-trace-A1.csv
+2026-10-16T07:24:59Z [A1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T07:25:02Z [A1] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T07:27:19Z [A1] KV-cache line at 2026-10-16T07:27:15.194012895Z = 2026-10-16T09:27:15 local
+2026-10-16T07:27:30Z [A1] healthy after 148 s
+2026-10-16T07:28:01Z [mount-A1] first measurement request at 2026-10-16T09:28:01 local
+2026-10-16T07:28:23Z [mount-A1] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh /app/bench/conc_ladder.py; grep -c DYNAMIC_K /app/single-user/start_qwen.sh; grep -c -- --salt /app/bench/conc_ladder.py'
+2026-10-16T07:28:23Z [A1] first measurement request at 2026-10-16T09:28:23 local
+2026-10-16T07:28:33Z [A1] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=7 (window: KV-cache line 2026-10-16T09:27:15 -> first request 2026-10-16T09:28:23, local time)
+2026-10-16T07:28:45Z [A1] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --reps 6 --out 1024 --salt dynk1016 --json /tmp/ladder-A1.json
+2026-10-16T07:33:20Z [A1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-16T07:33:34Z [B1] cp bench/results/2026-10-16-dynamic-k-ab-salted/.env.B .env
+2026-10-16T07:33:34Z [B1] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab-salted/mem-trace-B1.csv
+2026-10-16T07:33:35Z [B1] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T07:33:35Z [B1] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T07:35:42Z [B1] KV-cache line at 2026-10-16T07:35:38.180483951Z = 2026-10-16T09:35:38 local
+2026-10-16T07:35:52Z [B1] healthy after 136 s
+2026-10-16T07:36:23Z [mount-B1] first measurement request at 2026-10-16T09:36:23 local
+2026-10-16T07:36:46Z [mount-B1] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh /app/bench/conc_ladder.py; grep -c DYNAMIC_K /app/single-user/start_qwen.sh; grep -c -- --salt /app/bench/conc_ladder.py'
+2026-10-16T07:36:46Z [B1] first measurement request at 2026-10-16T09:36:46 local
+2026-10-16T07:36:46Z [B1] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=6 (window: KV-cache line 2026-10-16T09:35:38 -> first request 2026-10-16T09:36:46, local time)
+2026-10-16T07:37:08Z [B1] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --reps 6 --out 1024 --salt dynk1016 --json /tmp/ladder-B1.json
+2026-10-16T07:41:36Z [B1] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-16T07:41:50Z [B2] cp bench/results/2026-10-16-dynamic-k-ab-salted/.env.B .env
+2026-10-16T07:41:50Z [B2] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab-salted/mem-trace-B2.csv
+2026-10-16T07:41:50Z [B2] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T07:41:51Z [B2] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T07:43:58Z [B2] KV-cache line at 2026-10-16T07:43:55.296278217Z = 2026-10-16T09:43:55 local
+2026-10-16T07:44:08Z [B2] healthy after 137 s
+2026-10-16T07:44:40Z [mount-B2] first measurement request at 2026-10-16T09:44:40 local
+2026-10-16T07:45:02Z [mount-B2] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh /app/bench/conc_ladder.py; grep -c DYNAMIC_K /app/single-user/start_qwen.sh; grep -c -- --salt /app/bench/conc_ladder.py'
+2026-10-16T07:45:02Z [B2] first measurement request at 2026-10-16T09:45:02 local
+2026-10-16T07:45:12Z [B2] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=6 (window: KV-cache line 2026-10-16T09:43:55 -> first request 2026-10-16T09:45:02, local time)
+2026-10-16T07:45:24Z [B2] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --reps 6 --out 1024 --salt dynk1016 --json /tmp/ladder-B2.json
+2026-10-16T07:49:54Z [B2] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-16T07:50:07Z [A2] cp bench/results/2026-10-16-dynamic-k-ab-salted/.env.A .env
+2026-10-16T07:50:07Z [A2] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab-salted/mem-trace-A2.csv
+2026-10-16T07:50:08Z [A2] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T07:50:09Z [A2] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T07:52:10Z [A2] KV-cache line at 2026-10-16T07:52:08.067859121Z = 2026-10-16T09:52:08 local
+2026-10-16T07:52:20Z [A2] healthy after 131 s
+2026-10-16T07:52:51Z [mount-A2] first measurement request at 2026-10-16T09:52:51 local
+2026-10-16T07:53:13Z [mount-A2] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh /app/bench/conc_ladder.py; grep -c DYNAMIC_K /app/single-user/start_qwen.sh; grep -c -- --salt /app/bench/conc_ladder.py'
+2026-10-16T07:53:14Z [A2] first measurement request at 2026-10-16T09:53:14 local
+2026-10-16T07:53:19Z [A2] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=7 (window: KV-cache line 2026-10-16T09:52:08 -> first request 2026-10-16T09:53:14, local time)
+2026-10-16T07:53:36Z [A2] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --reps 6 --out 1024 --salt dynk1016 --json /tmp/ladder-A2.json
+2026-10-16T07:58:12Z [A2] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
