@@ -66,6 +66,10 @@ REPS = _arg("--reps", 2)
 CTXTOK = _arg("--ctx-tokens", 4096)
 JSONOUT = _arg("--json", "", str)
 LABEL = _arg("--label", "", str)
+# --salt S fixes the prompt text across runs: the salt becomes S-n<N>-r<rep> instead of
+# carrying the wall clock, so two boots compared against each other decode the same
+# prompts. Streams, reps and N still get distinct prefixes, so nothing hits the prefix cache.
+SALT = _arg("--salt", "", str)
 SHARED = "--shared" in sys.argv
 
 FILLER = ("The RTX 3090 has 24 GB of GDDR6X and 82 streaming multiprocessors. "
@@ -208,16 +212,18 @@ def run_one(n, salt):
 
 print(f"prompts: {'shared' if SHARED else 'distinct'}, ~{CTXTOK} ctx tokens, "
       f"out={NOUT}, reps={REPS}, N={','.join(str(n) for n in NLIST)}"
-      + (f", label={LABEL}" if LABEL else ""))
+      + (f", label={LABEL}" if LABEL else "") + (f", salt={SALT}" if SALT else ""))
 print(f"{'N':>2} {'per-stream':>11} {'decode agg':>11} {'e2e agg':>8} {'tok/step':>9} "
       f"{'tok/pass':>9} {'ms/pass':>8} {'preempt':>8} {'kv%':>6} {'run':>4} {'TTFT ms':>8}  spread")
-rows = []
+rows, allreps = [], []
 for n in NLIST:
     best = None
     for rep in range(REPS):
-        r = run_one(n, salt=f"{LABEL}-n{n}-r{rep}-{int(time.time())}")
+        salt = f"{SALT}-n{n}-r{rep}" if SALT else f"{LABEL}-n{n}-r{rep}-{int(time.time())}"
+        r = run_one(n, salt=salt)
         if r is None:
             print(f"{n:>2}  incomplete"); continue
+        allreps.append(dict(r, rep=rep))
         # Keep the rep with the best STEADY-STATE aggregate: a collapse that survives
         # the best of two runs is not a transient, and a healthy config is not penalised
         # by one slow rep. Selecting on per-stream instead would prefer the rep where the
@@ -246,6 +252,6 @@ print("| tok/pass | " + " | ".join(f"{r['tok_pass']:.1f}" for r in rows) + " |")
 print("| ms/pass | " + " | ".join(f"{r['ms_pass']:.1f}" for r in rows) + " |")
 print("| preemptions | " + " | ".join(f"{r['preempt']:.0f}" for r in rows) + " |")
 if JSONOUT:
-    json.dump({"label": LABEL, "ctx_tokens": CTXTOK, "out": NOUT, "shared": SHARED,
-               "rows": rows}, open(JSONOUT, "w"), indent=1)
+    json.dump({"label": LABEL, "salt": SALT, "ctx_tokens": CTXTOK, "out": NOUT, "shared": SHARED,
+               "rows": rows, "reps": allreps}, open(JSONOUT, "w"), indent=1)
     print(f"\nwrote {JSONOUT}")
