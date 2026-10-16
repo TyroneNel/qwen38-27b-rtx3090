@@ -31,6 +31,8 @@ and each one is decided at boot:
 The block size itself (448 tokens on bf16, 864 on int8) is a side effect of forcing the GDN state page and the
 attention page to be the same number of bytes. It follows k_max and KV dtype, not seats.
 
+§8 lists existing upstream and HyperQwen work against each proposed fix. None implements 5.3 or 5.4 for this stack.
+
 ## 2. How the sizes are decided
 
 ```mermaid
@@ -296,3 +298,77 @@ boots, every rep kept.
 - **The host-memory step per seat** (1 MiB per seat) is not tied to one allocation.
 - **Gotcha numbering:** the launcher comments and bench reports cite gotcha numbers 4 higher than today's
   `docs/gotchas.md`. Old 38 / 39 are now 34 / 35.
+
+## 8. Prior work (searched 2026-10-16)
+
+What already exists in vllm-project/vllm and in HyperQwen (`syv-ai/HyperQwen`, which `syv-ai/qwen38-27b-rtx3090`
+redirects to; the fork has no PRs and has issues turned off).
+
+- **Method:** PR and issue titles, bodies and comments, with diffs read for the PRs whose overlap depends on the code.
+- **"In 0.31.0":** a merged PR counts as in the deployed version when `gh api compare v0.31.0...<merge sha>` reports
+  it behind the tag. The release branch was cut on 2026-09-28, a week before the 2026-10-05 tag, so merge dates alone
+  mislead.
+- **Summary:** nothing implements 5.3 or 5.4 for this stack. Parts of every layer exist.
+
+### 8.1 Per fix
+
+| Fix | Closest existing work | State | Overlap |
+|---|---|---|---|
+| 5.3 state pages follow the scheduled k | [vllm#57658](https://github.com/vllm-project/vllm/pull/57658) "Fix Hybrid Mamba KV-cache admission for dynamic K" | open, needs rebase, unreviewed | **Partial, and not for align mode.** It threads a per-step `num_spec_override` through `allocate_slots` → coordinator → `MambaManager`, but applies it only under `if self.mamba_cache_mode != "align"` (confirmed in the diff). No free on shrink, no grow or clamp. It takes k from running + waiting rather than the scheduled batch, and also overrides the full-sequence admission check, which 5.3 keeps at k_max. Usable as the plumbing skeleton. |
+| | [vllm#39562](https://github.com/vllm-project/vllm/pull/39562) | merged, in 0.31.0 | Align-mode `allocate_new_blocks` accepts a smaller requirement than the blocks held. A smaller k is safe, but the surplus is kept, not freed. |
+| | [vllm#53542](https://github.com/vllm-project/vllm/pull/53542) | open | Narrows the GDN `spec_state_indices` view to the active k (claims 212 → 299 tok/s on Qwen3.8-27B, max k7, runtime k3). Speed only; "the preallocated buffer remains max-K-sized". |
+| | [vllm#59759](https://github.com/vllm-project/vllm/pull/59759) | merged 2026-10-06, **not** in 0.31.0 | Edits the spec-block relocation and `physical_block_cap` lines a 5.3 patch would touch, and fixes MTP output after a prefix hit. Rebase onto it first. |
+| | [vllm#49164](https://github.com/vllm-project/vllm/pull/49164) | closed unmerged | DFlash draft compute follows dynamic k; states that the max k "still controls worker allocation, scheduler lookahead, and KV-cache reservation". |
+| | [vllm#55533](https://github.com/vllm-project/vllm/issues/55533), [RFC #59117](https://github.com/vllm-project/vllm/issues/59117), [#49548](https://github.com/vllm-project/vllm/issues/49548) | open | Cause 1 reported on this model class. #59117 names "the align-mode `2 + k` reservation" as the remaining gap. #49548 notes `num_lookahead_tokens` stays at the static k. |
+| | local `2cbfdfa` (`cline/gf59cdmh`, docs item S-5) | branch | **Argues against 5.3:** "covering the largest k any step uses is the only correct behaviour". 5.3 answers this by freeing on shrink and clamping k when the pool cannot grow, so each step still holds the pages its own k needs. |
+| 5.4 break the equal-page coupling | [vllm#37429](https://github.com/vllm-project/vllm/pull/37429) (dedicated Mamba pool) | open, stale | Partial: attention pages are still raised to the Mamba page. |
+| | [vllm#39031](https://github.com/vllm-project/vllm/pull/39031) (one pool per group, natural page sizes) | closed by the author | The full option A, with the Mamba pool fixed at `max_seqs` blocks and no rebalancing. Abandoned. |
+| | [vllm#46251](https://github.com/vllm-project/vllm/pull/46251) | open draft | Small attention blocks inside Mamba-sized large blocks, so attention keeps its natural block. The reverse of the sub-page idea in 5.4. |
+| | [vllm#35703](https://github.com/vllm-project/vllm/pull/35703) `--attn-pack-size N` | open, stale | N attention layers per page, so the block is 1/N tokens. |
+| | packed layout `_get_packed_kv_cache_groups` ([#40860](https://github.com/vllm-project/vllm/pull/40860), [#53896](https://github.com/vllm-project/vllm/pull/53896)) | merged, in 0.31.0 | Inactive here: FLASH_ATTN and Triton keep the default layer-outermost layout. [#58380](https://github.com/vllm-project/vllm/pull/58380) and [#60967](https://github.com/vllm-project/vllm/pull/60967) (open) would enable it and drop the Mamba padding; the block stays Mamba-coupled. |
+| | `--prefix-match-unit` ([#46384](https://github.com/vllm-project/vllm/pull/46384)) | merged, in 0.31.0 | Solves the prefix-hit granularity half of §3.4 without changing allocation. On this stack it is switched off by [#51843](https://github.com/vllm-project/vllm/pull/51843): the DFlash sliding-window group cannot do sub-block lookups unless its block equals the match unit (unblocking: [#53786](https://github.com/vllm-project/vllm/issues/53786)). |
+| | [vllm#58207](https://github.com/vllm-project/vllm/pull/58207), [#60252](https://github.com/vllm-project/vllm/pull/60252) | open | Upstream counterparts of `hybrid-kv-groups-v2-cudagraph.patch` (group size by padding bytes) and `hybrid-sw-block-promote.patch` (SW drafter block divides the primary block). |
+| 5.1 launcher reads geometry | [#42967](https://github.com/vllm-project/vllm/pull/42967), [#50809](https://github.com/vllm-project/vllm/pull/50809), [#50462](https://github.com/vllm-project/vllm/pull/50462), [#42206](https://github.com/vllm-project/vllm/pull/42206) | merged, in 0.31.0 | **The data source is ready.** `vllm:cache_config_info` reports the resolved `block_size` and `mamba_block_size`, `kv_cache_size_tokens` and `kv_cache_max_concurrency`, computed after hybrid alignment. |
+| | [vllm#54840](https://github.com/vllm-project/vllm/pull/54840) | open | Per-group block budget (`KVCacheBlockBudget`), the `G_state` / `G_attn` split 5.1 needs, but logged only, not on `/metrics`. |
+| | HyperQwen `bench/harness.py` ([#302](https://github.com/syv-ai/HyperQwen/pull/302)), `bench/prefix_alternation.py` ([#184](https://github.com/syv-ai/HyperQwen/pull/184)) | merged | A `/metrics` parser to reuse. #184 notes that with an explicit `--block-size` (`CTX=huge` passes 128) the `block_size` label shows that value, so 5.1 should read `mamba_block_size` there `[INFERENCE]`. |
+| | `d905cec`, `5ec9ca1` (`origin/cline/gf59cdmh`) | branch, no PR | The measured-function and range seat prints (§3.2), with `bench/test_resident_print.sh`. Constants still hard-coded. |
+| 5.2 `MAX_SEQS` from the pool | [vllm#41371](https://github.com/vllm-project/vllm/pull/41371) | closed unmerged | Auto-clamped `max_num_seqs` to the block count. Maintainers preferred an error to a silent clamp. |
+| | [vllm#54816](https://github.com/vllm-project/vllm/pull/54816), [#55018](https://github.com/vllm-project/vllm/pull/55018) | open | A live running-seat cap (no memory reclaim), and a re-init of the pool, graphs and scheduler with weights resident. The latter is the closest thing to the two-pass boot in 5.2. |
+| | [vllm#38270](https://github.com/vllm-project/vllm/pull/38270) | merged, in 0.31.0 | Refuses to start when `max_num_seqs` exceeds the Mamba block count. A bound of 1 block per seat, far below the real `6·(2+k)` + attention. |
+| Cause 3 seat-sized buffers | [vllm#46554](https://github.com/vllm-project/vllm/pull/46554) | closed unmerged | Lazy-grown token-id buffers, V1 runner only. Nothing exists for the V2 runner or the M-RoPE `prefill_positions` table. |
+| | [vllm#56148](https://github.com/vllm-project/vllm/pull/56148) | merged 2026-10-13, not in 0.31.0 | **Upgrade risk:** spec-verify rows use split-K and the Triton scratch becomes `min(seq_threshold_3D, max_num_seqs) × (1+k)` rows, so it grows with seats × k. |
+| | [vllm#50488](https://github.com/vllm-project/vllm/pull/50488) | merged, in 0.31.0 | Default capture sizes cover `max_num_seqs × (1+k)` with per-tier dynamic-SD sizes. Graph budget scales with seats × k. |
+
+Note on §3.3: the `min(max_num_seqs, 32) × 16` rows rule is the repo's `spec-decode-scratch-token-units.patch`. Stock
+0.31.0 sizes that scratch from `seq_threshold_3D` (`triton_attn.py`).
+
+### 8.2 Cross-cutting findings
+
+- **[vllm#60174](https://github.com/vllm-project/vllm/issues/60174) (open):** "DFlash2/DSpark + prefix caching corrupt
+  output after a cache hit on Qwen3.8-27B (TP=1) on 0.30/0.31". That is the launcher's default spec + prefix-cache
+  pairing.
+  - **Trigger:** the thread's latest diagnosis is the drafter inheriting an fp8 KV cache with no scales, and bf16 KV
+    is clean. This config is bf16 KV, so it should be unaffected `[INFERENCE]`.
+  - **#55601:** the related fix ([vllm#55601](https://github.com/vllm-project/vllm/pull/55601), merged after 0.31.0)
+    addresses a group whose block is smaller than `mamba_block_size`. Every group here is 448, the same as the
+    mamba block.
+  - **Test:** a hardware check on the default config is in
+    `bench/results/2026-10-16-issue60174-prefix-cache/` on branch `issue-60174-check`.
+- **[HyperQwen#329](https://github.com/syv-ai/HyperQwen/pull/329)** (`DYNAMIC_K`) and
+  **[#330](https://github.com/syv-ai/HyperQwen/pull/330)** (`conc_ladder --salt`) are open upstream. #329 states "It
+  adds no seats", which is cause 1.
+- **Prior evidence for cause 2:** [HyperQwen#25](https://github.com/syv-ai/HyperQwen/issues/25) (open) is where
+  "MAX_SEQS is not the knob" was established. [#40](https://github.com/syv-ai/HyperQwen/issues/40) and
+  [#33](https://github.com/syv-ai/HyperQwen/issues/33) work out residency by hand.
+- **Block size is fixed:** a maintainer comment on [HyperQwen#102](https://github.com/syv-ai/HyperQwen/issues/102)
+  calls B "not configurable", because the attention page has to equal the Mamba page. §5.4 and the upstream rows above
+  are the only ways around that.
+
+### 8.3 Searched and not found
+
+- Freeing spare spec state pages when k drops, growing them when k rises, or capping k to the free pool, in either
+  repo.
+- A rebalancing policy for two pools (movable split or migration).
+- Packing one request's speculative state slots several to a page.
+- Any per-group or Mamba-state usage gauge on `/metrics`.
+- Any HyperQwen launcher code that reads `/metrics`.
