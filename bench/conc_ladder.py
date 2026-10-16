@@ -3,7 +3,8 @@ WHY it falls off -- forward passes, preemptions, KV pool occupancy, and the spre
 across streams.
 
   venv/bin/python bench/conc_ladder.py [--max-n 8 | --n 1,2,4,8] [--out 256] [--reps 2]
-                                       [--ctx-tokens 4096] [--shared] [--json f.json]
+                                       [--ctx-tokens 4096] [--shared] [--label L] [--salt S]
+                                       [--json f.json]
 
 Three throughput columns, because they answer different questions and disagree:
 per-stream is each stream's own first-token-to-last-token rate, averaged -- what one
@@ -13,9 +14,15 @@ window (opened once EVERY stream has its first token), which is the steady-state
 aggregate rate and the honest scaling number. `e2e agg` is all output tokens over the
 whole wall clock including TTFT, so it is dominated by prefill once several long
 prompts arrive at once. Prompts are distinct per stream, per repetition and per N (each carries
-its own salt), so nothing here is ever served out of the prefix cache -- which is the
-condition that matters, since a shared prefix hides exactly the failure this measures.
---shared makes them identical instead, which is what a cache-friendly client looks like.
+its own salt), so nothing in one run is served out of the prefix cache -- which is the
+condition that matters, since a shared prefix hides exactly the failure this measures. The
+salt also carries the wall clock, so no two runs share a prompt either. --salt S replaces
+the clock with S, so two boots decode the same prompts, which a cross-boot A/B needs:
+spec-decode acceptance (tok/step) depends on the prompt. Pair the boots by (n, rep) from the
+JSON's `reps`, because the printed row is the best rep and can be a different rep per boot.
+Reusing S against a server that has already seen it under PREFIX_CACHE=1 is a prefix-cache
+hit, and the run prints a `!` line saying so. --shared makes the prompts identical instead
+(and ignores --salt), which is what a cache-friendly client looks like.
 
 Four columns diagnose a collapse, and they separate three different causes:
 
@@ -66,9 +73,6 @@ REPS = _arg("--reps", 2)
 CTXTOK = _arg("--ctx-tokens", 4096)
 JSONOUT = _arg("--json", "", str)
 LABEL = _arg("--label", "", str)
-# --salt S fixes the prompt text across runs: the salt becomes S-n<N>-r<rep> instead of
-# carrying the wall clock, so two boots compared against each other decode the same
-# prompts. Streams, reps and N still get distinct prefixes, so nothing hits the prefix cache.
 SALT = _arg("--salt", "", str)
 SHARED = "--shared" in sys.argv
 
@@ -117,10 +121,11 @@ def stream(i, salt, res, first_tok):
         "stream_options": {"include_usage": True},
         "chat_template_kwargs": {"enable_thinking": False},
     }
-    t0 = time.perf_counter(); first = None; last = None; ntok = 0
+    t0 = time.perf_counter(); first = None; last = None; ntok = 0; cached = 0
     for d in harness.stream("/v1/chat/completions", payload, timeout=3600):
         if d.get("usage"):
             ntok = d["usage"]["completion_tokens"]
+            cached = (d["usage"].get("prompt_tokens_details") or {}).get("cached_tokens") or 0
         ch = d.get("choices") or []
         if ch and ch[0].get("delta", {}).get("content"):
             now = time.perf_counter()
@@ -129,7 +134,7 @@ def stream(i, salt, res, first_tok):
                 first_tok[i] = now
             last = now
     res[i] = dict(ttft=(first - t0) if first else None,
-                  decode_s=(last - first) if first and last else None, ntok=ntok,
+                  decode_s=(last - first) if first and last else None, ntok=ntok, cached=cached,
                   rate=((ntok - 1) / (last - first)) if first and last and last > first else None)
 
 
@@ -207,7 +212,7 @@ def run_one(n, salt):
                 ms_pass=ms_per_pass, ttft=sum(v["ttft"] for v in good) / n * 1000,
                 preempt=m1["num_preemptions_total"] - m0["num_preemptions_total"],
                 kv=peak["kv"] * 100, running=peak["running"], waiting=peak["waiting"],
-                rates=[round(r, 1) for r in rates])
+                rates=[round(r, 1) for r in rates], cached=sum(v["cached"] for v in good))
 
 
 print(f"prompts: {'shared' if SHARED else 'distinct'}, ~{CTXTOK} ctx tokens, "
@@ -242,6 +247,9 @@ print()
 if any(not r["full"] for r in rows):
     print("* no instant at which all N streams were decoding: the pool could not hold "
           "them, so that row is a tail measurement, not a steady state.")
+if not SHARED and any(r["cached"] for r in allreps):
+    print("! prompt tokens were served from the prefix cache (`cached` in the JSON): the server "
+          "has seen these prompts before, so TTFT and e2e agg are not cold. Restart it or change --salt.")
 print("| N | " + " | ".join(str(r["n"]) for r in rows) + " |")
 print("|---|" + "---|" * len(rows))
 print("| per-stream tok/s | " + " | ".join(f"{r['per']:.1f}" for r in rows) + " |")
