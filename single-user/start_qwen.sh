@@ -519,8 +519,12 @@ SPEC_ARGS=()
 
 # PREFIX_CACHE=1: reuse the KV of a shared prompt prefix across requests, and resume the
 # recurrent (GDN) state from the last cached block boundary instead of re-running the prompt.
-# Turn-2+ of a chat with a 24k document goes from ~23 s to ~1 s; costs one extra state page
-# per request (~16% of the KV pool). Hybrid models keep this opt-in upstream.
+# Turn-2+ of a chat with a 24k document goes from ~23 s to ~1 s (measured on vLLM 0.27.1,
+# against caching off). From vLLM 0.28 on, vLLM turns prefix caching on for this model by
+# default and switches the Mamba cache to align mode. So PREFIX_CACHE=0 does not turn it off
+# and pays the same state pages (on 0.31, SPEC=dflash2 CTX=fast: a 380-page KV pool either
+# way). =1 passes the two flags explicitly and adds the tuning below.
+# EXTRA_ARGS=--no-enable-prefix-caching is what turns caching off.
 if [ "${PREFIX_CACHE:-0}" = "1" ]; then
   EXTRA_ARGS="--enable-prefix-caching --mamba-cache-mode align ${EXTRA_ARGS}"
   # KVarN runs --block-size 128; match the prefix hash unit to its tile so cache
@@ -614,6 +618,11 @@ if [ "${PREFIX_CACHE:-0}" = "1" ]; then
   # break identically, so the drafter is not implicated and every KVarN
   # speculator reaches it. It also needs a prefix-cache HIT to
   # fire at all, which is why PREFIX_CACHE=0 always looked clean (PR #13).
+  # That was vLLM 0.27.1. Since 0.28 PREFIX_CACHE=0 keeps vLLM's default caching. On 0.31,
+  # bench/residue_sweep.py over all 128 residues at CTX=huge SPEC=mtp with PREFIX_CACHE
+  # unset, under vLLM's default FULL_AND_PIECEWISE capture and an 86% prefix-cache hit
+  # rate, found 0 broken (2026-10-17). That run does not cover the PREFIX_CACHE=1 path,
+  # which keeps PIECEWISE below.
   # Correctness first, and it is close to free for MTP as well -- same depth
   # ladder, only the capture toggled, 8k/16k/32k/50k:
   #   FULL      87.8 / 86.1 / 70.4 / 63.5 tok/s

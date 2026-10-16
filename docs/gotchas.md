@@ -401,8 +401,10 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     Two conditions, and it took two people to see both. The **hit** is necessary:
     a fresh server, one request, no warm-up, never collapses at any length
     ([#13](https://github.com/syv-ai/HyperQwen/pull/13), mjungnickel18) —
-    which is also why `PREFIX_CACHE=0` always looked clean. The **residue** decides
-    whether a hit corrupts, and it is a clean function of the draft count:
+    which is also why `PREFIX_CACHE=0` always looked clean on vLLM 0.27.1, where it meant
+    no caching. Since 0.28 `PREFIX_CACHE=0` leaves vLLM's default caching on. The
+    **residue** decides whether a hit corrupts, and it is a clean function of the draft
+    count:
 
     | config | k | verify block L=k+1 | attention block | broken R | free slots 128-R |
     |---|---|---|---|---|---|
@@ -1028,7 +1030,8 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
 
     So the inflated perplexity and the NaN are one bug, not two: in the broken
     combination the logprobs that come back are ~23% worse on English than the
-    same server produces with prefix caching off, and the requests whose
+    same server produces with `PREFIX_CACHE=0` (measured on vLLM 0.28, so that row
+    still had vLLM's default caching on, in align mode), and the requests whose
     corruption reaches a non-finite float are the ones that 400. Every clean
     configuration agrees to four decimals, which is also what makes the broken
     one unmistakable.
