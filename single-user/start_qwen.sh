@@ -515,7 +515,7 @@ fi
 # ignored an exported KV_MEM without a word (#68, #210).
 [ -n "${KV_MEM:-}" ] && EXTRA_ARGS="--kv-cache-memory=$KV_MEM ${EXTRA_ARGS}"
 # DYNAMIC_K: on the reference 3090 at SPEC=dflash2 DFLASH_TOKENS=7, [[1,3,7],[4,512,3]] lifted decode at 4
-# streams +8.0% and +9.2% in two A/Bs, single-stream -0.2%/+0.4%. It buys step time, not seats: the recurrent-state
+# streams +7.7%, +8.0% and +9.2% in three A/Bs, single-stream within 1%. It buys step time, not seats: the recurrent-state
 # pages are reserved for num_speculative_tokens, not the k a step runs at, so only a lower DFLASH_TOKENS buys
 # residents. Refused at CTX=huge + PREFIX_CACHE=1: a k that moves with the batch size is a verify length that
 # changes step to step, which the VLLM_DFLASH2_LOOKUP_ADAPTIVE comment above shows corrupts a prefix-cache hit.
