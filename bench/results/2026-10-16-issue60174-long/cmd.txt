@@ -1,0 +1,33 @@
+2026-10-16T11:02:56Z [L] cp bench/results/2026-10-16-issue60174-long/.env.L .env
+2026-10-16T11:02:56Z [L] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-issue60174-long/mem-trace-L.csv
+2026-10-16T11:02:56Z [L] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T11:02:58Z [L] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T11:05:09Z [L] KV-cache line at 2026-10-16T11:05:07.052732133Z = 2026-10-16T13:05:07 local
+2026-10-16T11:05:20Z [L] healthy after 142 s
+2026-10-16T11:06:36Z [L] first measurement request at 2026-10-16T13:06:36 local
+2026-10-16T11:06:39Z [L] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=9 (window: KV-cache line 2026-10-16T13:05:07 -> first request 2026-10-16T13:06:36, local time)
+2026-10-16T11:06:58Z [L] docker compose --profile single exec -T single bash -lc 'true'
+2026-10-16T11:06:59Z [replay-L] first measurement request at 2026-10-16T13:06:59 local
+2026-10-16T11:07:21Z [replay-L] docker compose --profile single exec -T single bash -lc 'cd /app && venv/bin/python /tmp/replay_60174.py /tmp/raw-replay-L.json'
+2026-10-16T11:12:12Z [L] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
