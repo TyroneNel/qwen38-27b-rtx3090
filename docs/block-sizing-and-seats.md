@@ -358,9 +358,16 @@ Note on §3.3: the `min(max_num_seqs, 32) × 16` rows rule is the repo's `spec-d
     - **No collapse:** every reply is coherent, and the longest single-token run is 2.
     - **Acceptance:** 4.09-4.42 warm against 4.60 cold.
     - **T=0 replies:** identical to their salted cold twins on 4 of 5 turns.
+  - **Tested: not affected on the int8 `CTX=long` profile** (`bench/results/2026-10-16-issue60174-long/`, branch
+    `issue-60174-long`, commit `d3e3f35`). This is `TRITON_ATTN` with `int8_per_token_head` and 864-token blocks in
+    every group. The run used the same replay, with 19,008-19,872 cached tokens on every follow-up turn.
+    - **No collapse:** every reply is coherent, and the longest single-token run is 2.
+    - **Acceptance:** 3.76-4.23 warm against 4.19 cold, within 10.1%.
+    - **T=0 replies:** identical to cold on 4 of 5 turns.
 
-    The int8 `CTX=long` profile was not tested. Its drafter may inherit a quantized KV dtype, which is the issue's
-    trigger.
+    `int8_per_token_head` computes a scale per token and head, so the fp8 static-scale saturation has no equivalent
+    `[INFERENCE]`. The boot log does not name the drafter's KV dtype; it only warns that no KV cache group could be
+    identified as the draft model's. So the run cannot show directly that the drafter used int8.
 - **[HyperQwen#329](https://github.com/syv-ai/HyperQwen/pull/329)** (`DYNAMIC_K`) and
   **[#330](https://github.com/syv-ai/HyperQwen/pull/330)** (`conc_ladder --salt`) are open upstream. #329 states "It
   adds no seats", which is cause 1.
