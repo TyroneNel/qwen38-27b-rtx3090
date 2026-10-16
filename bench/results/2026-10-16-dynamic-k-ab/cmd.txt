@@ -1,0 +1,98 @@
+2026-10-16T06:47:30Z [A] cp bench/results/2026-10-16-dynamic-k-ab/.env.A .env
+2026-10-16T06:47:30Z [A] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab/mem-trace-A.csv
+2026-10-16T06:47:31Z [A] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T06:47:32Z [A] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T06:49:43Z [A] KV-cache line at 2026-10-16T06:49:39.741837190Z = 2026-10-16T08:49:39 local
+2026-10-16T06:49:53Z [A] healthy after 141 s
+2026-10-16T06:50:29Z [mount-A] first measurement request at 2026-10-16T08:50:29 local
+2026-10-16T06:50:51Z [mount-A] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh; grep -c DYNAMIC_K /app/single-user/start_qwen.sh'
+2026-10-16T06:51:05Z [A] first measurement request at 2026-10-16T08:51:05 local
+2026-10-16T06:51:27Z [A] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --json /tmp/ladder-A.json
+2026-10-16T06:52:24Z [A] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-16T06:53:53Z [B] cp bench/results/2026-10-16-dynamic-k-ab/.env.B .env
+2026-10-16T06:53:53Z [B] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab/mem-trace-B.csv
+2026-10-16T06:53:54Z [B] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T06:53:55Z [B] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T06:56:07Z [B] KV-cache line at 2026-10-16T06:56:02.994486799Z = 2026-10-16T08:56:02 local
+2026-10-16T06:56:18Z [B] healthy after 143 s
+2026-10-16T06:56:50Z [mount-B] first measurement request at 2026-10-16T08:56:50 local
+2026-10-16T06:57:12Z [mount-B] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh; grep -c DYNAMIC_K /app/single-user/start_qwen.sh'
+2026-10-16T06:57:13Z [B] first measurement request at 2026-10-16T08:57:12 local
+2026-10-16T06:57:16Z [B] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=7 (window: KV-cache line 2026-10-16T08:56:02 -> first request 2026-10-16T08:57:12, local time)
+2026-10-16T06:57:35Z [B] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --json /tmp/ladder-B.json
+2026-10-16T06:58:26Z [B] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
+2026-10-16T06:59:14Z [A2] cp bench/results/2026-10-16-dynamic-k-ab/.env.A2 .env
+2026-10-16T06:59:14Z [A2] sampler: bench/results/2026-10-15-batch4-tools/sampler.ps1 -> bench/results/2026-10-16-dynamic-k-ab/mem-trace-A2.csv
+2026-10-16T06:59:15Z [A2] (PowerShell) docker compose --profile single up -d --force-recreate --no-deps single
+docker :  Network hyperqwen_default Creating 
+At line:1 char:32
++ ... \HyperQwen; docker compose --profile single up -d --force-recreate -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Network hyperqwen_default Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Network hyperqwen_default Creating 
+ Network hyperqwen_default Created 
+ Network hyperqwen_default Created 
+ Container hyperqwen-single-1 Creating 
+ Container hyperqwen-single-1 Created 
+ Container hyperqwen-single-1 Starting 
+ Container hyperqwen-single-1 Started 
+
+2026-10-16T06:59:17Z [A2] spill watch started: bench/results/2026-10-15-batch4-tools/spillwatch.sh
+2026-10-16T07:01:24Z [A2] KV-cache line at 2026-10-16T07:01:24.296621059Z = 2026-10-16T09:01:24 local
+2026-10-16T07:01:35Z [A2] healthy after 138 s
+2026-10-16T07:02:06Z [mount-A2] first measurement request at 2026-10-16T09:02:06 local
+2026-10-16T07:02:28Z [mount-A2] docker compose --profile single exec -T single bash -lc 'sha256sum /app/single-user/start_qwen.sh; grep -c DYNAMIC_K /app/single-user/start_qwen.sh'
+2026-10-16T07:02:28Z [A2] first measurement request at 2026-10-16T09:02:28 local
+2026-10-16T07:02:38Z [A2] guard floors: FLOORS F_ctx=84.2 F_kv=92.2 n_kv=7 (window: KV-cache line 2026-10-16T09:01:24 -> first request 2026-10-16T09:02:28, local time)
+2026-10-16T07:02:50Z [A2] docker compose --profile single exec -T single venv/bin/python bench/conc_ladder.py --n 1,4 --json /tmp/ladder-A2.json
+2026-10-16T07:03:42Z [A2] docker compose --profile single down
+ Container hyperqwen-single-1 Stopping 
+ Container hyperqwen-single-1 Stopped 
+ Container hyperqwen-single-1 Removing 
+ Container hyperqwen-single-1 Removed 
+ Network hyperqwen_default Removing 
+ Network hyperqwen_default Removed 
