@@ -1030,8 +1030,8 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
 
     So the inflated perplexity and the NaN are one bug, not two: in the broken
     combination the logprobs that come back are ~23% worse on English than the
-    same server produces with `PREFIX_CACHE=0` (measured on vLLM 0.28, so that row
-    still had vLLM's default caching on, in align mode), and the requests whose
+    same server produces with `PREFIX_CACHE=0` (measured on vLLM 0.27.1, where that
+    meant no prefix caching), and the requests whose
     corruption reaches a non-finite float are the ones that 400. Every clean
     configuration agrees to four decimals, which is also what makes the broken
     one unmistakable.
@@ -1049,8 +1049,13 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     pass depending on the rest.
 
     Practical rule until the read path is fixed: measure perplexity or anything
-    else using `prompt_logprobs` on KVarN with `PREFIX_CACHE=0`, or on a
-    non-MTP speculator. Ordinary generation is not implicated — needle
+    else using `prompt_logprobs` on KVarN with prefix caching off, or on a
+    non-MTP speculator. Since vLLM 0.28 `PREFIX_CACHE=0` leaves vLLM's default
+    caching on, so caching off is `EXTRA_ARGS=--no-enable-prefix-caching`. On
+    0.31 (a 3090, 332-336k-token pool, 2026-10-17) the `--ppl-only` battery read
+    10.76 on English with caching off, with `PREFIX_CACHE` unset and with
+    `PREFIX_CACHE=1`, three runs each. The bug did not fire at that geometry,
+    which does not show it is gone. Ordinary generation is not implicated — needle
     retrieval and decode rates are normal on the same server.
 47. **`DFLASH_TOKENS=15` asserted at engine start on the int4 path, because the
     drafter's promoted block only has to *cover* the primary page, not divide

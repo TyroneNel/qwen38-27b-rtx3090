@@ -186,10 +186,11 @@ Things this campaign measured that did NOT pay, so nobody re-walks them:
   fused context-KV precompute. (On 0.30, `SPEC=off` runs the V2 runner too, per its
   boot log on 2026-09-25, so that cause no longer holds there, and 0.29's batch boots,
   which have no drafter, run V2 as well; the ~20% gap itself has not been re-measured.)
-- **`PREFIX_CACHE=0` prefills ~20% slower than `PREFIX_CACHE=1`** on this
-  stack, align mode ruled out as the cause (since vLLM 0.28 plain PC=0 already runs align,
-  because vLLM sets it whenever caching is on, and PC=0 + `--mamba-cache-mode align`
-  measures the same as plain PC=0). Do not set `PREFIX_CACHE=0` "for speed".
+- **`PREFIX_CACHE=0` prefilled ~20% slower than `PREFIX_CACHE=1`** on vLLM 0.27.1, when
+  `PREFIX_CACHE=0` meant caching off. (The control that added `--mamba-cache-mode align` to
+  `PREFIX_CACHE=0` did not test align: with caching off, vLLM resets the mode to `none`.)
+  Since 0.28 `PREFIX_CACHE=0` runs caching in align mode too, and the gap has not been
+  re-measured. Do not turn caching off "for speed".
 - **Bigger prefill chunks do not boot** under the pinned `KV_MEM`:
   `--max-num-batched-tokens` 4096 and 8192 both inflate the profiled
   activation peak past the transient floor (engine init fails). 2048 stays.

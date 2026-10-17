@@ -11,14 +11,15 @@ Data (once):
 Perplexity needs prompt_logprobs, which needs memory headroom: run the server with
 GPU_UTIL=0.93 for this (gotcha 10 in the README).
 
-On CTX=huge (KVarN) with SPEC=mtp, measure perplexity with PREFIX_CACHE=0. That
-combination corrupts prompt_logprobs: some requests 400 with "Out of range float
-values are not JSON compliant: nan", and the batteries that do complete read
-~23% high on English (12.6-13.7 against 10.76) and drift run to run. Setting
-PREFIX_CACHE=0 makes the same server exact and stable to four decimals. SPEC=off
-and SPEC=dflash2 on KVarN are unaffected, at the same pool size, and so is
-CTX=fast on all three settings, so the published quality tables are not
-implicated. Measured in #64 (gotcha 46).
+On CTX=huge (KVarN) with SPEC=mtp, measure perplexity with prefix caching off:
+EXTRA_ARGS=--no-enable-prefix-caching (since vLLM 0.28, PREFIX_CACHE=0 leaves vLLM's
+default caching on). With PREFIX_CACHE=1 that combination corrupts prompt_logprobs:
+some requests 400 with "Out of range float values are not JSON compliant: nan", and
+the batteries that do complete read ~23% high on English (12.6-13.7 against 10.76)
+and drift run to run. On vLLM 0.27.1, PREFIX_CACHE=0 (then caching off) made the
+same server exact and stable to four decimals. SPEC=off and SPEC=dflash2 on KVarN
+are unaffected, at the same pool size, and so is CTX=fast on all three settings, so
+the published quality tables are not implicated. Measured in #64 (gotcha 46).
 Usage: python bench/quality_battery.py <tag> [--ppl-only] [--gsm-only] [--gsm-n 200]
 """
 import json, os, sys, glob, re, math, time, random

@@ -88,9 +88,9 @@ the prefix cache partially serve repeated bench prompts, which read one config
 Decode at C1 is unchanged by the int8 path (122±5 vs 121 tok/s over repeats);
 quality is the documented int8 trade
 ([docs/optimizations.md](../docs/optimizations.md), GSM8K 95.0 vs 96.5, PPL
-+4.1%). `SPEC=off` and `PREFIX_CACHE=0` each measure ~20% *slower* prefill
-than the dflash2 defaults — the drafter rides the V2 model runner and the
-prefix-cache path is the fast allocation path — so neither is a "lean" prefill
++4.1%). On vLLM 0.27.1, `SPEC=off` and `PREFIX_CACHE=0` (then caching off) each measured
+~20% *slower* prefill than the dflash2 defaults — the drafter rides the V2 model runner and
+the prefix-cache path is the fast allocation path — so neither is a "lean" prefill
 configuration.
 
 Two things to plan capacity around. First, concurrency does nothing for
@@ -101,7 +101,7 @@ waits ~40 s). Second, the falloff with length is mild — ~45% from 1k to 100k
 on the int8 path, ~34% on W4A16 — because just 16 of 64 layers pay quadratic
 attention; this is one of the places the hybrid architecture genuinely helps.
 
-### Raw-engine cells (no speculation, `PREFIX_CACHE=0`)
+### Raw-engine cells (no speculation, no prefix caching, vLLM 0.27.1)
 
 For apples-to-apples comparison with other 3090 stacks, the standard "raw"
 protocol people ask for: `SPEC=off PREFIX_CACHE=0`, 7,681-token prompts,
@@ -109,9 +109,10 @@ protocol people ask for: `SPEC=off PREFIX_CACHE=0`, 7,681-token prompts,
 requests, distinct seeds per call. PP = total prompt tokens / wall time of
 1-token-output runs at the same concurrency; TG = C × 1000 / mean TPOT
 (true tokens per second — with speculation off every round emits exactly one
-token per request). RTX 3090 at 250 W, this checkpoint (W4A16-AutoRound-fast). Since
-vLLM 0.28 `PREFIX_CACHE=0` leaves vLLM's default prefix caching on, so a run that must
-have none needs `EXTRA_ARGS=--no-enable-prefix-caching`.
+token per request). RTX 3090 at 250 W, this checkpoint (W4A16-AutoRound-fast), vLLM 0.27.1,
+when `PREFIX_CACHE=0` meant no prefix caching. Since vLLM 0.28 `PREFIX_CACHE=0` leaves
+vLLM's default prefix caching on, so to repeat these cells add
+`EXTRA_ARGS=--no-enable-prefix-caching`.
 
 | cell | W4A16 raw: PP / TG-agg | + server-side int8 (`INT8_ACT=int8 PREFILL_ATTN=int8`): PP / TG-agg |
 |---|---|---|

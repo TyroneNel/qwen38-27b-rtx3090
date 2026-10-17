@@ -238,9 +238,11 @@ fi
 # implicated, so this warns rather than refuses.
 if [ "$SPEC" = "mtp" ] && [ "$CTX" = "huge" ] && [ "${PREFIX_CACHE:-0}" = "1" ]; then
   echo "WARNING: CTX=huge + SPEC=mtp + PREFIX_CACHE=1 returns corrupt prompt_logprobs (#64," >&2
-  echo "  gotcha 51): perplexity ~23% high, some requests 400 with a NaN. Generation is fine." >&2
-  echo "  For quality measurement use SPEC=dflash2 or PREFIX_CACHE=0. SPEC=dflash2 is also" >&2
-  echo "  faster on this profile: 113.9 against 69.6 tok/s at 245k context, measured in #64." >&2
+  echo "  gotcha 46): perplexity ~23% high, some requests 400 with a NaN. Generation is fine." >&2
+  echo "  For quality measurement use SPEC=dflash2, or turn caching off with" >&2
+  echo "  EXTRA_ARGS=--no-enable-prefix-caching (PREFIX_CACHE=0 leaves it on since vLLM 0.28)." >&2
+  echo "  SPEC=dflash2 is also faster on this profile: 113.9 against 69.6 tok/s at 245k context," >&2
+  echo "  measured in #64." >&2
 fi
 if [ "$SPEC" = "dflash2" ]; then
   if [ -z "$DRAFT" ]; then
