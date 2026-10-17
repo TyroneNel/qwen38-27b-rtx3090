@@ -29,14 +29,22 @@ jobs:
         run: python bench/verbatim.py
       - name: Check the bench harness (resolve_api_key.sh's key, the URL, streams and /metrics) without a GPU
         run: python bench/test_harness.py
+      - name: Check conc_ladder --salt repeats its prompts and reports a prefix-cache hit without a GPU
+        run: python bench/test_conc_ladder_salt.py
       - name: Check a launcher with no API key binds 127.0.0.1
         run: bash bench/test_no_key_bind.sh
       - name: Check PREFIX_CACHE sets the engine's prefix caching (unset/1 on, 0 off) and its safeguards follow
         run: bash bench/test_prefix_cache_knob.sh
       - name: Check KV_OFFLOAD_GB becomes one --kv-offloading-size in every launcher
         run: bash bench/test_kv_offload_knob.sh
+      - name: Check DYNAMIC_K reaches --speculative-config in single-user/start_qwen.sh, and its refusals
+        run: bash bench/test_dynamic_k_knob.sh
+      - name: Check the launchers read -tp=N, any whitespace and _ in --flag names the way vLLM does
+        run: bash bench/test_tp_size.sh
       - name: Check each launcher refuses a boolean knob that is neither 0 nor 1 (#310)
         run: bash bench/test_bool_knobs.sh
+      - name: Check the dflash2 seat note against the measured pools and resident counts
+        run: bash bench/test_resident_print.sh
 
   kvarn-torch-gate:
     runs-on: ubuntu-latest
