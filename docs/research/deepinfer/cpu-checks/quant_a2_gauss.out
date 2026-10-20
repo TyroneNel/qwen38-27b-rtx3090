@@ -1,0 +1,2 @@
+gaussian (bench/test_marlin_int8_asym-like) per-token 0.881%  per-128 0.647%  had128+per-token 0.872%
+student-t df=8, lognormal ch per-token 2.376%  per-128 1.095%  had128+per-token 0.903%

@@ -1,0 +1,11 @@
+gaussian         no minmax tuning, v=0                  neg-scale groups  49.5%  neg groups using code -8 100.0%  clamped elems/neg-group 1.27  weight-error energy + 5.11%  zp-remap max|diff| 0.0e+00
+gaussian         minmax tuned U(0.85,1), v~U(-.3,.3)    neg-scale groups  49.4%  neg groups using code -8 100.0%  clamped elems/neg-group 1.71  weight-error energy + 8.56%  zp-remap max|diff| 0.0e+00
+student-t df=4   no minmax tuning, v=0                  neg-scale groups  49.3%  neg groups using code -8 100.0%  clamped elems/neg-group 1.12  weight-error energy + 4.76%  zp-remap max|diff| 0.0e+00
+student-t df=4   minmax tuned U(0.85,1), v~U(-.3,.3)    neg-scale groups  49.4%  neg groups using code -8 100.0%  clamped elems/neg-group 1.28  weight-error energy + 7.78%  zp-remap max|diff| 0.0e+00
+
+## int16 4096-level group-scale requant (s/s.max()*4096, round): relative scale error
+  max/min scale ratio     4: mean rel err 0.0133%  max 0.049%  (int4 g128 RTN rel err ~ 1/(8*sqrt(12)) per elem ~ 3.6% of max)
+  max/min scale ratio    16: mean rel err 0.0331%  max 0.195%  (int4 g128 RTN rel err ~ 1/(8*sqrt(12)) per elem ~ 3.6% of max)
+  max/min scale ratio    64: mean rel err 0.0924%  max 0.773%  (int4 g128 RTN rel err ~ 1/(8*sqrt(12)) per elem ~ 3.6% of max)
+  max/min scale ratio   256: mean rel err 0.2821%  max 3.028%  (int4 g128 RTN rel err ~ 1/(8*sqrt(12)) per elem ~ 3.6% of max)
+  max/min scale ratio  1024: mean rel err 0.8972%  max 11.108%  (int4 g128 RTN rel err ~ 1/(8*sqrt(12)) per elem ~ 3.6% of max)

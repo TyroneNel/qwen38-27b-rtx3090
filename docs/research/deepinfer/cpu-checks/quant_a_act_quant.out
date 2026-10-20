@@ -1,0 +1,36 @@
+
+## in_proj-like K=5120, df=5, 6 outlier ch x40
+  per-token int8 (HyperQwen now)                act-GEMM rel err 10.222%
+  per-token x per-128 int8, fp32 scale          act-GEMM rel err  2.082%
+  per-token x per-128 int8, pow2 scale          act-GEMM rel err  2.963%
+  per-token x per-32 int8, pow2 scale           act-GEMM rel err  1.569%
+  per-token x per-32 fp8e4m3, pow2 (DeepSeek)   act-GEMM rel err  2.527%
+  Hadamard-128 + per-token int8                 act-GEMM rel err  1.257%
+  Hadamard-128 + per-128 int8                   act-GEMM rel err  0.455%
+
+## gate_up-like K=5120, df=5, 6 outlier ch x20
+  per-token int8 (HyperQwen now)                act-GEMM rel err  7.437%
+  per-token x per-128 int8, fp32 scale          act-GEMM rel err  1.702%
+  per-token x per-128 int8, pow2 scale          act-GEMM rel err  2.501%
+  per-token x per-32 int8, pow2 scale           act-GEMM rel err  1.433%
+  per-token x per-32 fp8e4m3, pow2 (DeepSeek)   act-GEMM rel err  2.675%
+  Hadamard-128 + per-token int8                 act-GEMM rel err  1.118%
+  Hadamard-128 + per-128 int8                   act-GEMM rel err  0.560%
+
+## down_proj-like K=17408, df=2.5, 16 outlier ch x30
+  per-token int8 (HyperQwen now)                act-GEMM rel err 13.660%
+  per-token x per-128 int8, fp32 scale          act-GEMM rel err  1.963%
+  per-token x per-128 int8, pow2 scale          act-GEMM rel err  2.806%
+  per-token x per-32 int8, pow2 scale           act-GEMM rel err  1.540%
+  per-token x per-32 fp8e4m3, pow2 (DeepSeek)   act-GEMM rel err  2.755%
+  Hadamard-128 + per-token int8                 act-GEMM rel err  1.752%
+  Hadamard-128 + per-128 int8                   act-GEMM rel err  0.474%
+
+## down_proj-like K=17408, df=2.5, no outlier ch
+  per-token int8 (HyperQwen now)                act-GEMM rel err 11.062%
+  per-token x per-128 int8, fp32 scale          act-GEMM rel err  1.713%
+  per-token x per-128 int8, pow2 scale          act-GEMM rel err  2.478%
+  per-token x per-32 int8, pow2 scale           act-GEMM rel err  1.432%
+  per-token x per-32 fp8e4m3, pow2 (DeepSeek)   act-GEMM rel err  2.662%
+  Hadamard-128 + per-token int8                 act-GEMM rel err  1.587%
+  Hadamard-128 + per-128 int8                   act-GEMM rel err  0.530%

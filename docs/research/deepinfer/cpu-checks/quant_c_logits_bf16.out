@@ -1,0 +1,16 @@
+
+## temperature 1.0
+  top  12 head-spread   3 bulk-mean  -2: entropy  5.73 nats  KL(fp32||bf16) mean 1.08e-04 max 1.43e-04  argmax flips 0.0%
+  top  20 head-spread   3 bulk-mean   2: entropy  3.24 nats  KL(fp32||bf16) mean 5.92e-04 max 8.53e-04  argmax flips 0.0%
+  top  20 head-spread   8 bulk-mean   2: entropy  2.61 nats  KL(fp32||bf16) mean 4.36e-04 max 8.41e-04  argmax flips 0.0%
+  top  28 head-spread   3 bulk-mean   8: entropy  3.17 nats  KL(fp32||bf16) mean 5.17e-04 max 7.02e-04  argmax flips 0.0%
+  top  28 head-spread  10 bulk-mean   8: entropy  2.18 nats  KL(fp32||bf16) mean 3.75e-04 max 7.78e-04  argmax flips 0.0%
+  top  40 head-spread   4 bulk-mean  15: entropy  2.96 nats  KL(fp32||bf16) mean 2.16e-03 max 2.95e-03  argmax flips 0.0%
+
+## temperature 0.6
+  top  12 head-spread   3 bulk-mean  -2: entropy  2.88 nats  KL(fp32||bf16) mean 3.67e-04 max 5.87e-04  argmax flips 0.0%
+  top  20 head-spread   3 bulk-mean   2: entropy  2.80 nats  KL(fp32||bf16) mean 1.39e-03 max 2.28e-03  argmax flips 0.0%
+  top  20 head-spread   8 bulk-mean   2: entropy  1.87 nats  KL(fp32||bf16) mean 9.78e-04 max 1.91e-03  argmax flips 0.0%
+  top  28 head-spread   3 bulk-mean   8: entropy  2.82 nats  KL(fp32||bf16) mean 1.37e-03 max 2.20e-03  argmax flips 0.0%
+  top  28 head-spread  10 bulk-mean   8: entropy  1.76 nats  KL(fp32||bf16) mean 8.52e-04 max 1.59e-03  argmax flips 0.0%
+  top  40 head-spread   4 bulk-mean  15: entropy  2.55 nats  KL(fp32||bf16) mean 4.90e-03 max 7.51e-03  argmax flips 0.0%

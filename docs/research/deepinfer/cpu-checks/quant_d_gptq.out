@@ -1,0 +1,24 @@
+
+## seed 0
+  RTN g128 amax/7                                  rel out err 3.8088e-02  (+310.1% vs shipped)
+  RTN g128 signed amax/8 (AutoRound-style)         rel out err 3.0138e-02  (+224.5% vs shipped)
+  HQ gptq_quantize (dynamic amax/7) [shipped]      rel out err 9.2877e-03  (  +0.0% vs shipped)
+  HQ gptq_quantize --mse-clip                      rel out err 6.7677e-03  ( -27.1% vs shipped)
+  GPTQ static amax/7                               rel out err 9.2105e-03  (  -0.8% vs shipped)
+  GPTQ static signed amax/8                        rel out err 7.0077e-03  ( -24.5% vs shipped)
+  GPTQ static signed amax/8 + mse                  rel out err 6.1630e-03  ( -33.6% vs shipped)
+  GPTQ static amax/7 + act-order                   rel out err 6.0817e-03  ( -34.5% vs shipped)
+  GPTQ static signed amax/8 + mse + act-order      rel out err 4.1385e-03  ( -55.4% vs shipped)
+  GPTQ per-channel (group=K) amax/7 + act-order    rel out err 2.2874e-02  (+146.3% vs shipped)
+
+## seed 1
+  RTN g128 amax/7                                  rel out err 3.8479e-02  (+336.0% vs shipped)
+  RTN g128 signed amax/8 (AutoRound-style)         rel out err 2.9326e-02  (+232.3% vs shipped)
+  HQ gptq_quantize (dynamic amax/7) [shipped]      rel out err 8.8250e-03  (  +0.0% vs shipped)
+  HQ gptq_quantize --mse-clip                      rel out err 6.1662e-03  ( -30.1% vs shipped)
+  GPTQ static amax/7                               rel out err 8.7452e-03  (  -0.9% vs shipped)
+  GPTQ static signed amax/8                        rel out err 6.5835e-03  ( -25.4% vs shipped)
+  GPTQ static signed amax/8 + mse                  rel out err 5.6089e-03  ( -36.4% vs shipped)
+  GPTQ static amax/7 + act-order                   rel out err 6.0079e-03  ( -31.9% vs shipped)
+  GPTQ static signed amax/8 + mse + act-order      rel out err 3.9009e-03  ( -55.8% vs shipped)
+  GPTQ per-channel (group=K) amax/7 + act-order    rel out err 2.1075e-02  (+138.8% vs shipped)
