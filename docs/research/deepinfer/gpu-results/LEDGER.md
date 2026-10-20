@@ -8,7 +8,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
-| env | Box inventory: GPU, driver, power limit, WSL, Docker, models | – | todo | | | |
+| env | Box inventory: GPU, driver, power limit, WSL, Docker, models | – | done | INFO | 3090 at 250 W, driver 610.88, WSL2; bf16 DFlash2 fetched | [ENVIRONMENT.md](ENVIRONMENT.md) |
 | health | `make verify` plus the repo's GPU-applicable `bench/test_*` | – | todo | | | |
 | cpu-checks | Re-run every script in `cpu-checks/`; compare with committed `.out` | – | todo | | | |
 | baseline | Headline numbers per mode A–E on this box | health | todo | | | |
