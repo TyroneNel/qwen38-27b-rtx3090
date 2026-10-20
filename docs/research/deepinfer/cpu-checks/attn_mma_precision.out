@@ -1,0 +1,8 @@
+rows=48 L=8192 D=256; reference = fp64 attention on the dequantised int8 cache
+arm        logit rmse logit maxabs out relerr
+base          0.00060      0.00523   0.000423
+q8k8          0.01073      0.07811   0.007907
+pv_f16acc     0.00060      0.00523   0.000491
+both          0.01073      0.07811   0.007903
+qk_f16acc     0.00227      0.03920   0.004326
+all_f16acc    0.00227      0.03920   0.004336
