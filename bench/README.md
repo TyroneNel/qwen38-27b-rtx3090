@@ -5,6 +5,10 @@ says how to run it. This page says which scripts are tests, what each one needs,
 its exit code means. CI runs the ones that `.github/workflows/patch-integrity.yml` and the
 `Dockerfile` name.
 
+Under Docker Desktop (WSL2) the VM's clock can run fast against the host's, by 8.3% on one
+RTX 3090, and can change rate partway through a run. Durations timed there read long by up to
+that much, so compare A/B arms that ran interleaved in one sitting rather than absolute numbers.
+
 ## Exit codes
 
 | exit | meaning |
