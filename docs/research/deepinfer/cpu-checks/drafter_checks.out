@@ -1,0 +1,66 @@
+== (a) parameter counts (Qwen3.8-27B-sized block drafter)
+per layer attn 52.4M mlp 267.4M; 5 layers 1.599B; fc 131M
+backbone+fc 1.730B vs DFlash2 card 1.92B -> rest 190M (selector codebooks 2*V*r: r=256 -> 127M, r=384 -> 191M)
+DSpark Markov head rank 256: W1 63.6M + W2 63.6M = 127M params; confidence head 5377 params
+
+== (a) bytes read per decode step (estimate, single stream)
+DFlash2 W4A16 drafter 1.00 GB + full int4 lm_head top-k 0.65 GB = 1.65 GB -> >= 1.76 ms
+DSpark add-on: Markov W2 bf16 127 MB read once per sequential position; x7 positions = 0.89 GB -> >= 0.95 ms/step (int4 W2: 0.24 ms). DFlash2 selector gathers 16 rows/slot: ~0
+40,960-row draft slice of int4 lm_head: 0.107 GB, saves 0.543 GB -> >= 0.58 ms of a 26.5 ms step (2.2%)
+MTP-4 for scale: (215 MB module + 107 MB draft head) x4 sequential = 1.29 GB
+
+== (a') DeepSpec target-cache bytes (bf16, (n_layers+1)*H*2 per token)
+Qwen3-4B default                          30720 B/token; 7M tok 0.22 TB; 50M tok 1.5 TB; 1.24B tok 38 TB
+Qwen3.8-27B 5 taps                        61440 B/token; 7M tok 0.43 TB; 50M tok 3.1 TB; 1.24B tok 76 TB
+27B 3 taps                                40960 B/token; 7M tok 0.29 TB; 50M tok 2.0 TB; 1.24B tok 51 TB
+27B 5 taps, no last hidden (CE-only)      51200 B/token; 7M tok 0.36 TB; 50M tok 2.6 TB; 1.24B tok 63 TB
+top-64 logits (fp16 val + int32 id) instead of last hidden: 384 B vs 10240 B per token
+
+== (b) toy DSpark heads + loss (copied from DeepSpec)
+markov sample shape (2, 7), confidence logits shape (2, 3, 7)
+Monte-Carlo acceptance 0.6426 vs 1-TV 0.6417 vs sum(min) 0.6417
+BCE fixed point sigmoid(z)=0.3700 target 0.3700000047683716
+loss position weights exp(-k/4): [1.0, 0.779, 0.607, 0.472, 0.368, 0.287, 0.223] -> position 6 gets 6.0% of the weight
+
+== (c1) draft-vocab slice on DFlash2 (estimate)
+k=7 geometric per-position acceptance matching tau=3.34: a=0.723
+OOV share 0.025, OOV tokens currently accepted at 0.0x average: tau 3.340->3.340 (+0.0%), step -2.2% -> net +2.2%
+OOV share 0.025, OOV tokens currently accepted at 0.5x average: tau 3.340->3.259 (-2.4%), step -2.2% -> net -0.2%
+OOV share 0.025, OOV tokens currently accepted at 1.0x average: tau 3.340->3.182 (-4.7%), step -2.2% -> net -2.6%
+OOV share 0.010, OOV tokens currently accepted at 1.0x average: tau 3.340->3.275 (-1.9%), step -2.2% -> net +0.3%
+
+== (c2) long-context step anatomy from long-context.md:199-207 (step = tok/step / tok/s)
+  reproduce (dflash2)      91.7 ms/step
+  list cmds (dflash2)      76.2 ms/step
+  quote (dflash2)          62.7 ms/step
+  summarize (dflash2)      62.4 ms/step
+  answer (dflash2)         62.6 ms/step
+  quote (mtp)              37.7 ms/step
+  summarize (mtp)          37.5 ms/step
+  answer (mtp)             37.8 ms/step
+lookup-hit steps run 16 query tokens, no-hit steps 8 (VLLM_DFLASH2_LOOKUP_ADAPTIVE default on, patches/speed-knobs-envs.patch:45) -> c = (91.7-62.6)/8 = 3.64 ms per verify token, T0 = 33.5 ms (inferred)
+QA-like: geometric a=0.527 matches tau 2.1 at 7 drafts
+  fixed verify  8: tau 2.10, step 62.6 ms -> 33.6 tok/s
+  fixed verify  6: tau 2.07, step 55.3 ms -> 37.4 tok/s
+  fixed verify  5: tau 2.03, step 51.6 ms -> 39.2 tok/s
+  fixed verify  4: tau 1.95, step 48.0 ms -> 40.6 tok/s
+  fixed verify  3: tau 1.80, step 44.4 ms -> 40.7 tok/s
+  fixed verify  2: tau 1.53, step 40.7 ms -> 37.5 tok/s
+  MTP CTX=long on the same tasks: ~2.3-2.75 tok/step at ~37-38 ms -> 62-73 tok/s
+
+== (c3) per-request truncation with a noisy confidence head, QA-like + reproduce-like mix (estimate)
+QA only, 7 drafts: fixed 33.4 tok/s tau 2.09 | thr 0.3 noise 0.5: 38.5 (+15%, tau 1.62) | thr 0.3 noise 1.5: 36.1 (+8%, tau 1.51) | thr 0.15 noise 1.5: 38.1 (+14%, tau 1.70)
+QA 7 + reproduce 15: fixed 105.8 tok/s tau 8.16 | thr 0.3 noise 0.5: 118.5 (+12%, tau 7.92) | thr 0.3 noise 1.5: 116.9 (+10%, tau 7.73) | thr 0.15 noise 1.5: 116.4 (+10%, tau 7.92)
+
+== (c4) chat-like requests (a=0.723, tau 3.34 at 7 drafts) at three slopes (estimate)
+25k: 0.89 ms/token: fixed 8 125.8 tok/s | cost-aware thr 0.11, noise 0.0: +0.7% | cost-aware thr 0.11, noise 0.5: -0.5% | cost-aware thr 0.11, noise 1.5: -8.0%
+~64k: 2.0 ms/token (interp.): fixed 8 94.8 tok/s | cost-aware thr 0.19, noise 0.0: +4.8% | cost-aware thr 0.19, noise 0.5: +3.8% | cost-aware thr 0.19, noise 1.5: -3.8%
+112k: 3.64 ms/token: fixed 8 68.9 tok/s | cost-aware thr 0.25, noise 0.0: +11.4% | cost-aware thr 0.25, noise 0.5: +11.4% | cost-aware thr 0.25, noise 1.5: +4.0%
+
+all checks passed
+
+== (c5) cost-aware threshold on the long-context mixes of (c3) (estimate)
+QA only, 7 drafts: fixed 33.7 tok/s; cost-aware thr 0.12: noise 0.0 +20%, noise 0.5 +20%, noise 1.5 +14%
+QA 7 + reproduce 15: fixed 105.6 tok/s; cost-aware thr 0.38: noise 0.0 +13%, noise 0.5 +12%, noise 1.5 +10%
+
+all checks passed (c5)
