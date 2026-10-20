@@ -9,15 +9,15 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
 | env | Box inventory: GPU, driver, power limit, WSL, Docker, models | – | done | INFO | 3090 at 250 W, driver 610.88, WSL2; bf16 DFlash2 fetched | [ENVIRONMENT.md](ENVIRONMENT.md) |
-| health | `make verify` plus the repo's GPU-applicable `bench/test_*` | – | todo | | | |
-| cpu-checks | Re-run every script in `cpu-checks/`; compare with committed `.out` | – | todo | | | |
+| health | `make verify` plus the repo's GPU-applicable `bench/test_*` | – | done | INFO | verify 0 FAIL; 39 tests pass/skip, 2 fail outside the serving path (stale 0.31 test API; WSL banner order) | [health.md](health.md) |
+| cpu-checks | Re-run every script in `cpu-checks/`; compare with committed `.out` | – | done | INFO | 11/12 byte-identical; `quant_d_gptq` float noise only | [cpu-checks.md](cpu-checks.md) |
 | baseline | Headline numbers per mode A–E on this box | health | todo | | | |
 
 ## Phase 2: measurement tools and probes
 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
-| quant-2-check | `quant_real_ckpt_check.py` on the real checkpoint | – | todo | | | |
+| quant-2-check | `quant_real_ckpt_check.py` on the real checkpoint | – | done | INFO | 50.4% negative groups, 100% of them use −8; fold error 0.069% of weight energy | [quant-2-check.md](quant-2-check.md) |
 | runtime-2 | `bench/step_curve.py`: ms/step vs verified tokens, per backend and depth | baseline | todo | | | |
 | evals-2 | `VLLM_GPU_SYNC_CHECK=warn` boot per mode | health | todo | | | |
 | evals-1 | Decode-vs-prefill KL probe per mode | health | todo | | | |
