@@ -128,15 +128,19 @@ Get-Counter '\GPU Adapter Memory(*)\Dedicated Usage','\GPU Adapter Memory(*)\Sha
 
 If a hyperqwen container is up and you did not start it, stop and report.
 
-**The commit under test.** It is the head of upstream `main` when you start:
+**The commit under test.** It is the newest commit on upstream `main` that CI builds an image for.
+CI builds none for a push that changes only `*.md` files, `docs/` or `.gitignore`, so a docs-only
+head of `main` has no image of its own:
 
 ```powershell
-git ls-remote https://github.com/syv-ai/HyperQwen.git refs/heads/main    # record the full SHA as <main>
+git fetch https://github.com/syv-ai/HyperQwen.git main
+git log -1 --first-parent --format=%H FETCH_HEAD -- . ':!*.md' ':!docs' ':!.gitignore'    # record it as <main>
 ```
 
 The image is `ghcr.io/syv-ai/hyperqwen:sha-<first 7 characters of main>`, written `<img>` below.
 If `docker images <img>` lists nothing, pull it. If the tag does not exist yet, CI is still building
-it. Wait up to an hour and try again, then stop and report.
+it, or a newer push to `main` cancelled its build. Wait up to an hour, run the two lines above again
+for a fresh `<main>`, and pull that `<img>`. If it still does not exist, stop and report.
 
 ```powershell
 docker pull <img>
