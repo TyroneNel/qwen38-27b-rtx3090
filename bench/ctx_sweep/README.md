@@ -62,8 +62,8 @@ MAX_LEN is also CLEAR. Otherwise the margin is "within boot spread".
 
 Every rate is on the host's clock. The WSL2 VM's clock runs at a slightly different rate from the
 host's, so each cell records both clocks at its start and end, and `analyze.py` corrects for the ratio.
-The bench clients in the container run under `mono.py`, which times them with a monotonic clock. The VM
-wall clock steps back about 2.3 s every 28 s.
+The bench clients time durations with `time.perf_counter()`, so the VM wall clock's steps (about 2.3 s
+back every 28 s) do not reach them.
 
 ## Runbook for the agent on the 3090 PC
 
@@ -198,7 +198,8 @@ docker run --rm -v hyperqwen_qwen-cache:/cache --entrypoint bash $IMG -c \
   'ls -la /cache/bench; sha256sum /cache/bench/labd_corpus*.txt; find /cache/quality-data -name "*.parquet" | sort'
 docker run --rm -v hyperqwen_qwen-cache:/cache --entrypoint /app/venv/bin/python $IMG -c \
   'b = open("/cache/bench/labd_corpus.txt").read(); l = open("/cache/bench/labd_corpus_long.txt").read(); print(len(b), len(b.split()), len(l), l[:len(b)] == b)'
-                                     # the first above 200,000 chars, the long one above 400,000, and True
+    # the first above 200,000 chars and 20,000 words, the long one above 400,000 chars, and True
+    # (a corpus built where the docs were not found is 200,000 newlines: 0 words)
 ```
 
 These three parquet files must be listed:

@@ -251,14 +251,6 @@ def main():
           "the report gives the winner's env and lists every boot")
     shutil.rmtree(tmp)
 
-    t = tempfile.mkdtemp(prefix="mono-")
-    write(f"{t}/sib.py", "X = 7\n")
-    write(f"{t}/s.py", "import sys, time, sib\nprint(sib.X, time.time() < 1e9, sys.argv[1:])\n")
-    out = subprocess.run([sys.executable, os.path.join(REPO, "bench/ctx_sweep/mono.py"), f"{t}/s.py", "a", "--b"],
-                         capture_output=True, text=True).stdout
-    shutil.rmtree(t)
-    check(out.strip() == "7 True ['a', '--b']", f"mono.py: sibling import, monotonic time.time and argv pass through ({out.strip()})")
-
     print("FAIL" if FAILS else "PASS", f"{len(FAILS)} failed" if FAILS else "")
     return 1 if FAILS else 0
 

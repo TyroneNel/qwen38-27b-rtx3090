@@ -10,10 +10,11 @@ fast | f-mtp4-i8  | SPEC=mtp; CTX=fast; GPU_UTIL=0.89; INT8_ACT=int8; INT8_LAYER
 fast | f-df7      | SPEC=dflash2; CTX=fast | --kv-cache-dtype bfloat16; "method":"dflash"; "num_speculative_tokens":7
 fast | f-df15     | SPEC=dflash2; CTX=fast; DFLASH_TOKENS=15 | --kv-cache-dtype bfloat16; "method":"dflash"; "num_speculative_tokens":15
 #
-# long: speed and context together. PTH_FA=1 on mtp long is #345's default, not main's.
+# long: speed and context together. On 8.6 an unset PTH_FA resolves to 1 on mtp long, so l-pth is the default
+# main ships and l-fp8 is its opt-out.
 long | l-fp8      | SPEC=mtp; CTX=long; PTH_FA=0; GPU_UTIL=0.89 | --kv-cache-dtype fp8; "method":"mtp"
-long | l-pth      | SPEC=mtp; CTX=long; PTH_FA=1; GPU_UTIL=0.89 | --attention-backend CUSTOM; --kv-cache-dtype int8_per_token_head; "method":"mtp"; "attention_backend":"CUSTOM"
-long | l-pth-uva  | SPEC=mtp; CTX=long; PTH_FA=1; GPU_UTIL=0.89; EMBED_UVA=1 | --attention-backend CUSTOM; --kv-cache-dtype int8_per_token_head; "method":"mtp"; VLLM_EMBED_UVA=1
+long | l-pth      | SPEC=mtp; CTX=long; GPU_UTIL=0.89 | --attention-backend CUSTOM; --kv-cache-dtype int8_per_token_head; "method":"mtp"; "attention_backend":"CUSTOM"
+long | l-pth-uva  | SPEC=mtp; CTX=long; GPU_UTIL=0.89; EMBED_UVA=1 | --attention-backend CUSTOM; --kv-cache-dtype int8_per_token_head; "method":"mtp"; VLLM_EMBED_UVA=1
 long | l-df       | SPEC=dflash2; CTX=long | --attention-backend CUSTOM; --kv-cache-dtype int8_per_token_head; "method":"dflash"
 #
 # huge: the longest context that boots and finds the needle. int4 is a batch-mode KV on main, so its arms reach

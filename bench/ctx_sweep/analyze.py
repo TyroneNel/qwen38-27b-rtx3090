@@ -172,7 +172,7 @@ def cells(D, L):
     ml = int(flag(launch(read(D, L, "live.txt"))[0], "--max-model-len") or 0)
     if not ml:
         return []
-    lb = lambda c, ctx: (c, f"venv/bin/python /sweep/mono.py bench/labd_bench.py sw-{L}-{c} --ctx {ctx} "
+    lb = lambda c, ctx: (c, f"venv/bin/python bench/labd_bench.py sw-{L}-{c} --ctx {ctx} "
                             "--corpus ~/bench/labd_corpus_long.txt")
     smoke = ("smoke", "venv/bin/python bench/api_smoke.py")
     needle = ("needle", f"venv/bin/python bench/needle_test.py {ml * 9 // 10} 0.9")
