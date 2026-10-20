@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stands in for venv/bin/vllm in a throwaway container (sweep.sh dryrun) or a stub tree (test_ctx_sweep.py).
+# It prints what the launcher would run, in the format sweep.sh records from the live process.
+printf 'ARG %s\n' "$@"
+env | grep -E '^(VLLM_|KVARN_|PYTORCH_CUDA)' | grep -v KEY | sort | sed 's/^/ENV /'
