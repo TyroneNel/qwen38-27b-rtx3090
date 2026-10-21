@@ -32,7 +32,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | todo | | | |
 | evals-8 | Per-component GPU time (nsys) | health | todo | | | |
 | evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | todo | | | |
-| evals-10 | Throughput vs per-user Pareto sweep per mode | baseline | todo | | | |
+| evals-10 | Throughput vs per-user Pareto sweep per mode | baseline | done | INFO | A knee N=16–32 (647 tok/s agg at N=32); at N=2–8 D (MTP) beats B (DFlash2): 423 vs 236 tok/s at N=8 | [evals-10.md](evals-10.md) |
 | evals-11 | Automatic warmup detection | health | done | INFO | WARM after 3–4 runs; settling is thermal (C1 −9.4% over ~4 min, 62 → 83 °C), not JIT: the first run is the fastest | [evals-11.md](evals-11.md) |
 
 ## Phase 3: config and patch experiments
