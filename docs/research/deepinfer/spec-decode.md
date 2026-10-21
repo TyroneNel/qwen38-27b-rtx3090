@@ -48,6 +48,8 @@ Modes: A batch; B DFlash2 chat (T=8); C quoting (`DFLASH_TOKENS=15`); D `SPEC=mt
 
 ### spec-1: opt GDN into vLLM 0.31's adaptive verification
 
+**Measured (2026-10-21):** INVALID. With the opt-in patch, greedy output departs from the adaptive-off reference at token 0–1 on all six labd tasks (0/23 clean chunks, against 18/23 with an identical off-arm control), and acceptance length falls to 1.75. No speed run was made. [gpu-results/spec-1.md](gpu-results/spec-1.md)
+
 - **DeepInfer.** Sigmoid confidence → cumulative survival → global sort → argmax of (num_seqs + Σ survival) / (baseline(graph) + slope·graph + sampler) (`mtp_varlen.hpp:150-267`; `csrc/engine/scheduler.hpp:648-665, 1239-1258`). A TileLang kernel then recomputes per-request lengths on the GPU (`tilelang_ops/schedule_mtp_varlen.py:35-98`). DeepInfer's own table: −1.5% at 16 sequences, +4–7% around 60 (`DeepInfer/doc/inference_deployment_qa.md:249-256`).
 - **vLLM pin.** The same policy: the budget comes from stale confidences, and fresh ones distribute it (`adaptive_verification.py:282-350`). Cost tables come from profiled draft and verify curves (lines 80-128). DFlash2 has no confidence head, so it uses the online logistic estimator (`spec_decode/acceptance_estimator.py:313`; `dflash2/speculator.py:246`).
 - **Why the patch is S, not M.**
@@ -74,6 +76,8 @@ Modes: A batch; B DFlash2 chat (T=8); C quoting (`DFLASH_TOKENS=15`); D `SPEC=mt
 
 ### spec-2: fresh-confidence device trim at batch 1
 
+**Measured (2026-10-21):** skipped, because its gate (spec-1) failed. [gpu-results/spec-1.md](gpu-results/spec-1.md)
+
 - **DeepInfer** recomputes per-request lengths on the GPU because async scheduling leaves the host one step stale (`schedule_mtp_varlen.py:35-98`). The *total* is still chosen on the host from older rates. vLLM splits it the same way.
 - **HyperQwen.** The lookup long block reads pinned flags one step stale and needs `--no-async-scheduling` (`docs/optimizations.md:287-299`).
 - **Mechanism.** Replay the k+1-wide graph every step, but let the drafter's tail kernel write a device `query_start_loc` with n = argmax over the fresh survival prefix of (1 + ΣS) / cost[n], using a cost table in device memory. pthfa and the GDN spec kernels read device lengths, so attention and per-token state writes shrink. Marlin runs padded, which is free below 16 rows. Trimmed positions count as rejected. No host sync.
@@ -83,6 +87,8 @@ Modes: A batch; B DFlash2 chat (T=8); C quoting (`DFLASH_TOKENS=15`); D `SPEC=mt
 - **Overlaps** drafter-1 in [drafter.md](drafter.md), which reaches the same per-step trim from the drafter side.
 
 ### spec-3: RecoverSSM for GDN
+
+**Measured (2026-10-21):** skipped, because its gate (spec-1 WIN) failed. [gpu-results/spec-1.md](gpu-results/spec-1.md)
 
 - **vLLM pin.** `kda_recoverssm_verify` runs the window "without modifying its checkpoint" and fills an fp32 correction cache plus a key/gate cache of k+1 positions (`vllm@v0.31.0:vllm/models/kimi_k3/nvidia/ops/recoverssm.py:585-640`). `_commit_kda_state_kernel` replays the accepted prefix into the state, including align-mode boundary states (lines 399-420). `num_speculative_blocks = 0` when it's on (`layers/mamba/abstract.py:77-83`).
 - **HyperQwen** uses vLLM's baseline: the GDN spec kernel stores the state after every token into slot i_t (`fused_sigmoid_gating.py`, `INPLACE_FINAL_STATE` inside the T loop). Each resident holds 6 groups × (2+k) pages, 0.88 GiB for DFlash2 at k=7 (`start_qwen.sh:566-573`; `docs/gotchas.md:325-336`; `docs/optimizations.md:349-352`). That's 15.8% of the `CTX=fast` pool per resident, so 6–7 fit (MTP: 8). Not tried; nothing in the repo mentions RecoverSSM.
@@ -97,6 +103,8 @@ Modes: A batch; B DFlash2 chat (T=8); C quoting (`DFLASH_TOKENS=15`); D `SPEC=mt
 - **Cheap next step (not run).** A float64 CPU check that per-token GDN states equal checkpoint-plus-replay.
 
 ### spec-4: lookup-aware confidences in one verify budget
+
+**Measured (2026-10-21):** skipped, because its gate (spec-1) failed. [gpu-results/spec-1.md](gpu-results/spec-1.md)
 
 - **DeepInfer** ranks every draft position in one survival list (`scheduler.hpp:1239-1258`).
 - **HyperQwen.** Confidences come from the drafter's candidate scores *before* `_apply_lookup` overwrites positions (`patches/dflash2-lookup-drafting.patch:1053-1062`), and tail positions 8–15 have none. The long block runs on a 2-step, batch-unanimous heuristic with sync scheduling (lookup patch:850-1000). Real-traffic acceptance at width 15: 0.79–0.96 for the drafter's 7 positions, a flat ~0.15 tail (`docs/gotchas.md:1159-1162`). At C ≥ 2 one non-copying request vetoes the long block for everyone.

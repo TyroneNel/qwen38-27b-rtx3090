@@ -44,11 +44,11 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | quant-7 | int4 embedding where `EMBED_UVA` can't be used | evals-1 | todo | | | |
 | quant-5 | Batch-mode lm_head as W4A8 | evals-1 | todo | | | |
 | spec-0 | `DFLASH_TOKENS=3/5/7` ladder at 90k, 150k, 240k | runtime-2 | todo | | | |
-| spec-1 | GDN opt-in to adaptive verification (= runtime-1) | runtime-2 | todo | | | |
+| spec-1 | GDN opt-in to adaptive verification (= runtime-1) | runtime-2 | done | INVALID | greedy bit-identity fails at token 0–1 on all 6 tasks (0/23 clean chunks vs 18/23 off, off control identical); acceptance length 1.75 | [spec-1.md](spec-1.md) |
 | kvarn-varlen | Root-cause KVarN corruption on verify-length change (`start_qwen.sh:399-428`) | – | todo | | | |
 | drafter-1a | Host-side confidence trim, stage 0 | runtime-2 | todo | | | |
-| spec-2 | Fresh-confidence device trim | spec-1 | todo | | | |
-| spec-4 | Lookup-aware confidences | spec-1 | todo | | | |
+| spec-2 | Fresh-confidence device trim | spec-1 | skipped | | gate failed: spec-1 INVALID | [spec-1.md](spec-1.md) |
+| spec-4 | Lookup-aware confidences | spec-1 | skipped | | gate failed: spec-1 INVALID | [spec-1.md](spec-1.md) |
 | runtime-3 | Bound the tail of forced tool calls | – | done | WIN | runaways 6–10/40 → 0/40, valid calls 31–34/40 → 40/40, batch and single, required and named (`VLLM_TOOL_CALL_BOUND=1`) | [runtime-3.md](runtime-3.md) |
 
 ## Phase 4: kernel prototypes
@@ -76,7 +76,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
 | attn-2 | KVarN verify on a pthfa-family CUDA kernel | e-profile: attention ≥ 25% of E's step at 200k; attn-1.1 done | todo | | | |
-| spec-3 | RecoverSSM for GDN | spec-1 WIN | todo | | | |
+| spec-3 | RecoverSSM for GDN | spec-1 WIN | skipped | | gate failed: spec-1 INVALID, not WIN | [spec-1.md](spec-1.md) |
 | quant-4 | Block-Hadamard-128 rotation of linear inputs | quant-1 route A blocked or slower than Marlin by > 5% | todo | | | |
 | attn-4 | Training-free top-k sparse attention | attn-2 done; needle and GSM8K gates ready | todo | | | |
 | attn-6 | Device-side balanced split scheduler | appendix expects ~0; probe only if attn-ncu shows split imbalance | todo | | | |

@@ -696,6 +696,39 @@ if [ -n "${DYNAMIC_K:-}" ]; then
     SPEC_CFG="${SPEC_CFG%\}},\"num_speculative_tokens_per_batch_size\":$DYNAMIC_K}"
   fi
 fi
+# ADAPTIVE_VERIFY=1 (experiment, docs/research/deepinfer spec-1 / runtime-1; default off): vLLM 0.31's adaptive
+# verification ("enable_adaptive_verification" in the speculative config) picks the batch's total verify budget from
+# profiled step costs and an online acceptance estimate, then gives each request its best draft prefix on the device.
+# Stock vLLM refuses it on Qwen's GDN layers; it needs a vLLM carrying
+# docs/research/deepinfer/experiments/patches/gdn-adaptive-verify-optin.patch, whose two knobs are exported here
+# (VLLM_FA2_VARLEN_VERIFY=0 keeps FA2's stock refusal, for an attention backend that is not FLASH_ATTN).
+# SPEC=dflash2 only. Refused at CTX=huge with prefix caching on for the reason DYNAMIC_K is (a verify length that
+# changes step to step corrupts a KVarN prefix-cache hit), and with DFLASH_TOKENS>7 while the lookup is on: the
+# positions past the drafter's 7 carry no confidence for the estimator to rank.
+case "${ADAPTIVE_VERIFY:-0}" in
+  0) ;;
+  1)
+    if [ -z "$SPEC_CFG" ]; then
+      echo "[start_qwen] ADAPTIVE_VERIFY ignored: SPEC=$SPEC has no speculative decoding to verify." >&2
+    elif [ "$SPEC" != dflash2 ]; then
+      echo "ADAPTIVE_VERIFY=1 is wired for SPEC=dflash2 only (the spec-1 experiment); SPEC=$SPEC is refused." >&2
+      exit 1
+    elif [ "$CTX" = "huge" ] && [ "$PREFIX_CACHE_ON" = 1 ]; then
+      echo "ADAPTIVE_VERIFY refused at CTX=huge with prefix caching on: a per-step verify length corrupts a" >&2
+      echo "  prefix-cache hit on the KVarN cache (see the VLLM_DFLASH2_LOOKUP_ADAPTIVE comment in" >&2
+      echo "  single-user/start_qwen.sh). Unset ADAPTIVE_VERIFY, or set PREFIX_CACHE=0." >&2
+      exit 1
+    elif [ "$VLLM_DFLASH2_LOOKUP" = 1 ] && [ "$DRAFT_TOKENS" -gt 7 ]; then
+      echo "ADAPTIVE_VERIFY refused with DFLASH_TOKENS=$DRAFT_TOKENS and the lookup on: verify positions past the" >&2
+      echo "  drafter's 7 have no confidence to rank. Use DFLASH_TOKENS<=7, or LOOKUP=0." >&2
+      exit 1
+    else
+      SPEC_CFG="${SPEC_CFG%\}},\"enable_adaptive_verification\":true}"
+      export VLLM_GDN_ADAPTIVE_VERIFY=1
+      export VLLM_FA2_VARLEN_VERIFY=${VLLM_FA2_VARLEN_VERIFY:-1}
+    fi ;;
+  *) echo "ADAPTIVE_VERIFY=$ADAPTIVE_VERIFY: set it to 0 or 1" >&2; exit 1 ;;
+esac
 SPEC_ARGS=()
 [ -n "$SPEC_CFG" ] && SPEC_ARGS=(--speculative-config "$SPEC_CFG")
 
@@ -845,6 +878,43 @@ fi
 if [ -n "${CUDAGRAPH_MODE:-}" ] && [ -z "${CG_MODE:-}" ]; then
   CG_MODE=",\"cudagraph_mode\":\"$CUDAGRAPH_MODE\""
 fi
+
+# CONF_TRIM (drafter-1a, docs/research/deepinfer/drafter.md; a research experiment that needs an image built with
+# docs/research/deepinfer/experiments/patches/drafter1a-conf-trim.patch): 1 trims each step's DFlash2 verify length on
+# the drafter's fresh confidences, 2 on the previous step's. Unset or empty changes nothing. The threshold is
+# VERIFY_MS_PER_TOKEN (runtime-2's slope, ms per extra verify token) x the measured tokens per ms, or a fixed
+# CONF_TRIM_THR; one of the two is required. It runs the scheduler synchronously, the only path on which vLLM takes the
+# worker's draft count. Refused at CTX=huge with prefix caching on (as DYNAMIC_K is), and with DYNAMIC_K or ADAPTIVE_VERIFY=1.
+if [ -n "${CONF_TRIM:-}" ]; then
+  case "$CONF_TRIM" in
+    1|2) ;;
+    *) echo "CONF_TRIM=$CONF_TRIM: set it to 1 (fresh confidences) or 2 (previous step's)" >&2; exit 1 ;;
+  esac
+  if [ "$SPEC" != "dflash2" ]; then
+    echo "CONF_TRIM is a SPEC=dflash2 setting (got SPEC=$SPEC); refusing." >&2
+    exit 1
+  fi
+  if [ "$CTX" = "huge" ] && [ "$PREFIX_CACHE_ON" = 1 ]; then
+    echo "CONF_TRIM refused at CTX=huge with prefix caching on: a verify length that changes step to step corrupts a" >&2
+    echo "  prefix-cache hit on the KVarN cache (the VLLM_DFLASH2_LOOKUP_ADAPTIVE comment above). Set PREFIX_CACHE=0." >&2
+    exit 1
+  fi
+  if [ -n "${DYNAMIC_K:-}" ] || [ "${ADAPTIVE_VERIFY:-0}" = 1 ]; then
+    echo "CONF_TRIM and DYNAMIC_K or ADAPTIVE_VERIFY=1 all set the verify length; refusing. Unset one." >&2
+    exit 1
+  fi
+  if [ -z "${VERIFY_MS_PER_TOKEN:-}" ] && [ -z "${CONF_TRIM_THR:-}" ]; then
+    echo "CONF_TRIM needs VERIFY_MS_PER_TOKEN (cost-aware threshold) or CONF_TRIM_THR (fixed survival threshold)." >&2
+    exit 1
+  fi
+  export VLLM_DFLASH2_CONF_TRIM=$CONF_TRIM
+  if [ -n "${VERIFY_MS_PER_TOKEN:-}" ]; then export VLLM_DFLASH2_VERIFY_MS_PER_TOKEN=$VERIFY_MS_PER_TOKEN; fi
+  if [ -n "${CONF_TRIM_THR:-}" ]; then export VLLM_DFLASH2_CONF_TRIM_THR=$CONF_TRIM_THR; fi
+  ASYNC_SCHED=${ASYNC_SCHED:-0}
+  if [ "$ASYNC_SCHED" != 0 ]; then
+    echo "[start_qwen] WARNING: CONF_TRIM with ASYNC_SCHED=$ASYNC_SCHED: async scheduling ignores the trimmed draft count." >&2
+  fi
+fi # CONF_TRIM
 
 # ASYNC_SCHED=0 (set above for a long DFlash2 verify block) runs the scheduler
 # synchronously, which is the only path on which vLLM lets the worker choose how many draft

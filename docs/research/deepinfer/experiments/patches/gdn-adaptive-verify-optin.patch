@@ -1,0 +1,146 @@
+spec-1 / runtime-1 (docs/research/deepinfer/spec-decode.md, runtime.md): opt Qwen GDN into
+vLLM 0.31's adaptive verification, mirroring the KDA opt-in of vllm#52988 (88aa0d287d).
+Experimental, against the image's installed (already patched) vLLM. Inert unless the env
+knobs are set; single-user/start_qwen.sh ADAPTIVE_VERIFY=1 sets both.
+
+VLLM_GDN_ADAPTIVE_VERIFY=1 (gdn_attn.py):
+- GDNAttentionBackend.supports_device_cpu_query_lens_mismatch() -> True.
+- GDNAttentionMetadataBuilder.get_varlen_cudagraph_max_query_len() -> num_spec + 1
+  (kept UNIFORM_BATCH instead of KDA's ALWAYS: prefill batches still never replay a
+  FULL graph, only the varlen decode check is satisfied).
+- spec_sequence_masks_cpu &= query_len <= num_spec + 1 (profiler dummy rows).
+- uniform_spec_sequence_length left None (the CPU split is a placeholder).
+VLLM_FA2_VARLEN_VERIFY=1 (flash_attn.py): FA2 (UNIFORM_BATCH, no bound upstream) reports
+a varlen bound of k+1 so the FLASH_ATTN target (CTX=fast, FA2_FP8KV plugin) passes the
+same boot check. Whether FA2 / the fp8 plugin really honour device q_len < host bound is
+exactly what the greedy bit-identity run decides.
+
+--- a/envs.py
++++ b/envs.py
+@@ -222,6 +222,8 @@
+     VLLM_DFLASH2_LOOKUP_SEARCH: int = 1 << 30
+     VLLM_DFLASH2_LOOKUP_ADAPTIVE: bool = True
+     VLLM_DFLASH2_LOOKUP_STICKY: int = 3
++    VLLM_GDN_ADAPTIVE_VERIFY: bool = False
++    VLLM_FA2_VARLEN_VERIFY: bool = False
+     VLLM_DFLASH2_CHAIN: bool = False
+     VLLM_DFLASH2_CHAIN_MINMATCH: int = 8
+     VLLM_DFLASH2_CHAIN_LOG_SEC: float = 30.0
+@@ -1653,6 +1655,11 @@
+     "VLLM_DFLASH2_LOOKUP_SEARCH": lambda: int(os.environ.get("VLLM_DFLASH2_LOOKUP_SEARCH", str(1 << 30))),
+     "VLLM_DFLASH2_LOOKUP_ADAPTIVE": lambda: os.environ.get("VLLM_DFLASH2_LOOKUP_ADAPTIVE", "1") == "1",
+     "VLLM_DFLASH2_LOOKUP_STICKY": lambda: int(os.environ.get("VLLM_DFLASH2_LOOKUP_STICKY", "3")),
++    # HyperQwen experiment (docs/research/deepinfer spec-1): let GDN accept the trimmed,
++    # device-decided verify lengths of adaptive verification; and give FA2 a varlen
++    # decode-graph bound of k+1 so the FLASH_ATTN target passes the same boot check.
++    "VLLM_GDN_ADAPTIVE_VERIFY": lambda: os.environ.get("VLLM_GDN_ADAPTIVE_VERIFY", "0") == "1",
++    "VLLM_FA2_VARLEN_VERIFY": lambda: os.environ.get("VLLM_FA2_VARLEN_VERIFY", "0") == "1",
+     "VLLM_DFLASH2_CHAIN": lambda: os.environ.get("VLLM_DFLASH2_CHAIN", "0") == "1",
+     "VLLM_DFLASH2_CHAIN_MINMATCH": lambda: int(os.environ.get("VLLM_DFLASH2_CHAIN_MINMATCH", "8")),
+     "VLLM_DFLASH2_CHAIN_LOG_SEC": lambda: float(os.environ.get("VLLM_DFLASH2_CHAIN_LOG_SEC", "30")),
+--- a/v1/attention/backends/flash_attn.py
++++ b/v1/attention/backends/flash_attn.py
+@@ -632,6 +632,27 @@
+     ) -> AttentionCGSupport:
+         return cls._cudagraph_support
+ 
++    @classmethod
++    def get_varlen_cudagraph_max_query_len(
++        cls,
++        vllm_config: "VllmConfig",
++        kv_cache_spec: "KVCacheSpec",
++    ) -> int | None:
++        # HyperQwen experiment (VLLM_FA2_VARLEN_VERIFY=1, off by default): claim that
++        # an FA2 FULL graph captured at the verify width k+1 replays any 1..k+1 mix.
++        # The varlen kernel and the split-KV verify read per-request q_len from the
++        # device cu_seqlens; the host max_query_len stays an upper bound. Unproven on
++        # FA2 (and on the fa2_fp8kv plugin, which inherits this): validate greedy
++        # bit-identity before trusting it.
++        if cls._cudagraph_support == AttentionCGSupport.ALWAYS:
++            return None
++        if not envs.VLLM_FA2_VARLEN_VERIFY:
++            return None
++        spec = vllm_config.speculative_config
++        if spec is None or not spec.num_speculative_tokens:
++            return None
++        return spec.num_speculative_tokens + 1
++
+     def _get_scheduler_metadata(
+         self,
+         *,
+--- a/v1/attention/backends/gdn_attn.py
++++ b/v1/attention/backends/gdn_attn.py
+@@ -7,6 +7,7 @@
+ 
+ import torch
+ 
++import vllm.envs as envs
+ from vllm.config import VllmConfig
+ from vllm.utils.torch_utils import async_tensor_h2d
+ from vllm.v1.attention.backend import (
+@@ -37,6 +38,17 @@
+     def is_ssm(cls) -> bool:
+         return True
+ 
++    @classmethod
++    def supports_device_cpu_query_lens_mismatch(cls) -> bool:
++        # HyperQwen experiment (VLLM_GDN_ADAPTIVE_VERIFY=1, off by default), after
++        # #52988's KDA opt-in. Adaptive verification keeps the CPU token total, the
++        # spec/non-spec split and the prefill lengths exact and trims only the per-row
++        # split of verify tokens on device. The pure-spec branch takes its offsets from
++        # the device query_start_loc; the mixed branch builds its token permutation and
++        # spec offsets from the device query_lens and only CPU totals. Both kernels read
++        # per-row lengths from device cu_seqlens within the fixed k+1 state window.
++        return envs.VLLM_GDN_ADAPTIVE_VERIFY
++
+ 
+ @dataclass
+ class GDNAttentionMetadata:
+@@ -87,6 +99,23 @@
+ 
+     reorder_batch_threshold: int = 1
+ 
++    @classmethod
++    def get_varlen_cudagraph_max_query_len(
++        cls,
++        vllm_config: VllmConfig,
++        kv_cache_spec: MambaSpec,
++    ) -> int | None:
++        # HyperQwen experiment (VLLM_GDN_ADAPTIVE_VERIFY=1): a FULL spec-decode graph
++        # is captured with k+1 state slots per row and replays any 1..k+1 mix, since
++        # the conv and recurrent kernels read each row's length from the device.
++        # Batches with a prefill never replay these graphs (they are not staged).
++        if not envs.VLLM_GDN_ADAPTIVE_VERIFY:
++            return None
++        spec = vllm_config.speculative_config
++        if spec is None or not spec.num_speculative_tokens:
++            return None
++        return spec.num_speculative_tokens + 1
++
+     def __init__(
+         self,
+         kv_cache_spec: MambaSpec,
+@@ -251,6 +280,12 @@
+             num_spec_decodes = 0
+         else:
+             spec_sequence_masks_cpu = num_decode_draft_tokens_cpu >= 0
++            if envs.VLLM_GDN_ADAPTIVE_VERIFY:
++                # Adaptive verification's cost profiler runs dummy rows longer than
++                # the k+1 state window; never route such a row through spec decode.
++                spec_sequence_masks_cpu &= (
++                    query_start_loc_cpu.diff() <= self.num_spec + 1
++                )
+             num_spec_decodes = spec_sequence_masks_cpu.sum().item()
+             if (
+                 num_spec_decodes == 0
+@@ -309,7 +344,9 @@
+             non_spec_sequence_masks_cpu = ~spec_sequence_masks_cpu
+             query_lens_cpu = query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]
+             spec_query_lens_cpu = query_lens_cpu[spec_sequence_masks_cpu]
+-            if spec_query_lens_cpu.numel() > 0:
++            if spec_query_lens_cpu.numel() > 0 and not envs.VLLM_GDN_ADAPTIVE_VERIFY:
++                # Under adaptive verification the CPU split is an even placeholder,
++                # not the device one, so uniformity cannot be read off the CPU.
+                 first_spec_sequence_length = int(spec_query_lens_cpu[0])
+                 if first_spec_sequence_length > 0 and bool(
+                     torch.all(spec_query_lens_cpu == first_spec_sequence_length)
