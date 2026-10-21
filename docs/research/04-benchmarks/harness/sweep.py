@@ -154,8 +154,8 @@ def main():
     ap.add_argument("--corpus", default=None)
     ap.add_argument("--out", default=".")
     args = ap.parse_args()
-    if args.reps < 3:
-        sys.exit("--reps must be >= 3 (mean and spread need it)")
+    if args.reps < 3 and os.environ.get("SMOKE") != "1":  # SMOKE=1: plumbing check only, one rep, no spread
+        sys.exit("--reps must be >= 3 (mean and spread need it; SMOKE=1 allows fewer for a smoke run)")
     salt = args.salt or args.label
     cells, corpus = build(args)
     os.makedirs(args.out, exist_ok=True)

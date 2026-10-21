@@ -1,0 +1,37 @@
+worktree: /home/tyrone/research-wt/x16  python: 3.13.7  torch: 2.12.1+cu130 cuda False
+case                                         mode  status    detail
+P1 pth_flash_attn                            bare  OK        
+P2 pth_flash_attn.planner                    bare  OK        
+P3 pth_flash_attn.ops                        bare  FALLBACK  ops.is_available() False (no _C.abi3.so), import succeeds
+P3b ops.pth_flash_attn_fwd() call            bare  FAIL      RuntimeError: 'pth_flash_attn_fwd: op library /home/tyrone/research-wt/x16/pthfa/python/pth_flash_attn/_C.abi3.so is not built; run tools/build_in_image.sh' @ repo pthfa/python/pth_flash_attn/ops.py:388  [raise RuntimeError(]  site ~/research-wt/x16/pthfa/python/pth_flash_attn/ops.py:388
+P4 plugin import                             bare  OK        
+P4b plugin.register()                        bare  FAIL      ModuleNotFoundError: "No module named 'vllm'" @ repo pthfa/python/pth_flash_attn/plugin.py:32  [from vllm.v1.attention.backends.registry import (]  site ~/research-wt/x16/pthfa/python/pth_flash_attn/plugin.py:32
+P4c plugin.register()                        stub  OK        
+P5 vllm_backend import                       bare  FAIL      ModuleNotFoundError: "No module named 'vllm'" @ repo pthfa/python/pth_flash_attn/vllm_backend.py:52  [from vllm.config import VllmConfig, get_current_vllm_config_or_none]  site ~/research-wt/x16/pthfa/python/pth_flash_attn/vllm_backend.py:52
+P5s vllm_backend import                      stub  OK        
+P5t supports_compute_capability(8,6)         stub  FALLBACK  backend reports sm86 unsupported (ops.is_available() False); vLLM then rejects/skips CUSTOM
+F1 fa2_fp8kv_vllm                            bare  OK        
+F2 paths.check()                             bare  FAIL      SystemExit: 'fa2_fp8kv: missing /home/tyrone/research-wt/x16/fa2/python/fa2_fp8kv_vllm/fa2_fp8kv.so, /home/tyrone/research-wt/x16/fa2/python/fa2_fp8kv_vllm/fa2_fp8kv_prefill.so (bash fa2/install.sh builds and installs them)' @ repo fa2/python/fa2_fp8kv_vllm/paths.py:33  [sys.exit("fa2_fp8kv: missing " + ", ".join(gone) + " (bash fa2/install.sh builds and installs them)")]  site ~/research-wt/x16/fa2/python/fa2_fp8kv_vllm/paths.py:33
+F3 register() FA2_FP8KV unset                bare  OK        
+F4 register() FA2_FP8KV=1                    bare  OK        
+F4s register() FA2_FP8KV=1                   stub  OK        
+F5 backend import                            bare  FAIL      ModuleNotFoundError: "No module named 'vllm'" @ repo fa2/python/fa2_prefill.py:4  [from vllm.vllm_flash_attn import flash_attn_varlen_func]  site ~/research-wt/x16/fa2/python/fa2_prefill.py:4
+F6 fa2_prefill import                        bare  FAIL      ModuleNotFoundError: "No module named 'vllm'" @ repo fa2/python/fa2_prefill.py:4  [from vllm.vllm_flash_attn import flash_attn_varlen_func]  site ~/research-wt/x16/fa2/python/fa2_prefill.py:4
+F7 paged_prefill import                      bare  OK        
+F5a backend, CPU (cc None)                   stub  OK        
+F5b backend, sm80 A100, FA2=1                stub  FALLBACK  no .so load on sm80; extension_selected() False -> native FLASH_ATTN
+F5c backend, sm86, FA2=1, .so missing        stub  OK        
+F5e backend, sm120, FA2=1                    stub  FALLBACK  no .so load on sm120; extension_selected() False -> native FLASH_ATTN
+F6s fa2_prefill import                       stub  OK        
+S1 spec_decode_attn.py (patch 1 text)        stub  OK        
+K1 kvarn sinkhorn (torch only)               stub  OK        
+K2 kvarn_decode (torch only)                 stub  OK        
+K3 kvarn config                              stub  OK        
+K4 kvarn_store                               stub  OK        
+K5 triton_kvarn_sinkhorn                     stub  OK        
+K6 triton_kvarn_decode                       stub  OK        
+K7 kvarn_attn backend                        stub  OK        
+K0 kvarn_attn backend                        bare  FAIL      ModuleNotFoundError: "No module named 'vllm'" @ repo None  [None]  site <string>:1
+K8 kvarn Triton sinkhorn run on CPU tensor   stub  FAIL      RuntimeError: '0 active drivers ([]). There should only be one.' @ repo kvarn/files/vllm/v1/attention/ops/triton_kvarn_sinkhorn.py:180  [_sinkhorn_log_kernel[(N,)](]  site ~/.local/lib/python3.13/site-packages/triton/runtime/driver.py:20
+
+SUMMARY {'OK': 21, 'FALLBACK': 4, 'FAIL': 8, 'CRASH': 0}

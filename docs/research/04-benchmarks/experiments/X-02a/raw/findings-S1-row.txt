@@ -1,0 +1,1 @@
+| S-1 | **Ship k as a concurrency control**: k=7 at 1 stream, **k=3 at 2-8, `SPEC=off` above ~9** — k=1 wins no concurrency | **measured** (batch 4's policy table): N=4 263.6 against 239.1 (k=7) and 143.2 (off); N=8 **337.1** against 176.8 (k=7, tail) and 250.7 (off); N=16 only `SPEC=off` seats all 16 (369.2). C1 pays 103.4 → 93.5 → 40.7 | config | low | none |

@@ -1,0 +1,2 @@
+#!/bin/sh
+case "$*" in *compute_cap*) echo 8.6 ;; *) exit 9 ;; esac

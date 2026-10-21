@@ -1,0 +1,432 @@
+HQ_SPEC_TIMING: per-step GPU-event timing of verify / accept / draft (experiment X-17, decision D12).
+
+Variant image only, never in patches/series. Inert unless HQ_SPEC_TIMING=1 in the engine's
+environment. Adds vllm/v1/worker/gpu/spec_timing.py (torch.cuda.Event ring, lazy Event.query()
+resolution, cumulative JSON log line "HQ_SPEC_TIMING {...}", optional Prometheus) and six
+one-line hooks in v1/worker/gpu/model_runner.py. Cut against: vLLM 0.31.0 + patches/series
+(51) + the four KVarN patches, paths relative to the vllm package directory:
+  patch -p1 --fuzz 0 -d "$SP" -i spec-timing.patch
+
+diff --git a/v1/worker/gpu/model_runner.py b/v1/worker/gpu/model_runner.py
+index d5c5e1c..34cd288 100644
+--- a/v1/worker/gpu/model_runner.py
++++ b/v1/worker/gpu/model_runner.py
+@@ -87,6 +87,7 @@ from vllm.v1.worker.gpu.async_utils import (
+     AsyncPoolingOutput,
+     StepTimingCollector,
+ )
++from vllm.v1.worker.gpu.spec_timing import make_timer as make_spec_timer
+ from vllm.v1.worker.gpu.attn_utils import (
+     FastPrefillHelper,
+     build_slot_mappings_by_layer,
+@@ -294,6 +295,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+         num_prefill_lookahead = max(1, vllm_config.num_prefill_lookahead_tokens)
+ 
+         self.step_timing = StepTimingCollector()
++        # HQ_SPEC_TIMING=1: GPU-event timing of verify/accept/draft per step; None (inert) otherwise.
++        self._spec_timer = make_spec_timer(self.max_num_reqs)
+ 
+         # General request states.
+         self.req_states = RequestState(
+@@ -1612,6 +1615,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                 grammar_output.grammar_bitmask,
+             )
+ 
++        if self._spec_timer is not None:
++            self._spec_timer.mark(2)  # logits done, sampling starts
+         sampler_output: SamplerOutput | None
+         if input_batch.num_reqs == 0:
+             # This rank owns no requests this step. It contributes an
+@@ -1631,6 +1636,10 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                 self.speculator.draft_logits,
+             )
+ 
++        if self._spec_timer is not None:
++            self._spec_timer.sampled(
++                sampler_output.num_sampled if sampler_output is not None else None
++            )
+         if shard_metadata is not None:
+             # Gather the sharded sampler outputs from the TP ranks into a single
+             # sampler output.
+@@ -1977,6 +1986,13 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+             input_batch, batch_desc.cg_mode == CUDAGraphMode.FULL
+         )
+         self.step_timing.forward_start()
++        if self._spec_timer is not None and not dummy_run:
++            self._spec_timer.begin(
++                input_batch.num_reqs,
++                input_batch.num_tokens,
++                input_batch.num_draft_tokens,
++                batch_desc.cg_mode == CUDAGraphMode.FULL,
++            )
+ 
+         connector_kwargs = dict(
+             scheduler_output=scheduler_output,
+@@ -2035,6 +2051,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                     # Eager (NONE): call the raw model directly.
+                     model_output = self.model(**model_inputs)
+ 
++        if self._spec_timer is not None:
++            self._spec_timer.mark(1)  # after the verify forward (graph replay is outside the capture)
+         self.kv_connector.finish_forward()
+ 
+         if self.is_last_pp_rank:
+@@ -2229,6 +2247,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                     self.sampler._get_contexts(input_batch.idx_mapping),
+                     self.sampler.watermarking.gpu[input_batch.idx_mapping],
+                 )
++            if self._spec_timer is not None:
++                self._spec_timer.mark(4)
+             with use_workspace_lane(self._draft_workspace_lane):
+                 draft_tokens = self.speculator.propose(
+                     input_batch,
+@@ -2245,6 +2265,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+                     dp_sync=dp_sync,
+                     mm_inputs=mm_inputs,
+                 )
++            if self._spec_timer is not None:
++                self._spec_timer.mark(5)
+             self.req_states.draft_tokens[input_batch.idx_mapping] = draft_tokens
+             if self.adaptive_verification is not None:
+                 self.adaptive_verification.record_confidences(
+@@ -2277,6 +2299,8 @@ class GPUModelRunner(LoRAModelRunnerMixin):
+         model_runner_output.kv_connector_output = kv_connector_output
+         model_runner_output.ec_connector_output = ec_connector_output
+ 
++        if self._spec_timer is not None:
++            self._spec_timer.end()
+         return async_output
+ 
+     def take_draft_token_ids(self) -> DraftTokenIds | None:
+diff --git a/v1/worker/gpu/spec_timing.py b/v1/worker/gpu/spec_timing.py
+new file mode 100644
+index 0000000..2360c02
+--- /dev/null
++++ b/v1/worker/gpu/spec_timing.py
+@@ -0,0 +1,326 @@
++# SPDX-License-Identifier: Apache-2.0
++"""Opt-in GPU-event timing of the speculative-decode step (variant image only).
++
++Off unless HQ_SPEC_TIMING=1; the model runner then holds None and every hook
++is one attribute check. Each real engine step records up to six
++torch.cuda.Event marks on the main stream, always OUTSIDE captured regions
++(around the target graph replay and around speculator.propose, never inside):
++
++  0 fwd0   before the target (verify) forward      1 fwd1   after it
++  2 smp0   after compute_logits, before sampling   3 smp1   after the sampler
++  4 drf0   before speculator.propose               5 drf1   after it
++
++phase = interval between two marks, measured on the GPU timeline:
++  verify 0-1 | logits 1-2 | accept 2-3 | other 3-4 | draft 4-5
++  total 0-last | gap = previous step's last mark -> this step's mark 0
++  (SPEC=off has no mark 5: the step ends at 4 and has no draft phase)
++
++No sync on the hot path: events live in a fixed ring, a slot is read only
++once Event.query() says its last mark is complete (checked in end(), while the
++step's own work is still queued). A full ring drops the new step (counted), it
++never blocks.
++Emitted numbers are CUMULATIVE (sums, sums of squares, histograms), one
++"HQ_SPEC_TIMING {json}" log line every HQ_SPEC_TIMING_EVERY resolved steps
++(default 200) and at least every 30 s while steps arrive.
++HQ_SPEC_TIMING_PROM_PORT=<port> also serves them as Prometheus histograms.
++"""
++
++import atexit
++import bisect
++import json
++import os
++import time
++import uuid
++from collections import deque
++
++SCHEMA = 1
++# Histogram upper bounds in ms; bucket i holds (edges[i-1], edges[i]], the last is overflow.
++EDGES_MS = (0.05, 0.1, 0.2, 0.5, 1, 2, 3, 4, 5, 7.5, 10, 15, 20, 30, 50, 100, 250)
++_PAIRS = (
++    ("verify", 0, 1),
++    ("logits", 1, 2),
++    ("accept", 2, 3),
++    ("other", 3, 4),
++    ("draft", 4, 5),
++)
++_NMARK = 6
++_MAX_REQ_KEY = 17  # batches above this share one key ("r17")
++_FLUSH_S = 30.0
++
++
++class _Slot:
++    __slots__ = ("ev", "have", "last", "meta", "seq", "buf", "nreq")
++
++    def __init__(self, mk):
++        self.ev = [mk() for _ in range(_NMARK)]
++        self.have = 0
++        self.last = -1
++        self.meta = (0, 0, 0, False)  # reqs, tokens, drafts, full graph
++        self.seq = 0
++        self.buf = None  # pinned host copy of num_sampled (see SpecTimer._ensure_bufs)
++        self.nreq = 0
++
++
++class SpecTimer:
++    def __init__(
++        self,
++        event_factory,
++        emit,
++        every=200,
++        nslots=64,
++        pin=False,
++        max_reqs=1024,
++        observe=None,
++        clock=time.time,
++        capturing=lambda: False,
++    ):
++        self._slots = [_Slot(event_factory) for _ in range(nslots)]
++        self._free = deque(self._slots)
++        self._max_reqs = max_reqs
++        self._buf_dtype = None
++        self._pending = deque()
++        self._cur = None
++        self._prev = None  # last resolved slot, kept for the gap to its successor
++        self._seq = 0
++        self._emit_fn = emit
++        self._every = every
++        self._pin = pin
++        self._observe = observe
++        self._clock = clock
++        self._capturing = capturing
++        self.run = uuid.uuid4().hex[:8]
++        self.pid = os.getpid()
++        self.steps = 0
++        self.dropped = 0  # ring full when a step began
++        self.abandoned = 0  # a step began and never reached end()
++        self.keys = {}
++        self.hist = {}
++        self._last_emit_t = clock()
++        self._last_emit_n = 0
++
++    # --- hot path: host-only, no sync ---------------------------------
++
++    def begin(self, num_reqs, num_tokens, num_drafts, full_graph):
++        # No resolution here: the GPU may be idle until this step's forward is
++        # launched, so the bookkeeping runs in end() instead (see there).
++        if self._cur is not None:
++            self.abandoned += 1
++            self._free.append(self._cur)
++            self._cur = None
++        if self._capturing():
++            return
++        self._seq += 1  # also for a dropped step, so no gap is measured across it
++        if not self._free:
++            self._resolve()
++            if not self._free:
++                self.dropped += 1
++                return
++        s = self._free.popleft()
++        s.have = 0
++        s.last = -1
++        s.nreq = 0
++        s.meta = (num_reqs, num_tokens, num_drafts, bool(full_graph))
++        s.seq = self._seq
++        self._cur = s
++        self._rec(0)
++
++    def mark(self, i):
++        if self._cur is not None:
++            self._rec(i)
++
++    def sampled(self, num_sampled):
++        """Mark 3, then copy num_sampled (tokens emitted per request) to pinned
++        host memory asynchronously; it is read once the slot's last mark is done."""
++        s = self._cur
++        if s is None:
++            return
++        self._rec(3)
++        if self._pin and num_sampled is not None:
++            n = int(num_sampled.shape[0])
++            self._ensure_bufs(num_sampled.dtype)
++            # a dtype change or an oversized batch would mean a converting/allocating
++            # copy on the hot path: skip the token count for that step instead
++            if s.buf is not None and n <= self._max_reqs and s.buf.dtype == num_sampled.dtype:
++                s.buf[:n].copy_(num_sampled, non_blocking=True)
++                s.nreq = n
++
++    def _ensure_bufs(self, dtype):
++        """Pinned allocation syncs the device, so give EVERY slot its buffer once, on the
++        first spec step (warm-up traffic), never one at a time later."""
++        if self._buf_dtype is None:
++            import torch
++
++            self._buf_dtype = dtype
++            for sl in self._slots:
++                sl.buf = torch.empty(self._max_reqs, dtype=dtype, pin_memory=True)
++
++    def end(self):
++        s = self._cur
++        if s is not None:
++            if s.last < 4:  # no speculator: close the step here
++                self._rec(4)
++            self._pending.append(s)
++            self._cur = None
++        # Resolve finished steps here, not in begin(): this step's work is still
++        # queued on the GPU, so the host bookkeeping overlaps it instead of
++        # delaying the next forward launch (matters with --no-async-scheduling).
++        self._resolve()
++        if self._clock() - self._last_emit_t > _FLUSH_S and self.steps > self._last_emit_n:
++            self.emit()
++
++    def _rec(self, i):
++        s = self._cur
++        assert s is not None
++        s.ev[i].record()
++        s.have |= 1 << i
++        s.last = i
++
++    # --- lazy resolution ----------------------------------------------
++
++    def _resolve(self):
++        p = self._pending
++        while p and p[0].ev[p[0].last].query():
++            s = p.popleft()
++            self._consume(s)
++            if self._prev is not None:
++                self._free.append(self._prev)
++            self._prev = s
++
++    def _consume(self, s):
++        ph = {}
++        for name, a, b in _PAIRS:
++            if s.have >> a & 1 and s.have >> b & 1:
++                ph[name] = s.ev[a].elapsed_time(s.ev[b])
++        ph["total"] = s.ev[0].elapsed_time(s.ev[s.last])
++        pv = self._prev
++        if pv is not None and pv.seq + 1 == s.seq:
++            ph["gap"] = pv.ev[pv.last].elapsed_time(s.ev[0])
++        reqs, toks, drafts, graph = s.meta
++        kind = "spec" if drafts > 0 else "plain"
++        key = f"{kind}/r{min(reqs, _MAX_REQ_KEY)}/{'G' if graph else 'E'}"
++        st = self.keys.get(key)
++        if st is None:
++            st = self.keys[key] = {
++                "n": 0, "gap_n": 0, "tok": 0, "drafts": 0, "ms": {}, "sq": {},
++            }
++        st["n"] += 1
++        st["tok"] += toks
++        st["drafts"] += drafts
++        if "gap" in ph:
++            st["gap_n"] += 1
++        emitted = None
++        if s.nreq and s.buf is not None:
++            emitted = int(s.buf[: s.nreq].sum())
++            st["emit"] = st.get("emit", 0) + emitted
++        hk = self.hist.setdefault(kind, {})
++        for name, v in ph.items():
++            st["ms"][name] = st["ms"].get(name, 0.0) + v
++            st["sq"][name] = st["sq"].get(name, 0.0) + v * v
++            h = hk.get(name)
++            if h is None:
++                h = hk[name] = [0] * (len(EDGES_MS) + 1)
++            h[bisect.bisect_left(EDGES_MS, v)] += 1
++        if self._observe is not None:
++            self._observe(kind, ph, emitted)
++        self.steps += 1
++        if self.steps % self._every == 0:
++            self.emit()
++
++    # --- output ---------------------------------------------------------
++
++    def snapshot(self):
++        return {
++            "v": SCHEMA,
++            "run": self.run,
++            "pid": self.pid,
++            "ts": round(self._clock(), 3),
++            "mono": round(time.perf_counter(), 3),
++            "steps": self.steps,
++            "dropped": self.dropped,
++            "abandoned": self.abandoned,
++            "tokens": self._pin,
++            "keys": {
++                k: {
++                    **{f: v[f] for f in ("n", "gap_n", "tok", "drafts")},
++                    **({"emit": v["emit"]} if "emit" in v else {}),
++                    "ms": {p: round(x, 4) for p, x in v["ms"].items()},
++                    "sq": {p: round(x, 6) for p, x in v["sq"].items()},
++                }
++                for k, v in self.keys.items()
++            },
++            "hist": self.hist,
++        }
++
++    def emit(self):
++        self._last_emit_t = self._clock()
++        self._last_emit_n = self.steps
++        self._emit_fn("HQ_SPEC_TIMING " + json.dumps(self.snapshot(), separators=(",", ":")))
++
++    def flush(self):
++        """Exit-time: wait for the last marks (a sync, off the hot path) and emit."""
++        try:
++            if self._pending:
++                self._pending[-1].ev[self._pending[-1].last].synchronize()
++            self._resolve()
++            self.emit()
++        except Exception:  # CUDA context may already be gone
++            pass
++
++
++def _prom_observer(port, log):
++    try:
++        from prometheus_client import Counter, Histogram, start_http_server
++
++        hist = Histogram(
++            "hq_spec_timing_seconds",
++            "GPU-event time of a speculative-decode step phase",
++            ["kind", "phase"],
++            buckets=[e / 1000 for e in EDGES_MS],
++        )
++        toks = Counter("hq_spec_timing_emitted_tokens", "tokens emitted by timed steps", ["kind"])
++        start_http_server(port)
++    except Exception as e:  # missing package, port taken (TP>1: one worker wins)
++        log.warning("HQ_SPEC_TIMING_PROM_PORT=%s not served: %r", port, e)
++        return None
++
++    def observe(kind, ph, emitted):
++        for name, v in ph.items():
++            hist.labels(kind, name).observe(v / 1000)
++        if emitted:
++            toks.labels(kind).inc(emitted)
++
++    return observe
++
++
++def make_timer(max_reqs=1024):
++    """The timer, or None when HQ_SPEC_TIMING is unset/0 (the stock behaviour)."""
++    if os.environ.get("HQ_SPEC_TIMING", "0") in ("", "0"):
++        return None
++    import torch
++
++    from vllm.logger import init_logger
++    from vllm.utils.platform_utils import is_pin_memory_available
++
++    log = init_logger(__name__)
++    port = os.environ.get("HQ_SPEC_TIMING_PROM_PORT")
++    t = SpecTimer(
++        lambda: torch.cuda.Event(enable_timing=True),
++        log.info,
++        every=int(os.environ.get("HQ_SPEC_TIMING_EVERY", "200")),
++        nslots=int(os.environ.get("HQ_SPEC_TIMING_SLOTS", "64")),
++        # an unpinned non_blocking copy would sync the stream: no pinned memory, no token counts
++        pin=is_pin_memory_available(),
++        max_reqs=max_reqs,
++        observe=_prom_observer(int(port), log) if port else None,
++        capturing=torch.cuda.is_current_stream_capturing,
++    )
++    atexit.register(t.flush)
++    log.info(
++        "HQ_SPEC_TIMING_START %s",
++        json.dumps(
++            {"v": SCHEMA, "run": t.run, "pid": t.pid, "every": t._every,
++             "tokens": t._pin, "edges_ms": list(EDGES_MS)},
++            separators=(",", ":"),
++        ),
++    )
++    return t

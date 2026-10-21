@@ -1,0 +1,10 @@
+# start 2026-10-15T10:43:01Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=1,2,4,8,16
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1        40.1       40.1      23.8       nan       1.0     25.0        0    7.6    1     4379  40/40/40
+ 2        36.4       77.5      34.5       nan       2.0     25.8        0   13.1    2     7758  34/39/39
+ 4        25.8      143.2      42.9       nan       4.0     27.9        0   22.2    4    12646  16/32/36
+ 8        16.2      250.7      48.8       nan       8.0     31.9        0   40.4    8    21545  8/15/32
+16         9.1      369.2      52.1       nan      16.0     43.3        0   76.8   16    38733  4/7/24
+
+| N | 1 | 2 | 4 | 8 | 16 |

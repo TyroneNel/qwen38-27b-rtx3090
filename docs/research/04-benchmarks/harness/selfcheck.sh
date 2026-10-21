@@ -44,6 +44,12 @@ print(f"decode {r:.1f} tok/s/stream vs mock 300 (without the fix: ~+17%, 7 token
 assert 240 < r < 315, r
 PYEOF
 chk 0 $? "decode rate = (ntok-1) over first content -> finish chunk"
+echo "== 1d. smoke mode and empty LC_CELLS (no spread is computed at one rep)"
+mock --rate 300
+"$PY" "$HERE/sweep.py" smk --set short_chat --conc 1 --reps 1 --max-tokens 8 --out "$T/smk" >/dev/null 2>&1; chk 1 $? "--reps 1 is refused without SMOKE=1"
+SMOKE=1 "$PY" "$HERE/sweep.py" smk --set short_chat --conc 1 --reps 1 --max-tokens 8 --out "$T/smk" >/dev/null 2>&1; chk 0 $? "--reps 1 runs with SMOKE=1"
+SMOKE=1 REPS=1 LC_CELLS="" HARNESS_CORPUS="$T/corpus.txt" BENCH="$REPO/bench" HARNESS="$HERE" OUT="$T/nolc" PHASES="sweep" CONC=1 MAXTOK=8 TAIL=1 bash "$HERE/run_suite.sh" nolc >/dev/null 2>&1; chk 0 $? "run_suite.sh with LC_CELLS= and SMOKE=1"
+ls "$T"/nolc/sweep_*long_context.json >/dev/null 2>&1; chk 2 $? "LC_CELLS= (empty) skips the long-context cells"
 echo "== 2. greedy_equal: non-spec vs spec (must be identical)"
 mock --rate 300; "$PY" "$HERE/greedy_equal.py" record nospec --max-tokens 24 --out "$T" >/dev/null
 "$PY" "$HERE/greedy_equal.py" compare "$T/greedy_nospec.json" "$T/spec.json" | tail -1; chk 0 ${PIPESTATUS[0]} "identical spec vs non-spec"

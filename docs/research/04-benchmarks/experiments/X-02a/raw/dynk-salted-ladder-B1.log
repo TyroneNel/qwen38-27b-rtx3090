@@ -1,0 +1,6 @@
+# start 2026-10-16T07:37:08Z
+prompts: distinct, ~4096 ctx tokens, out=1024, reps=6, N=1,4, salt=dynk1016
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       124.1      124.1      85.1      3.60       3.6     28.9        0   23.7    1     3771  124/124/124
+ 4        56.2      268.4     132.1      2.85      11.4     42.4        0   85.5    4    12044  41/64/68
+

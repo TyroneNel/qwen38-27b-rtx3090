@@ -1,0 +1,46 @@
+# X-17 checks, 2026-10-21T11:27:28Z, baseline 20c7625 kvarn installed (files + 4 patches): baseline = image tree
+
+## 1. apply check against the baseline tree
+git apply --check: OK
+checking file v1/worker/gpu/model_runner.py
+checking file v1/worker/gpu/spec_timing.py
+patch --fuzz 0 --dry-run exit=0
+
+## 1b. the stock image tree: patches/ and kvarn/ at 2cf50a0 (image commit) vs this branch
+patches/ + kvarn/ identical to 2cf50a0: same tree as the baseline
+
+## 2. real apply (Dockerfile.variant flags), then compare with the scratch tree HEAD
+patching file v1/worker/gpu/model_runner.py
+patching file v1/worker/gpu/spec_timing.py
+apply exit=0
+identical to scratch HEAD 0bc5600: v1/worker/gpu/model_runner.py
+identical to scratch HEAD 0bc5600: v1/worker/gpu/spec_timing.py
+
+## 3. second apply must fail (--forward)
+second apply exit=1 (nonzero expected)
+
+## 3b. verify.sh patch checks (entrypoint runs verify.sh --no-server on every boot): baseline vs variant
+same result on all 55 patches (45 exact reverse, 9 content check, 1 FAIL = spec-decode-scratch-token-units.patch which verify.sh passes as superseded)
+
+## 4. byte-compile, no .pyc written (Python 3.13.7; the image uses 3.12)
+compile OK: v1/worker/gpu/model_runner.py
+compile OK: v1/worker/gpu/spec_timing.py
+compile OK: parse_timing.py
+compile OK: test_timing.py
+
+## 5. unit tests (fake event times; module extracted from spec-timing.patch)
+OK
+exit=0
+
+## 6. parser on a SYNTHETIC log (fake events, NOT measurements)
+== synthetic f668c4bf pid 3895306: 10 timed steps (dropped 0, abandoned 0)
+                      n     gap  verify  logits  accept   other   draft   total tok/step acc/draft impl tok/s
+plain (all)           1       -   20.00    1.20    0.40    0.30       -   21.90     1.00         -       45.7
+spec (all)            9    1.20   14.00    1.20    1.80    0.60    3.90   21.50     4.00     0.429      176.2
+plain/r1/E            1       -   20.00    1.20    0.40    0.30       -   21.90     1.00         -       45.7
+spec/r1/G             9    1.20   14.00    1.20    1.80    0.60    3.90   21.50     4.00     0.429      176.2
+   mean ms per step; key = kind/r<requests>/<G full graph | E not>; gap = idle between steps;
+   draft = whole speculator.propose; step = total + gap
+   plain: verify 91% logits 5% accept 2% other 1%; p50/p95 <= verify 20/20, accept 0.5/0.5
+   spec: verify 65% logits 6% accept 8% other 3% draft 18%; p50/p95 <= verify 15/15, accept 2/2, draft 4/4
+

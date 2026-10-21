@@ -18,6 +18,7 @@
 #   profile  torch profile + vendor/trace_breakdown.py: draft vs verify GPU time (needs the profiler boot, README)
 # PTH_FA must be set (0 or 1) in the booted container; run_suite.sh exits 2 otherwise.
 # Sizing knobs (defaults are for a ~68k-token KV pool, mode B; raise them only in CTX=long/huge modes):
+#   (LC_CELLS="" skips the long-context cells; SMOKE=1 lets REPS go below 3, smoke runs only)
 #   REPS=3 WARMUP=1 MAXTOK=256 CONC=1,2,4,8 LC_CELLS="8000:1,2,4 32000:1" LADDER_CELLS="200:1,2,4,8 8000:1,2,4"
 #   SALT=$LABEL (same salt on every boot of an A/B; a second run on the same boot needs a new one)
 LABEL=${1:?usage: run_suite.sh LABEL}
@@ -27,7 +28,7 @@ PY=${PY:-$(command -v /app/venv/bin/python || command -v python3)}
 export PYTHONPATH="$BENCH:$HARNESS"
 PHASES=${PHASES:-snap warm probe sweep ladder greedy spill}
 REPS=${REPS:-3}; WARMUP=${WARMUP:-1}; MAXTOK=${MAXTOK:-256}; CONC=${CONC:-1,2,4,8}; SALT=${SALT:-$LABEL}
-LC_CELLS=${LC_CELLS:-"8000:1,2,4 32000:1"}; LADDER_CELLS=${LADDER_CELLS:-"200:1,2,4,8 8000:1,2,4"}
+LC_CELLS=${LC_CELLS-"8000:1,2,4 32000:1"}; LADDER_CELLS=${LADDER_CELLS:-"200:1,2,4,8 8000:1,2,4"}
 QUALITY_DATA=${QUALITY_DATA:-/app/models/quality-data}; export QUALITY_DATA
 PORT=${PORT:-18020}; fails=0
 has() { [[ " $PHASES " == *" $1 "* ]]; }

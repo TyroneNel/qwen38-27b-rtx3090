@@ -1,0 +1,180 @@
+================ upstream: 63f7581 docs: field reports (#350, #348) and the V100 note (#349) (#352)
+---- scope: SPEC x CTX, cc8.6 stub, package present, no other knobs
+upstream  | SPEC=mtp CTX=long                                | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+            > [effective-config] PTH_FA=1 (default; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and MTP drafter)
+upstream  | SPEC=mtp CTX=fast                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | SPEC=dflash2 CTX=long                            | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=0 (PTH_FA=1 overrides the 8.6 default)
+            > [effective-config] PTH_FA=1 (default; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and DFlash2 drafter)
+upstream  | SPEC=dflash2 CTX=fast                            | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=dflash2 FA2_FP8KV=0 (default)
+upstream  | SPEC=mtp CTX=huge                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=huge SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | defaults (CTX/SPEC unset)                        | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=mtp FA2_FP8KV=0 (default)
+---- blockers on SPEC=mtp CTX=long
+upstream  | + VISION=1                                       | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + DRAFT_TOKENS=4                                 | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + DRAFT_TOKENS=3 (explicit, = default)           | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+            > [effective-config] PTH_FA=1 (default; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and MTP drafter)
+upstream  | + DYNAMIC_K=1                                    | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + KV_OFFLOAD_GB=8                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + FA2_FP8KV=0                                    | rc=0 PTH_FA=unset FA2_FP8KV=0
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (explicit)
+upstream  | + FA2_FP8KV=1                                    | refused (exit before print)
+            > resolve_config: refusing: FA2_FP8KV=1 runs only on SPEC=dflash2 CTX=long (got SPEC=mtp CTX=long)
+upstream  | + EXTRA_ARGS=--kv-cache-dtype fp8                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > resolve_config: WARNING: EXTRA_ARGS carries --kv-cache-dtype which overrides the launcher's own flag (EXTRA_ARGS expands last)
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + EXTRA_ARGS=--attention-backend X               | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > resolve_config: WARNING: EXTRA_ARGS carries --attention-backend which overrides the launcher's own flag (EXTRA_ARGS expands last)
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + EXTRA_ARGS=--speculative-config {}             | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + PTH_FA=0 (opt out)                             | rc=0 PTH_FA=0 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + PTH_FA=1 (explicit)                            | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+            > [effective-config] PTH_FA=1 (explicit; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and MTP drafter)
+upstream  | + PTH_FA= (empty)                                | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+            > [effective-config] PTH_FA=1 (default; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and MTP drafter)
+upstream  | + package missing                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > resolve_config: PTH_FA defaults to 1 on SPEC=mtp CTX=long on compute capability 8.6, but the pth_flash_attn package is not in the venv, so the arm's own default runs (bash pthfa/install.sh to use it; PTH_FA=0 silences this)
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + cc 8.9 stub                                    | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | + no nvidia-smi (CI as shipped)                  | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | box .env: CTX=fast VISION=1                      | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=mtp FA2_FP8KV=0 (default)
+upstream  | box .env + CTX=long (VISION=1 kept)              | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+---- blockers on SPEC=dflash2 CTX=long
+upstream  | + VISION=1                                       | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+upstream  | + DFLASH_TOKENS=15                               | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+upstream  | + LOOKUP=0                                       | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+upstream  | + DYNAMIC_K=1                                    | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+upstream  | + DRAFT=x                                        | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+upstream  | + FA2_FP8KV=0                                    | rc=0 PTH_FA=unset FA2_FP8KV=0
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=0 (explicit)
+================ ours: 95ac251 Merge pull request #339 from noon-at-cgn/pth-flash-attn-default
+---- scope: SPEC x CTX, cc8.6 stub, package present, no other knobs
+ours      | SPEC=mtp CTX=long                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | SPEC=mtp CTX=fast                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=mtp FA2_FP8KV=0 (default)
+ours      | SPEC=dflash2 CTX=long                            | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=0 (PTH_FA=1 overrides the 8.6 default)
+            > [effective-config] PTH_FA=1 (default; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and DFlash2 drafter)
+ours      | SPEC=dflash2 CTX=fast                            | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=dflash2 FA2_FP8KV=0 (default)
+ours      | SPEC=mtp CTX=huge                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=huge SPEC=mtp FA2_FP8KV=0 (default)
+ours      | defaults (CTX/SPEC unset)                        | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=mtp FA2_FP8KV=0 (default)
+---- blockers on SPEC=mtp CTX=long
+ours      | + VISION=1                                       | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + DRAFT_TOKENS=4                                 | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + DRAFT_TOKENS=3 (explicit, = default)           | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + DYNAMIC_K=1                                    | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + KV_OFFLOAD_GB=8                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + FA2_FP8KV=0                                    | rc=0 PTH_FA=unset FA2_FP8KV=0
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (explicit)
+ours      | + FA2_FP8KV=1                                    | refused (exit before print)
+            > resolve_config: refusing: FA2_FP8KV=1 runs only on SPEC=dflash2 CTX=long (got SPEC=mtp CTX=long)
+ours      | + EXTRA_ARGS=--kv-cache-dtype fp8                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > resolve_config: WARNING: EXTRA_ARGS carries --kv-cache-dtype which overrides the launcher's own flag (EXTRA_ARGS expands last)
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + EXTRA_ARGS=--attention-backend X               | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > resolve_config: WARNING: EXTRA_ARGS carries --attention-backend which overrides the launcher's own flag (EXTRA_ARGS expands last)
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + EXTRA_ARGS=--speculative-config {}             | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + PTH_FA=0 (opt out)                             | rc=0 PTH_FA=0 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + PTH_FA=1 (explicit)                            | rc=0 PTH_FA=1 FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+            > [effective-config] PTH_FA=1 (explicit; int8_per_token_head KV on the CUSTOM backend, pthfa/: target and MTP drafter)
+ours      | + PTH_FA= (empty)                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + package missing                                | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + cc 8.9 stub                                    | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | + no nvidia-smi (CI as shipped)                  | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+ours      | box .env: CTX=fast VISION=1                      | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=fast SPEC=mtp FA2_FP8KV=0 (default)
+ours      | box .env + CTX=long (VISION=1 kept)              | rc=0 PTH_FA=unset FA2_FP8KV=unset
+            > [effective-config] CTX=long SPEC=mtp FA2_FP8KV=0 (default)
+---- blockers on SPEC=dflash2 CTX=long
+ours      | + VISION=1                                       | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+ours      | + DFLASH_TOKENS=15                               | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+ours      | + LOOKUP=0                                       | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+ours      | + DYNAMIC_K=1                                    | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+ours      | + DRAFT=x                                        | rc=0 PTH_FA=unset FA2_FP8KV=1
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=1 (default)
+ours      | + FA2_FP8KV=0                                    | rc=0 PTH_FA=unset FA2_FP8KV=0
+            > [effective-config] CTX=long SPEC=dflash2 FA2_FP8KV=0 (explicit)
+================ launcher tests: upstream / nostub
+upstream  nostub test_no_key_bind        rc=0  all checks passed
+upstream  nostub test_prefix_cache_knob  rc=0  all checks passed
+upstream  nostub test_kv_offload_knob    rc=0  all checks passed
+upstream  nostub test_dynamic_k_knob     rc=0  all checks passed
+upstream  nostub test_tp_size            rc=0  all checks passed
+upstream  nostub test_bool_knobs         rc=0  all checks passed
+upstream  nostub test_resident_print     rc=0  all checks passed
+upstream  nostub test_fa2_fp8kv_knob     rc=0  all checks passed
+upstream  nostub test_pthfa_knob         rc=0  all checks passed
+================ launcher tests: upstream / cc86
+upstream  cc86   test_no_key_bind        rc=0  all checks passed
+upstream  cc86   test_prefix_cache_knob  rc=0  all checks passed
+upstream  cc86   test_kv_offload_knob    rc=0  all checks passed
+upstream  cc86   test_dynamic_k_knob     rc=0  all checks passed
+upstream  cc86   test_tp_size            rc=0  all checks passed
+upstream  cc86   test_bool_knobs         rc=0  all checks passed
+upstream  cc86   test_resident_print     rc=0  all checks passed
+upstream  cc86   test_fa2_fp8kv_knob     rc=0  all checks passed
+upstream  cc86   test_pthfa_knob         rc=0  all checks passed
+================ launcher tests: ours / nostub
+ours      nostub test_no_key_bind        rc=0  all checks passed
+ours      nostub test_prefix_cache_knob  rc=0  all checks passed
+ours      nostub test_kv_offload_knob    rc=0  all checks passed
+ours      nostub test_dynamic_k_knob     rc=0  all checks passed
+ours      nostub test_tp_size            rc=0  all checks passed
+ours      nostub test_bool_knobs         rc=0  all checks passed
+ours      nostub test_resident_print     rc=0  all checks passed
+ours      nostub test_fa2_fp8kv_knob     rc=0  all checks passed
+ours      nostub test_pthfa_knob         rc=0  all checks passed
+================ launcher tests: ours / cc86
+ours      cc86   test_no_key_bind        rc=0  all checks passed
+ours      cc86   test_prefix_cache_knob  rc=0  all checks passed
+ours      cc86   test_kv_offload_knob    rc=0  all checks passed
+ours      cc86   test_dynamic_k_knob     rc=0  all checks passed
+ours      cc86   test_tp_size            rc=0  all checks passed
+ours      cc86   test_bool_knobs         rc=0  all checks passed
+ours      cc86   test_resident_print     rc=0  all checks passed
+ours      cc86   test_fa2_fp8kv_knob     rc=0  all checks passed
+ours      cc86   test_pthfa_knob         rc=0  all checks passed

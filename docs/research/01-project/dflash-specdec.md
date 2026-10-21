@@ -468,7 +468,7 @@ Each item gives the evidence, then what would confirm it: what to log and which 
    at about 40× its DRAM floor [M, e-profile]. It is 5.6 ms per rank at 128k on TP=2 [M]. Every
    verify position multiplies it.
    - It also carries a **correctness hazard**: with prefix caching, the adaptive long block on KVarN
-     gives wrong tokens (38 of 793 self-hits wrong at 12.71 tok/step, against clean output at
+     gives wrong tokens (38 of 793 self-hits wrong [review (phase 5): misread. `start_qwen.sh:399-411` says turn 2 tracks the source for about 38 characters and then diverges; "38/793" is not a count of wrong self-hits] at 12.71 tok/step, against clean output at
      14.71 with ADAPTIVE=0) [M, `start_qwen.sh:399-421`]. That is why ADAPTIVE=0 is pinned on huge.
    - *Confirm:* the torch profiler (`--profiler-config`) or DeepInfer `bench/trace_breakdown.py` at
      8k/32k/64k/128k × q∈{4,8,16}, giving ms per attention layer. Use `bench/spec_attn_ctx_scan.py`

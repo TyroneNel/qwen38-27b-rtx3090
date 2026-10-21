@@ -41,3 +41,24 @@ Priority order B, D, E (the modes EAGLE-4 compares against); then D', C, A. Comp
 |---|---|---|---|---|---|---|
 | pthfa-ab | `PTH_FA=0` vs `1` interleaved (0 1 0 1) for `SPEC=mtp CTX=long` and `SPEC=dflash2 CTX=long`; same `SALT`, same corpus; reports decode and TTFT at ~8k and ~66k | base-D, base-Dp | todo | | | |
 | profile-dv | Torch profile on a profiler boot of mode B at C1 short context: drafter ms vs target ms per step (`trace_breakdown.py`); ceiling-check against E at 170k (drafter 3.6 of 151 ms) | smoke | todo | | | |
+| specoff-C1 | `SPEC=off` fast-variant C1 decode (same prompts as base-B) to settle the speculation overhead per step (estimated 4.5-6.5 ms, E; independent cross-check of profile-dv) | smoke | todo | | | |
+
+## Phase 4: experiments (bench-13 to bench-25; jobs in [gpu-agent-prompt.md](gpu-agent-prompt.md) "Experiments")
+
+Verdicts are mechanical: apply the Gate column to the numbers (`WIN`, `LOSS`, `NEUTRAL`, `INFO`, `INVALID`). Evidence is `results/<X-id>-<YYYYMMDD>/RESULT.md`. Every X row compares arms of the same job and the same image. Each X job runs as parts of at most 2.0 h (queue rows bench-NNa, b, ...); the row stays `running` until its last part, and the verdict reads across all parts. Training runs are pilots with a stated budget; full runs are proposals in the prompt.
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| X-17 | Build the timing variant image, overhead A/B on B (stock, variant off, variant on), then draft/verify/accept GPU time on B and D (parts bench-13a, 13b, 13c) | Variant-on C1 decode >= 0.97 of stock, `tokens:true`, `dropped` 0; then INFO (phase means, no interpretation) | todo | | | |
+| X-08 | Near-tie classifier on greedy gate (`--near-tie 0.01 --ulp-band 0.25`) for SPEC=off / dflash2 / mtp, plus KVarN adaptive + prefix case (bench-14a main, 14b KVarN) | Every non-near-tie divergence reproducible on re-record AND the KVarN adaptive+prefix case flagged REAL | todo | | | |
+| X-01b | `SPEC=mtp CTX=long` `PTH_FA=1` vs `0` (our default) at `GPU_UTIL=0.89`, 3 interleaved boots per arm; labd 66k and 93k; C1 reported, not gated; GSM8K one boot per arm, conditional on the decode gate (bench-15a-c rounds, 15d GSM8K) | Median decode ratio >= 1.10 at both cells (H01 +12-22%, upstream-reported), tok/step within +-2%, GSM8K within 1 pt | todo | | | |
+| X-04' | int8 per-token-head KV via TRITON vs fp8 on mode B, ABBA plus quality boot; PTH sub-arm not queued (needs launcher edit) (bench-16a, 16b ABBA; 16c quality boot, conditional) | Pool >= 1.6x (prior 1.70x), N=8 preemptions <= 1 (prior 23), C1 within 2%, GSM8K within 1 pt | todo | | | |
+| X-03 | EAGLE-4 drafter loaded as EAGLE-3 (V3) vs DFlash2 (lookup on / off), T=0 and T=0.7; load-only pre-gate; evaluation-only licence D11 (bench-17a prep and pre-gate, 17b V3 and DL1 fix the verdict, 17c DL0 INFO) | V3 tok/step >= 1.12x DFlash2 (lookup on), same run, T=0, primary = short_chat + code N=1; lookup state stated | todo | | | |
+| X-02b' | Fitted `DYNAMIC_K` table vs existing at N=3, N=1 guard, 3 interleaved boots per arm; no N=4/8 framing (bench-18a rounds 1-2, 18b round 3, 18c rounds 4-5 conditional) | N=3 aggregate gain >= +5% (H02' 0-2% at N=4/8, E; N=3 prediction +5%, E), C1 within 2%; 3 to 5% needs 5 boots | todo | | | |
+| X-09 | MTP full head vs 40,960-row slice on Chinese, S F S F; needs supplied Chinese prompt file; switch arm not implemented (bench-19) | Chinese full-head tok/step >= 2.0 and English D C1 within 2%; switch arm not evaluable (INFO / NEUTRAL) | todo | | | |
+| X-10 | Mode A int8 per-token-head KV vs fp8: 64-conc e2e throughput ABBA and logprob drift vs bf16 reference (bench-20a F I R, 20b I F) | Throughput within 3% of fp8, drift <= 0.025 nats (fp8 0.0360, int8 0.0219 at 32k, prior) | todo | | | |
+| X-11 | W4A16 V4 drafter vs bf16 V3 (bench-21); only if X-03 WIN and V4 weights supplied | tok/step within -3% of V3 at T=0 and T=0.7; net pool >= DFlash2's | todo | | | |
+| X-12 | SVD-init rank-128 recall@128 on lm_head, plain and frequency-weighted; CPU only (bench-22) | Report only (INFO) vs paper 91.5% SVD / 98.2% trained | todo | | | |
+| X-13 | Body-only adaptation then X-03 again (bench-23a pilot, 23b evaluation); only if X-03 within 10% of break-even and tooling exists; pilot verdict only | Same ratio bar as X-03 (>= 1.12x DFlash2) | todo | | | |
+| X-14 | MTP TTT unroll depth 2 vs 4: train, export, serve on D (bench-24a T2 and 24b T4 pilots at 0.5 epoch, 24c serving, 24d conditional second pair) | T4 tok/step >= +3% over T2 on short_chat and code N=1 | todo | | | |
+| X-06 | Conditional-node probe, then MTP k=3 device-side stop on D (bench-25a probe, 25b and 25c boots); only if tooling exists | D C1 >= +3% over >= 5 interleaved boots (plan row; index text says +2%) | todo | | | |

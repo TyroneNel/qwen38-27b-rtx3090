@@ -1,41 +1,41 @@
-# selfcheck.sh output, 2026-10-21T09:10:27Z, research box (no GPU). Every number below comes from mock_server.py: plumbing proof, NOT a measurement of the stack. (post-review: spill + GPU-from-env checks added)
 == 1. run_suite.sh against the mock (spec on: acceptance counters move)
-label=selfcheck-spec out=$TMP/suite phases=snap probe sweep ladder greedy spill
+label=selfcheck-spec out=/tmp/tmp.oJPtVtnw4i/suite phases=snap probe sweep ladder greedy spill
 PTH_FA=0 SPEC=<unset> CTX=<unset>
-wrote $TMP/suite/snapshot_pre_ubuntu.txt
-[11:10:27] probe: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/vendor/warmup_probe.py --tokens 24 --out $TMP/suite/warmup_probe.json
-run 1: C1 decode 1082.7 tok/s agg 730.1 tok/s ttft_med 7ms  C4 decode 1094.8 tok/s agg 2957.4 tok/s ttft_med 7ms
-run 2: C1 decode 1092.6 tok/s agg 769.4 tok/s ttft_med 6ms (+0.9%)  C4 decode 1109.8 tok/s agg 3029.1 tok/s ttft_med 7ms (+1.4%)
-SUMMARY warmup_probe WARM runs=2 tol=3% c1=1092.6 c4=1109.8
-[11:10:28] sweep_short_chat: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec --set short_chat --conc 1,2 --reps 3 --warmup 1 --max-tokens 24 --salt selfcheck-spec --out $TMP/suite
-| short_chat | - | 1 | 26 | 7 ± 0 (cv 1.4%) | 931.3 ± 5.4 (cv 0.6%) | 762.8 ± 3.0 (cv 0.4%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
-| short_chat | - | 2 | 26 | 7 ± 0 (cv 0.3%) | 930.2 ± 3.7 (cv 0.4%) | 1514.5 ± 3.0 (cv 0.2%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+wrote /tmp/tmp.oJPtVtnw4i/suite/snapshot_pre_ubuntu.txt
+[13:13:29] probe: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/vendor/warmup_probe.py --tokens 24 --out /tmp/tmp.oJPtVtnw4i/suite/warmup_probe.json
+run 3: C1 decode 1048.4 tok/s agg 703.1 tok/s ttft_med 9ms (-2.8%)  C4 decode 1030.5 tok/s agg 2845.0 tok/s ttft_med 8ms (-5.0%)
+run 4: C1 decode 1075.5 tok/s agg 751.0 tok/s ttft_med 7ms (+2.6%)  C4 decode 1106.8 tok/s agg 3009.9 tok/s ttft_med 7ms (+7.4%)
+run 5: C1 decode 1069.8 tok/s agg 748.4 tok/s ttft_med 7ms (-0.5%)  C4 decode 1106.3 tok/s agg 2955.2 tok/s ttft_med 7ms (-0.1%)
+SUMMARY warmup_probe WARM runs=5 tol=3% c1=1069.8 c4=1106.3
+[13:13:31] sweep_short_chat: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec --set short_chat --conc 1,2 --reps 3 --warmup 1 --max-tokens 24 --salt selfcheck-spec --out /tmp/tmp.oJPtVtnw4i/suite
+| short_chat | - | 1 | 26 | 7 ± 0 (cv 3.2%) | 920.4 ± 8.1 (cv 0.9%) | 748.0 ± 7.7 (cv 1.0%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+| short_chat | - | 2 | 26 | 8 ± 1 (cv 10.0%) | 933.8 ± 9.2 (cv 1.0%) | 1436.8 ± 49.8 (cv 3.5%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
 
-wrote $TMP/suite/sweep_selfcheck-spec_short_chat.json
-[11:10:30] sweep_code: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec --set code --conc 1,2 --reps 3 --warmup 1 --max-tokens 24 --salt selfcheck-spec --out $TMP/suite
-| code | - | 1 | 26 | 6 ± 0 (cv 0.3%) | 933.3 ± 10.7 (cv 1.1%) | 765.2 ± 3.8 (cv 0.5%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
-| code | - | 2 | 26 | 7 ± 0 (cv 0.4%) | 943.5 ± 4.5 (cv 0.5%) | 1530.7 ± 5.5 (cv 0.4%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+wrote /tmp/tmp.oJPtVtnw4i/suite/sweep_selfcheck-spec_short_chat.json
+[13:13:32] sweep_code: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec --set code --conc 1,2 --reps 3 --warmup 1 --max-tokens 24 --salt selfcheck-spec --out /tmp/tmp.oJPtVtnw4i/suite
+| code | - | 1 | 26 | 8 ± 1 (cv 16.7%) | 902.5 ± 24.8 (cv 2.7%) | 709.4 ± 33.7 (cv 4.8%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+| code | - | 2 | 26 | 9 ± 0 (cv 3.3%) | 877.7 ± 57.8 (cv 6.6%) | 1320.3 ± 84.4 (cv 6.4%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
 
-wrote $TMP/suite/sweep_selfcheck-spec_code.json
-[11:10:31] sweep_long_1000: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec-1000 --set long_context --ctx 1000 --conc 1,2 --reps 3 --warmup 1 --max-tokens 16 --salt selfcheck-spec --out $TMP/suite
-| long_context | 1000 | 1 | 562 | 7 ± 0 (cv 0.4%) | 611.4 ± 5.1 (cv 0.8%) | 503.3 ± 3.4 (cv 0.7%) | 2.43 ± 0.00 (cv 0.0%) | 0.204 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
-| long_context | 1000 | 2 | 562 | 7 ± 0 (cv 0.8%) | 605.6 ± 1.9 (cv 0.3%) | 993.3 ± 3.8 (cv 0.4%) | 2.43 ± 0.00 (cv 0.0%) | 0.204 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+wrote /tmp/tmp.oJPtVtnw4i/suite/sweep_selfcheck-spec_code.json
+[13:13:34] sweep_long_1000: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec-1000 --set long_context --ctx 1000 --conc 1,2 --reps 3 --warmup 1 --max-tokens 16 --salt selfcheck-spec --out /tmp/tmp.oJPtVtnw4i/suite
+| long_context | 1000 | 1 | 562 | 9 ± 2 (cv 23.2%) | 550.8 ± 23.2 (cv 4.2%) | 429.9 ± 39.6 (cv 9.2%) | 2.43 ± 0.00 (cv 0.0%) | 0.204 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+| long_context | 1000 | 2 | 562 | 10 ± 1 (cv 8.5%) | 517.3 ± 14.8 (cv 2.9%) | 771.5 ± 33.4 (cv 4.3%) | 2.43 ± 0.00 (cv 0.0%) | 0.204 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
 
-wrote $TMP/suite/sweep_selfcheck-spec-1000_long_context.json
-[11:10:32] ladder_44: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/vram.py $TMP/suite/ladder_44_vram.json -- /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/bench/conc_ladder.py --n 1,2 --ctx-tokens 44 --out 16 --reps 3 --salt selfcheck-spec --label selfcheck-spec-44 --json $TMP/suite/ladder_44.json
-| ms/pass | 10.5 | 5.3 |
+wrote /tmp/tmp.oJPtVtnw4i/suite/sweep_selfcheck-spec-1000_long_context.json
+[13:13:35] ladder_44: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/vram.py /tmp/tmp.oJPtVtnw4i/suite/ladder_44_vram.json -- /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/bench/conc_ladder.py --n 1,2 --ctx-tokens 44 --out 16 --reps 3 --salt selfcheck-spec --label selfcheck-spec-44 --json /tmp/tmp.oJPtVtnw4i/suite/ladder_44.json
+| ms/pass | 7.2 | 3.8 |
 | preemptions | 0 | 0 |
 
-wrote $TMP/suite/ladder_44.json
-[11:10:32] greedy: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/greedy_equal.py record selfcheck-spec --max-tokens 24 --out $TMP/suite
+wrote /tmp/tmp.oJPtVtnw4i/suite/ladder_44.json
+[13:13:36] greedy: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/greedy_equal.py record selfcheck-spec --max-tokens 24 --out /tmp/tmp.oJPtVtnw4i/suite
 code/cd5: 24 tokens, finish=length
 code/cd6: 24 tokens, finish=length
 code/cd7: 24 tokens, finish=length
-wrote $TMP/suite/greedy_selfcheck-spec.json
-[11:10:33] spill: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/gpumem_summary.py $TMP/suite/gpumem.csv $TMP/suite/spill.json
+wrote /tmp/tmp.oJPtVtnw4i/suite/greedy_selfcheck-spec.json
+[13:13:37] spill: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/gpumem_summary.py /tmp/tmp.oJPtVtnw4i/suite/gpumem.csv /tmp/tmp.oJPtVtnw4i/suite/spill.json
 SUMMARY spill flat first=370 max=378 last=378 growth=8 MiB (n=3)
-wrote $TMP/suite/snapshot_post_ubuntu.txt
-done: 0 failed phase(s); results in $TMP/suite
+wrote /tmp/tmp.oJPtVtnw4i/suite/snapshot_post_ubuntu.txt
+done: 0 failed phase(s); results in /tmp/tmp.oJPtVtnw4i/suite
 ok   run_suite.sh (all phases) (exit 0)
 probe rc=0
 sweep_short_chat rc=0
@@ -47,7 +47,7 @@ spill rc=0
 -- snapshot (no GPU here, must degrade gracefully):
 
 ## date
-2026-10-21T09:10:27Z
+2026-10-21T11:13:28Z
 ubuntu
 6.17.13-2-pve
 
@@ -56,17 +56,22 @@ nvidia-smi: not found (no GPU on this box)
 
 ## env knobs (keys redacted)
 HARNESS=/home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness
-HARNESS_CORPUS=$TMP/corpus.txt
+HARNESS_CORPUS=/tmp/tmp.oJPtVtnw4i/corpus.txt
 -- sweep json: acceptance and spread are present:
-conc=2 ttft_mean_ms=6.6 sd=0.0 reps=3 tok_step=3.29 accept_rate=0.327 vram={'gpu': '0', 'source': 'nvidia-smi memory.used, secondary: misses WDDM spill (see spill.json)', 'idle_mib': None, 'peak_mib': None, 'samples': 0}
+conc=2 ttft_mean_ms=7.5 sd=0.7 reps=3 tok_step=3.29 accept_rate=0.327 vram={'gpu': '0', 'source': 'nvidia-smi memory.used, secondary: misses WDDM spill (see spill.json)', 'idle_mib': None, 'peak_mib': None, 'samples': 0}
 ok   sweep json: n>=3, tok/step and accept rate read from /metrics, vram None without nvidia-smi (exit 0)
 == 1b. run_suite.sh refuses an arm with PTH_FA unpinned
 PTH_FA is unset in this container: pin PTH_FA=0 or 1 in .env and reboot (README, 'Arm rules')
 ok   unpinned PTH_FA is refused (exit 2)
 PTH_FA=0
 == 1c. sweep decode rate keeps the EOS-only last step in its window (non-spec mock, 300 tok/s; review fix)
-decode 279.9 tok/s/stream vs mock 300 (without the fix: ~+17%, 7 tokens over 6 steps)
+decode 267.0 tok/s/stream vs mock 300 (without the fix: ~+17%, 7 tokens over 6 steps)
 ok   decode rate = (ntok-1) over first content -> finish chunk (exit 0)
+== 1d. smoke mode and empty LC_CELLS (no spread is computed at one rep)
+ok   --reps 1 is refused without SMOKE=1 (exit 1)
+ok   --reps 1 runs with SMOKE=1 (exit 0)
+ok   run_suite.sh with LC_CELLS= and SMOKE=1 (exit 0)
+ok   LC_CELLS= (empty) skips the long-context cells (exit 2)
 == 2. greedy_equal: non-spec vs spec (must be identical)
 SUMMARY greedy_equal nospec vs selfcheck-spec: 16/16 identical, 0 near-tie, 0 real
 ok   identical spec vs non-spec (exit 0)

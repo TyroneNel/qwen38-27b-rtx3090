@@ -1,0 +1,40 @@
+== EAGLE-4 draft resident weights ==
+V1 bf16 as released (own embed + own head + factors)        6.178 GB   5.754 GiB
+V2 bf16, embed dropped (share target embed)                 3.635 GB   3.386 GiB
+V3 = V2 minus efficient_lm_head factors (E-20 path)         3.570 GB   3.325 GiB
+V4 W4A16 layer+fc, int4 own head, no embed, no factors      0.921 GB   0.857 GiB
+V5 = V4 + bf16 factors (efficient head kept)                0.985 GB   0.918 GiB
+V6 bf16 layer+fc, shared target head (retrain/mismatch)     1.028 GB   0.957 GiB
+V7 W4A16 layer+fc, shared target head                       0.265 GB   0.247 GiB
+
+== Delta vs the drafter replaced, and context lost (GiB over spare x tokens/GiB) ==
+variant                 A                 B                 C                 D                D'                 E
+V1         +5.75/ 183.6k     +4.56/  66.5k     +4.56/  71.4k     +5.45/ 173.3k     +4.56/ 129.1k     +4.56/ 352.9k
+V2         +3.39/ 106.0k     +2.19/  27.7k     +2.19/  32.6k     +3.08/  98.0k     +2.19/  53.8k     +2.19/ 163.4k
+V3         +3.33/ 104.0k     +2.13/  26.7k     +2.13/  31.7k     +3.02/  96.0k     +2.13/  51.9k     +2.13/ 158.6k
+V4         +0.86/  23.2k     -0.34/   0.0k     -0.34/   0.0k     +0.55/  17.6k     -0.34/   0.0k     -0.34/   0.0k
+V5         +0.92/  25.2k     -0.28/   0.0k     -0.28/   0.0k     +0.61/  19.5k     -0.28/   0.0k     -0.28/   0.0k
+V6         +0.96/  26.4k     -0.24/   0.0k     -0.24/   0.0k     +0.65/  20.7k     -0.24/   0.0k     -0.24/   0.0k
+V7         +0.25/   3.2k     -0.95/   0.0k     -0.95/   0.0k     -0.06/   0.0k     -0.95/   0.0k     -0.95/   0.0k
+
+== Draft KV == 20480 B/token; 4096-window per request 80 MiB; if out-of-window blocks are not freed: 64k ctx 1.25 GiB, 170k 3.24 GiB
+
+== Draft step byte floor (fc read once per round, not per step) ==
+E-20 bf16 layer + bf16 own head              3.413 GB   3.65 ms/step;  k=7 chain 25.69 ms
+bf16 layer + efficient head (bf16 fact.)     0.937 GB   1.00 ms/step;  k=7 chain  7.17 ms
+W4A16 layer + int4 own head                  0.880 GB   0.94 ms/step;  k=7 chain  6.75 ms
+W4A16 layer + efficient head                 0.290 GB   0.31 ms/step;  k=7 chain  2.33 ms
+
+B C1 step = 29.4 ms (from 114.4 tok/s / 3.36 tok/step); DFlash2 realised/floor = 1.83
+== Break-even tok/step for an EAGLE-4 k=7 chain replacing DFlash2 at B C1 ==
+E-20 bf16 layer + bf16 own head              floor  draft 25.69 ms -> need 5.92 tok/step (+76.2%)
+E-20 bf16 layer + bf16 own head              x1.83  draft 47.11 ms -> need 8.37 tok/step (+149.1%)
+bf16 layer + efficient head (bf16 fact.)     floor  draft  7.17 ms -> need 3.80 tok/step (+13.2%)
+bf16 layer + efficient head (bf16 fact.)     x1.83  draft 13.15 ms -> need 4.49 tok/step (+33.5%)
+W4A16 layer + int4 own head                  floor  draft  6.75 ms -> need 3.75 tok/step (+11.7%)
+W4A16 layer + int4 own head                  x1.83  draft 12.37 ms -> need 4.40 tok/step (+30.9%)
+W4A16 layer + efficient head                 floor  draft  2.33 ms -> need 3.25 tok/step ( -3.3%)
+W4A16 layer + efficient head                 x1.83  draft  4.28 ms -> need 3.47 tok/step ( +3.3%)
+
+== E-10 on DFlash2 == full head 0.656 GB -> factors+rows 0.067 GB; saves 0.63 ms floor = 2.1% of B step -> +2.2% tok/s; at E 170k: 0.42% of 150.8 ms
+== T-01 on MTP == slice 0.108 GB vs factors+rows 0.065 GB per step; 3 steps save 0.14 ms of D step 26.5 ms (0.5%)

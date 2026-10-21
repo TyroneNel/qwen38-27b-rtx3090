@@ -42,19 +42,21 @@ mkdir -p docs/research/04-benchmarks/results
 # 1. arm .env (append or replace; keep the box's GPU-pin lines). Example: mode B
 cat >> .env <<'EOF'
 MODELS_DIR=/mnt/g/models
-VLLM_WSL2_ENABLE_PIN_MEMORY=1      # required on WSL2 for SPEC=dflash2
+VLLM_WSL2_ENABLE_PIN_MEMORY=1
 SPEC=dflash2
 PREFIX_CACHE=1
-PTH_FA=0                           # pinned on purpose (Arm rules 1); dflash2 CTX=long: pick 0 or 1, run both
+PTH_FA=0
 VISION=0
 EOF
+# PTH_FA is pinned on purpose (Arm rules 1); dflash2 CTX=long: pick 0 or 1, run both. VLLM_WSL2_ENABLE_PIN_MEMORY is required on WSL2 for SPEC=dflash2.
+# Keep .env values bare: no inline comments after a value.
 
 # 2. boot (fresh container per arm), wait for health
 docker compose --profile single up -d --force-recreate
 until curl -sf http://127.0.0.1:18020/health >/dev/null; do sleep 5; done
 
 # 3. the suite, inside the container (harness is mounted read-only at /harness, results at /results)
-docker compose exec single bash /harness/run_suite.sh B-pth0
+docker compose exec -T single bash /harness/run_suite.sh B-pth0
 #    results: docs/research/04-benchmarks/results/B-pth0-<timestamp>/
 
 # 4. host-side snapshot (docker image digest, compose config, KV pool log lines)
@@ -66,7 +68,7 @@ If the compose chaining is awkward on the box: `docker cp docs/research/04-bench
 
 Per-boot sequence in `run_suite.sh` (default `PHASES="snap warm probe sweep ladder greedy"`): pre-snapshot; `bench/warmup.sh`; `warmup_probe` (WARM or NOT-WARM verdict, not-warm results are suspect); `sweep.py` on short_chat and code at N=1,2,4,8 and long_context at 8k (N=1,2,4) and 32k (N=1), 1 warm-up round then 3 timed rounds per cell, mean/stdev/min/max/CV; `conc_ladder.py` at 200 and 8k tokens with ms/pass, preemptions, KV%; peak VRAM per cell (`vram.py`, nvidia-smi, secondary) and the WDDM spill reading (`gpumem_summary.py`, primary, if `GPUMEM_CSV` is set); greedy ids recorded; post-snapshot. A failed phase is logged to `status.txt` and the rest still run. Exit code is the number of failed phases > 0.
 
-Sizing. Defaults fit mode B's 68,605-token KV pool (N=8 at 4k preempted 19 times in the prior run, `../raw/prior-3090/evals-10.md:29`). For `CTX=long`/`huge` arms raise them, for example `LC_CELLS="8000:1,2,4,8 32000:1,2,4 64000:1" LADDER_CELLS="200:1,2,4,8 8000:1,2,4,8 32000:1,2"`. Other knobs: `REPS WARMUP MAXTOK CONC SALT LC_MAXTOK LADDER_OUT GREEDY_TOKENS PROBE_TOKENS PHASES`.
+Sizing. Defaults fit mode B's 68,605-token KV pool (N=8 at 4k preempted 19 times in the prior run, `../raw/prior-3090/evals-10.md:29`). For `CTX=long`/`huge` arms raise them, for example `LC_CELLS="8000:1,2,4,8 32000:1,2,4 64000:1" LADDER_CELLS="200:1,2,4,8 8000:1,2,4,8 32000:1,2"`. `LC_CELLS=""` (set but empty) skips the long-context cells; `SMOKE=1` lets `REPS` go below 3 (smoke runs only, no spread). Other knobs: `REPS WARMUP MAXTOK CONC SALT LC_MAXTOK LADDER_OUT GREEDY_TOKENS PROBE_TOKENS PHASES`.
 
 ## Spec vs non-spec greedy equality
 
@@ -74,9 +76,9 @@ Speculative decoding is exact at T=0, so token ids must match a non-speculative 
 
 ```bash
 # boot 1: SPEC=off (single-user/start_qwen.sh:193; unset means mtp), keep PTH_FA pinned (the suite requires it), PHASES="snap greedy"
-docker compose exec single env PHASES="snap greedy" bash /harness/run_suite.sh NS
+docker compose exec -T single env PHASES="snap greedy" bash /harness/run_suite.sh NS
 # boot 2: SPEC=dflash2 (or mtp) with the same GPU/ctx settings (PTH_FA only where the arm allows it: it is refused on SPEC=off, so pin 0 on boot 1 and the arm's value on boot 2)
-docker compose exec single env PHASES="snap greedy" bash /harness/run_suite.sh SPEC
+docker compose exec -T single env PHASES="snap greedy" bash /harness/run_suite.sh SPEC
 python3 docs/research/04-benchmarks/harness/greedy_equal.py compare results/NS-*/greedy_NS.json results/SPEC-*/greedy_SPEC.json
 ```
 
@@ -96,7 +98,7 @@ What does exist is the profile route, used for `e-profile` (`../raw/prior-3090/e
 # .env addition for the profile boot only (profiling slows the server; never mix with timing arms)
 # [review: fixed; the line lacked the flag itself and vLLM would get a bare JSON argument. Form as e-profile.md:9 and run_suite.sh:71; keep the comment off the value line]
 EXTRA_ARGS=--profiler-config {"profiler":"torch","torch_profiler_dir":"/results/prof"}
-docker compose exec single env PHASES="snap profile" PROF_DIR=/results/prof bash /harness/run_suite.sh LABEL-prof
+docker compose exec -T single env PHASES="snap profile" PROF_DIR=/results/prof bash /harness/run_suite.sh LABEL-prof
 ```
 
 `profile` posts `/start_profile`, runs a short sweep, posts `/stop_profile`, then `vendor/trace_breakdown.py` writes `breakdown.json` (ms per step by category, with a Drafter row).
@@ -138,17 +140,17 @@ Per boot, from WSL (sampler path, `-Match 1144f` and the "Non Local Usage" count
 ```bash
 LABEL=B-pth0; R=docs/research/04-benchmarks/results
 powershell.exe -NoProfile -File 'G:\dev\hq-bench\gpumem_sample.ps1' -Match 1144f > $R/gpumem_$LABEL.csv &  SAMPLER=$!   # start BEFORE the suite
-docker compose exec -e GPUMEM_CSV=/results/gpumem_$LABEL.csv single bash /harness/run_suite.sh $LABEL
+docker compose exec -T -e GPUMEM_CSV=/results/gpumem_$LABEL.csv single bash /harness/run_suite.sh $LABEL
 kill $SAMPLER                                   # the suite has already summarised what was written so far
 ```
 
-The `spill` phase copies the csv to `$OUT/gpumem.csv` and writes `$OUT/spill.json` (first / max / last / growth, verdict `flat` or `SPILL`; growth over 64 MiB is SPILL, the prior bound). A SPILL boot is invalid for throughput: re-run with a smaller `GPU_UTIL`/`KV_MEM`. Without `GPUMEM_CSV` the suite says so in `suite.log` and records no spill reading. The summary assumes the last numeric field of each line is MiB: the sampler's output format is not in the repo, so the first real run must check one `gpumem.csv` against it (smoke row) and adjust `gpumem_summary.py` if the unit differs. The sampler is host-side and cheap; nvidia-smi polling every 0.5 s is the only extra GPU query the harness makes.
+The `spill` phase copies the csv to `$OUT/gpumem.csv` and writes `$OUT/spill.json` (first / max / last / growth, verdict `flat` or `SPILL`; growth over 64 MiB is SPILL, the prior bound). Decision D15 (GPU runs): record the growth for every run, flag growth over 64 MiB as an anomaly (the harness verdict `SPILL`, and `spill rc=1` in `status.txt`, is that flag), abort only on OOM, growth over 256 MiB (`gpumem_summary.py ... --tol 256`), or C1 decode more than 10% below the prior measured value for the mode. A flagged boot is still reported with its growth. Without `GPUMEM_CSV` the suite says so in `suite.log` and records no spill reading. The summary assumes the last numeric field of each line is MiB: the sampler's output format is not in the repo, so the first real run must check one `gpumem.csv` against it (smoke row) and adjust `gpumem_summary.py` if the unit differs. The sampler is host-side and cheap; nvidia-smi polling every 0.5 s is the only extra GPU query the harness makes.
 
 ## Post-review changes
 
 After the phase-2 review (`../../00-meta/reviews/phase2-harness-baseline.md`), on top of the reviewer's own edits:
 
 1. F3: WDDM "Non Local Usage" sampler documented above and wired in (`gpumem_summary.py`, `spill` phase, `spill.json`); nvidia-smi peak is marked secondary in `vram.py` output and sweep JSON.
-2. F5: the smoke run includes the greedy check. Smoke command: `PHASES="snap probe sweep greedy spill" REPS=1 LC_CELLS="" GREEDY_TOKENS=64 bash /harness/run_suite.sh smoke`, then in the same boot `python3 /harness/greedy_equal.py record smoke2 --max-tokens 64 --out /results` and `greedy_equal.py compare /results/smoke-*/greedy_smoke.json /results/greedy_smoke2.json` (expect identical or near-tie only; this exercises logprobs and `return_tokens_as_token_ids` under the V2 runner before bench-7).
+2. F5: the smoke run includes the greedy check. Smoke command: `SMOKE=1 PHASES="snap probe sweep greedy spill" REPS=1 LC_CELLS="" GREEDY_TOKENS=64 bash /harness/run_suite.sh smoke`, then in the same boot `python3 /harness/greedy_equal.py record smoke2 --max-tokens 64 --out /results` and `greedy_equal.py compare /results/smoke-*/greedy_smoke.json /results/greedy_smoke2.json` (expect identical or near-tie only; this exercises logprobs and `return_tokens_as_token_ids` under the V2 runner before bench-7).
 3. F4: `vram.py` takes the GPU from `HARNESS_GPU`, else the first `CUDA_VISIBLE_DEVICES` entry (the pinned UUID), else 0.
 4. `selfcheck.sh` gained 4b (spill flat vs SPILL) and 4c (GPU from env); `selfcheck.out` re-run, SELFCHECK PASS.

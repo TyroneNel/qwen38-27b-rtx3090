@@ -1,0 +1,111 @@
+== inputs digest ==
+pooled measured E (Q1+Q2 boots): k1=1.811 k3=2.862 k7=3.508   (DYNAMIC_K A/B, N=4: k7=3.43, k3=2.81, ratio 0.819; pooled ratio 0.816)
+spec-5 profile a_0..a_6 = [0.687, 0.511, 0.404, 0.325, 0.267, 0.228, 0.19]  E3=2.602 E7=3.611  E3/E7=0.721
+ladder-matched profile  = [0.811, 0.587, 0.464, 0.208, 0.171, 0.146, 0.122]  E1=1.811 E3=2.862 E7=3.508
+ragged-batch factor c (agg / N*tok_step/ms) = 0.986
+anchor ms/pass (Q1 for k>=1, Q2-off for k=0; '*' = extrapolated):
+  N= 1 k0=  25.0  k1=  28.1  k3=  28.9  k7=  29.5 
+  N= 2 k0=  25.8  k1=  30.0  k3=  32.0  k7=  38.4 
+  N= 4 k0=  27.9  k1=  35.2  k3=  42.3  k7=  57.0 
+  N= 8 k0=  31.9  k1=  48.2  k3=  61.8  k7=  91.2*
+  N=16 k0=  43.3  k1=  74.2* k3= 100.8* k7= 159.6*
+
+== (a) BACK-TEST: DYNAMIC_K gain at N=4, k=3 vs k=7, V(4,3) held out ==
+reported gain 7.7-9.2% (single-user/README.md:434); raw salted A/B +7.7% (agg 241.4 -> 260.0); pass window = reported range +-3 pts = [4.7, 12.2]
+  spec-5 per-position a_i (as specified)           V3_pred=42.5 (meas Q1 42.3, A/B 43.15)  Vratio=0.745  E3/E7=0.721  gain=-3.3%  FAIL
+  ladder-matched a_i (pooled measured E1/E3/E7)    V3_pred=42.5 (meas Q1 42.3, A/B 43.15)  Vratio=0.745  E3/E7=0.816  gain=+9.5%  PASS
+  ladder-matched, V from Q2 (16-seat boot)         V3_pred=44.0 (meas Q2 42.2)  Vratio=0.729  gain=+11.9%  PASS
+  sanity: A/B step+acceptance cells give +7.5% (decode-agg +7.7%); Q1 boot-time k=3 vs k=7 agg +12.2%, Q2 +10.2%
+  spec-5 a_i with the A/B's OWN measured V ratio (0.762): -5.4%  -> the miss is acceptance shape, not the cost model
+  README step curve (25.9/32.8/49.1) vs Q1 k=7 cells: N=1: 0.88x, N=2: 0.85x, N=4: 0.86x  (older/faster image; scale cancels in the gain ratio)
+  README implied tok/step = agg*ms/N/1000: N=1: 3.55, N=2: 3.69, N=4: 3.79
+
+== (b) FITTED TABLE vs DYNAMIC_K  (DFLASH_TOKENS=7 boot, k in 0..7, native-OFF allowed; rows N>8 extrapolated) ==
+-- acceptance profile: ladder-matched
+  N | fit k | DYNAMIC_K k | agg(fit) | agg(dyn) | gain  | agg(k=7) | agg(off) | note
+   1 |     7 |           7 |    117.3 |    117.3 |  +0.0% |    117.3 |     40.0 | 
+   2 |     5 |           7 |    181.6 |    180.2 |  +0.8% |    180.2 |     77.5 | 
+   3 |     4 |           7 |    228.3 |    217.5 |  +4.9% |    217.5 |    111.7 | 
+   4 |     3 |           3 |    266.9 |    266.9 |  +0.0% |    242.7 |    143.4 | 
+   5 |     3 |           3 |    299.1 |    299.1 |  +0.0% |    263.8 |    173.0 | ; seat-limited on a k=7 boot (state pages)
+   6 |     3 |           3 |    325.3 |    325.3 |  +0.0% |    280.1 |    200.7 | ; seat-limited on a k=7 boot (state pages)
+   7 |     3 |           3 |    347.0 |    347.0 |  +0.0% |    293.0 |    226.5 | ; seat-limited on a k=7 boot (state pages)
+   8 |     3 |           3 |    365.3 |    365.3 |  +0.0% |    303.4 |    250.8 | ; seat-limited on a k=7 boot (state pages)
+  12 |     3 |           3 |    416.6 |    416.6 |  +0.0% |    331.0 |    319.1 | extrapolated; seat-limited on a k=7 boot (state pages)
+  16 |     3 |           3 |    448.0 |    448.0 |  +0.0% |    346.8 |    369.5 | extrapolated; seat-limited on a k=7 boot (state pages)
+-- acceptance profile: spec-5
+  N | fit k | DYNAMIC_K k | agg(fit) | agg(dyn) | gain  | agg(k=7) | agg(off) | note
+   1 |     7 |           7 |    120.7 |    120.7 |  +0.0% |    120.7 |     40.0 | 
+   2 |     7 |           7 |    185.4 |    185.4 |  +0.0% |    185.4 |     77.5 | 
+   3 |     6 |           7 |    224.5 |    223.9 |  +0.3% |    223.9 |    111.7 | 
+   4 |     5 |           3 |    253.7 |    242.6 |  +4.6% |    249.8 |    143.4 | 
+   5 |     5 |           3 |    279.3 |    271.9 |  +2.7% |    271.6 |    173.0 | ; seat-limited on a k=7 boot (state pages)
+   6 |     4 |           3 |    300.8 |    295.7 |  +1.7% |    288.3 |    200.7 | ; seat-limited on a k=7 boot (state pages)
+   7 |     4 |           3 |    318.8 |    315.5 |  +1.1% |    301.5 |    226.5 | ; seat-limited on a k=7 boot (state pages)
+   8 |     4 |           3 |    333.9 |    332.1 |  +0.5% |    312.3 |    250.8 | ; seat-limited on a k=7 boot (state pages)
+  12 |     3 |           3 |    378.7 |    378.7 |  +0.0% |    340.7 |    319.1 | extrapolated; seat-limited on a k=7 boot (state pages)
+  16 |     3 |           3 |    407.2 |    407.2 |  +0.0% |    356.9 |    369.5 | extrapolated; seat-limited on a k=7 boot (state pages)
+fitted DYNAMIC_K (ladder-matched, N=1..16): [[1, 1, 7], [2, 2, 5], [3, 3, 4], [4, 512, 3]]
+fitted DYNAMIC_K (spec-5, N=1..16): [[1, 2, 7], [3, 3, 6], [4, 5, 5], [6, 9, 4], [10, 512, 3]]
+existing DYNAMIC_K (single-user/start_qwen.sh:678): [[1, 3, 7], [4, 512, 3]]
+
+== (c) PREDICTED AGGREGATES, N=1/2/4/8 (estimated; ladder-matched a_i; tok/s) ==
+DFLASH_TOKENS=7 boot, bf16-like base = Q1 cells.  N=8: seat-limited (5-7 resident at 4k prompts) -> compute-only figure, measured tail rows 176.8-193.6
+  N=1: fixed k=7  117.3 | DYNAMIC_K(k=7)  117.3 | fitted(k=7)  117.3 | fit/dyn +0.0%  | fit/k7 +0.0%
+  N=2: fixed k=7  180.2 | DYNAMIC_K(k=7)  180.2 | fitted(k=5)  181.6 | fit/dyn +0.8%  | fit/k7 +0.8%
+  N=4: fixed k=7  242.7 | DYNAMIC_K(k=3)  266.9 | fitted(k=3)  266.9 | fit/dyn +0.0%  | fit/k7 +9.9%
+  N=8: fixed k=7  303.4 | DYNAMIC_K(k=3)  365.3 | fitted(k=3)  365.3 | fit/dyn +0.0%  | fit/k7 +20.4%
+tables for X-02b' (ladder-matched, N=1..4,8; agg tok/s, estimated):
+  DYNAMIC_K  [[1,3,7],[4,512,3]]             N=1:  117.3  N=2:  180.2  N=3:  217.5  N=4:  266.9  N=8:  365.3
+  fitted     [[1,1,7],[2,2,5],[3,3,4],[4,512,3]] N=1:  117.3  N=2:  181.6  N=3:  228.3  N=4:  266.9  N=8:  365.3
+  boundary   [[1,2,7],[3,512,3]]             N=1:  117.3  N=2:  180.2  N=3:  227.9  N=4:  266.9  N=8:  365.3
+measured cells for comparison (decode agg): N=4 k7 239.2/239.1/241.4, k3 268.4/263.6/260.0(DYNAMIC_K); N=8 k3 boot 350.1/337.1, k=1 299.4/294.9, off 250.7
+DFLASH_TOKENS=3 boot (seats ok at N=8): tables limited to k<=3
+  N=4: k=3  266.9 | fitted(k<=3)=3  266.9 | off  143.4
+  N=8: k=3  365.3 | fitted(k<=3)=3  365.3 | off  250.8
+
+== sensitivity: fitted/DYNAMIC_K gain (%) = argmax-table agg / DYNAMIC_K agg - 1 ==
+grid: acceptance profile x V base (Q1/Q2) x k-shape (linear/convex/concave between measured k) x V0 (k=0 cost) x1 0.8/1.0/1.3.
+D (extra drafter ms per position) is NOT in the grid: measured ms/pass already contains the drafter, adding k*D double counts; shown separately.
+-- ALL cases: 108 of 108 grid points
+  N=2: median +3.5%  max +13.2% (profile=ladder tail x0.77, base=Q2, shape=convex, V0x0.8, fit k=4);  fitted k seen: [3, 4, 5, 6, 7]
+  N=3: median +9.4%  max +19.9% (profile=ladder tail x0.77, base=Q2, shape=convex, V0x0.8, fit k=4);  fitted k seen: [3, 4, 5, 6, 7]
+  N=4: median +0.0%  max +12.9% (profile=spec5, base=Q1, shape=convex, V0x0.8, fit k=5);  fitted k seen: [3, 4, 5, 7]
+  N=8: median +0.0%  max +9.7% (profile=spec5, base=Q1, shape=convex, V0x0.8, fit k=5);  fitted k seen: [3, 4, 5]
+-- only acceptance profiles that PASS the back-test (linear V, Q1): 54 of 108 grid points
+  N=2: median +4.7%  max +11.4% (profile=ladder tail x0.9, base=Q2, shape=convex, V0x0.8, fit k=4);  fitted k seen: [3, 4, 5, 6, 7]
+  N=3: median +10.8%  max +18.1% (profile=ladder tail x0.9, base=Q2, shape=convex, V0x0.8, fit k=4);  fitted k seen: [3, 4, 5]
+  N=4: median +0.0%  max +5.7% (profile=ladder tail x1.1, base=Q1, shape=convex, V0x0.8, fit k=4);  fitted k seen: [3, 4]
+  N=8: median +0.0%  max +4.9% (profile=ladder tail x1.1, base=Q1, shape=convex, V0x0.8, fit k=4);  fitted k seen: [3, 4]
+  profile ladder            : E7=3.51 back-test gain +9.5% -> PASS
+  profile ladder tail x0.77 : E7=3.36 back-test gain +14.4% -> FAIL
+  profile ladder tail x0.9  : E7=3.44 back-test gain +11.6% -> PASS
+  profile ladder tail x1.1  : E7=3.57 back-test gain +7.5% -> PASS
+  profile ladder tail x1.25 : E7=3.67 back-test gain +4.7% -> FAIL
+  profile spec5             : E7=3.61 back-test gain -3.3% -> FAIL
+drafter cost D per position (ladder profile, Q1, linear):
+  D=0.0: N=4 fit k=3 N=8 fit k=3; gain vs k=3 table N=4 +0.0%
+  D=0.5: N=4 fit k=3 N=8 fit k=3; gain vs k=3 table N=4 +0.0%
+  D=1.0: N=4 fit k=3 N=8 fit k=3; gain vs k=3 table N=4 +0.0%
+cases where native-OFF (k=0) is the argmax at N in 2,3,4,8: 0 of 432
+native-OFF break-even: smallest N in 1..16 where k=0 is the argmax (extrapolated above N=8), by V0 multiplier and kmax:
+  V0x0.8 kmax=3: N>=15
+  V0x0.8 kmax=7: N>=15
+  V0x1.0 kmax=3: never (N<=16)
+  V0x1.0 kmax=7: never (N<=16)
+  V0x1.3 kmax=3: never (N<=16)
+  V0x1.3 kmax=7: never (N<=16)
+  V0x1.5 kmax=3: never (N<=16)
+  V0x1.5 kmax=7: never (N<=16)
+required E7-E3 (tail mass a_3..a_6) for fitted k>=5 at N=4 (ladder shape, linear V):
+  tail x0.7: E7=3.31 fit k at N=4: 3  gain vs DYNAMIC_K +0.0%
+  tail x1.0: E7=3.51 fit k at N=4: 3  gain vs DYNAMIC_K +0.0%
+  tail x1.5: E7=3.83 fit k at N=4: 5  gain vs DYNAMIC_K +2.1%
+  tail x2.0: E7=4.15 fit k at N=4: 6  gain vs DYNAMIC_K +8.4%
+  tail x2.5: E7=4.48 fit k at N=4: 7  gain vs DYNAMIC_K +16.1%
+
+== verdict inputs ==
+base-case fitted/DYNAMIC_K: N=4 +0.0%, N=8 +0.0%; back-test-consistent sensitivity max N=4 +5.7%, N=8 +4.9%, N=3 +18.1%
+H02' bar (>=5% at N=4 or N=8): reached only at a corner of the back-test-consistent range (see max above; median 0)
+
+SELF-CHECK OK

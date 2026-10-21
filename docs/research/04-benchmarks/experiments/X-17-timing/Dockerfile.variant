@@ -1,0 +1,30 @@
+# X-17 (decision D12): the stock hyperqwen image plus the HQ_SPEC_TIMING patch, as a SEPARATE tag.
+# Never push over the stock tag, never add the patch to patches/series.
+#
+#   cd docs/research/04-benchmarks/experiments/X-17-timing
+#   docker build -f Dockerfile.variant -t hyperqwen:sha-2cf50a0-spectiming .
+#
+# The build context is this folder (spec-timing.patch only). With HQ_SPEC_TIMING unset the
+# image behaves like the stock one (one `is not None` check per hook), so it can also run
+# the stock baseline arms.
+ARG BASE=ghcr.io/syv-ai/hyperqwen:sha-2cf50a0
+FROM ${BASE}
+# an ARG declared before FROM is out of scope after it: re-declare it for the LABEL below
+ARG BASE
+
+COPY spec-timing.patch /tmp/spec-timing.patch
+# Same policy as patches/apply.sh: GNU patch, -p1 at the vllm PACKAGE dir, exact context
+# (--fuzz 0), --forward so a second apply fails by name. The patch is cut against v0.31.0 +
+# patches/series + the four KVarN patches = the tree this base image holds (checks.out).
+# The CPU checks need no GPU: byte-compile both touched files and prove the module is inert.
+RUN set -e; PY=/app/venv/bin/python; \
+    SP=$($PY -c 'import vllm, os; print(os.path.dirname(vllm.__file__))' | tail -n1); \
+    [ -f "$SP/v1/worker/gpu/model_runner.py" ] || { echo "no vllm package at '$SP'"; exit 1; }; \
+    patch -p1 --forward --fuzz 0 --no-backup-if-mismatch -d "$SP" -i /tmp/spec-timing.patch; \
+    $PY -m py_compile "$SP/v1/worker/gpu/model_runner.py" "$SP/v1/worker/gpu/spec_timing.py"; \
+    env -u HQ_SPEC_TIMING $PY -c 'import vllm.v1.worker.gpu.spec_timing as m; assert m.make_timer() is None; print("spec_timing: inert when HQ_SPEC_TIMING is unset")'; \
+    rm /tmp/spec-timing.patch
+
+LABEL org.opencontainers.image.base.name="${BASE}" \
+      org.hyperqwen.variant="spectiming" \
+      org.hyperqwen.variant.patch="X-17 spec-timing.patch (HQ_SPEC_TIMING=1 enables)"

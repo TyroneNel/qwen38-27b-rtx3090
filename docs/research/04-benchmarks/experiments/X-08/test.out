@@ -1,0 +1,56 @@
+# X-08 test output (CPU, mock server). Generated 2026-10-21T11:11:52Z
+## python -m pytest -v test_classify_divergence.py
+============================= test session starts ==============================
+platform linux -- Python 3.13.7, pytest-9.0.2, pluggy-1.6.0 -- /home/tyrone/.local/bin/python
+cachedir: .pytest_cache
+rootdir: /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/experiments/X-08
+plugins: asyncio-1.3.0, xdist-3.8.0, anyio-4.13.0, logfire-4.32.1, typeguard-4.4.2
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 14 items
+
+test_classify_divergence.py::test_identical PASSED                       [  7%]
+test_classify_divergence.py::test_benign_near_tie_flip PASSED            [ 14%]
+test_classify_divergence.py::test_real_divergence_large_margin PASSED    [ 21%]
+test_classify_divergence.py::test_divergence_at_token0 PASSED            [ 28%]
+test_classify_divergence.py::test_divergence_at_last_token PASSED        [ 35%]
+test_classify_divergence.py::test_missing_logprobs PASSED                [ 42%]
+test_classify_divergence.py::test_margins_only_legacy_format PASSED      [ 50%]
+test_classify_divergence.py::test_ulp_band_needs_replay_and_judge PASSED [ 57%]
+test_classify_divergence.py::test_candidate_not_runner_up_is_not_near_tie PASSED [ 64%]
+test_classify_divergence.py::test_thresholds_configurable PASSED         [ 71%]
+test_classify_divergence.py::test_length_divergence PASSED               [ 78%]
+test_classify_divergence.py::test_kvarn_adaptive_prefix_shape PASSED     [ 85%]
+test_classify_divergence.py::test_invalid_input PASSED                   [ 92%]
+test_classify_divergence.py::test_end_to_end_mock PASSED                 [100%]
+
+============================== 14 passed in 3.25s ==============================
+
+## python test_classify_divergence.py
+ok   test_benign_near_tie_flip
+ok   test_candidate_not_runner_up_is_not_near_tie
+ok   test_divergence_at_last_token
+ok   test_divergence_at_token0
+ok   test_end_to_end_mock
+ok   test_identical
+INVALID /tmp/tmp1kedfjl2/y.json: different prompt sets or max_tokens
+ok   test_invalid_input
+off vs pinned long/copy: IDENTICAL
+off vs pinned long/copy@p2: IDENTICAL
+SUMMARY off vs pinned: {'identical': 2} -> exit 0
+off vs adaptive long/copy: IDENTICAL
+off vs adaptive long/copy@p2: REAL at 10/[20, 20] gap 3.95 []
+SUMMARY off vs adaptive: {'identical': 1, 'real': 1} -> exit 1
+off vs pinned long/copy: IDENTICAL
+off vs pinned long/copy@p2: IDENTICAL
+SUMMARY off vs pinned: {'identical': 2} -> exit 0
+off vs adaptive long/copy: IDENTICAL
+off vs adaptive long/copy@p2: REAL at 10/[20, 20] gap 3.95 []
+SUMMARY off vs adaptive: {'identical': 1, 'real': 1} -> exit 1
+ok   test_kvarn_adaptive_prefix_shape
+ok   test_length_divergence
+ok   test_margins_only_legacy_format
+ok   test_missing_logprobs
+ok   test_real_divergence_large_margin
+ok   test_thresholds_configurable
+ok   test_ulp_band_needs_replay_and_judge
+ALL 14 PASS

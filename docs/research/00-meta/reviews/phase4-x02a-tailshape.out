@@ -1,0 +1,5 @@
+a0=0.811 p=0.744 a2=0.449
+N=4: +5% for k=4 needs a3 >= 0.404
+E7=3.360 q=0.550 a3=0.247 | N=4 best k=3 gain vs k=3 +0.0% | N=8 slope 3.675: +2.5% | N=8 slope 5.0: +0.5% | N=8 slope 6.8: +0.0% | N=8 slope 7.35: +0.0%
+E7=3.508 q=0.632 a3=0.284 | N=4 best k=4 gain vs k=3 +1.1% | N=8 slope 3.675: +3.8% | N=8 slope 5.0: +1.7% | N=8 slope 6.8: +0.0% | N=8 slope 7.35: +0.0%
+E7=3.670 q=0.706 a3=0.317 | N=4 best k=4 gain vs k=3 +2.2% | N=8 slope 3.675: +6.3% | N=8 slope 5.0: +2.8% | N=8 slope 6.8: +0.1% | N=8 slope 7.35: +0.0%

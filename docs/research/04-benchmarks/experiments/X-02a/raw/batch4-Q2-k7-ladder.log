@@ -1,0 +1,10 @@
+# start 2026-10-15T09:12:10Z
+prompts: distinct, ~4096 ctx tokens, out=256, reps=2, N=1,2,4,8,16
+ N  per-stream  decode agg  e2e agg  tok/step  tok/pass  ms/pass  preempt    kv%  run  TTFT ms  spread
+ 1       105.5      105.4      36.9      3.45       3.4     32.7        0   20.7    1     4504  106/106/106
+ 2        66.6      167.4      43.7      3.60       7.1     42.5        0   37.5    2     7501  48/85/85
+ 4        35.5      239.1      47.4      3.67      14.4     60.3        0   73.8    4    12205  17/40/64
+ 8        23.8      176.8*     45.9      3.46       9.8     55.2        0   91.5    5    22708  10/16/67
+16        19.6      156.1*     46.6      3.58       6.9     44.3        0   92.8    5    43929  9/14/79
+
+* no instant at which all N streams were decoding: the pool could not hold them, so that row is a tail measurement, not a steady state.

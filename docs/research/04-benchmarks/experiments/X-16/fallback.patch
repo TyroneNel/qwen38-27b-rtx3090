@@ -1,0 +1,77 @@
+diff --git a/fa2/python/fa2_fp8kv_vllm/__init__.py b/fa2/python/fa2_fp8kv_vllm/__init__.py
+index fa1e0ea..1d17d06 100644
+--- a/fa2/python/fa2_fp8kv_vllm/__init__.py
++++ b/fa2/python/fa2_fp8kv_vllm/__init__.py
+@@ -1,10 +1,18 @@
+ """Register the FP8 extension through vLLM's attention-backend plugin API."""
+-from fa2_fp8kv_vllm.paths import enabled
++import logging
++
++from fa2_fp8kv_vllm.paths import enabled, missing
++
++logger = logging.getLogger(__name__)
+ 
+ 
+ def register():
+     if not enabled():
+         return
++    if missing():
++        # Without this, backend.py raises OSError at import in every worker (sm86 + FA2_FP8KV=1 + no .so).
++        logger.warning("fa2_fp8kv: FA2_FP8KV=1 but %s missing; FLASH_ATTN left stock (bash fa2/install.sh)", missing())
++        return
+     from vllm.v1.attention.backends.registry import AttentionBackendEnum, register_backend
+ 
+     register_backend(AttentionBackendEnum.FLASH_ATTN,
+diff --git a/fa2/python/fa2_fp8kv_vllm/backend.py b/fa2/python/fa2_fp8kv_vllm/backend.py
+index 4bff1bb..4a3acc7 100644
+--- a/fa2/python/fa2_fp8kv_vllm/backend.py
++++ b/fa2/python/fa2_fp8kv_vllm/backend.py
+@@ -14,8 +14,7 @@ from vllm.v1.attention.backends import flash_attn as native
+ from vllm.v1.kv_cache_layout import KVCacheLayout
+ 
+ 
+-# install.sh builds sm_86 only. That cubin also runs on sm_89 (same major); sm_120 would need its own build.
+-BUILT_FOR = ((8, 6), (8, 9))
++BUILT_FOR = paths.BUILT_FOR  # the arch table lives in paths.py
+ 
+ 
+ def extension_selected(cache_dtype):
+@@ -23,7 +22,7 @@ def extension_selected(cache_dtype):
+             and cache_dtype in ("fp8", "fp8_e4m3"))
+ 
+ 
+-if paths.enabled() and current_platform.get_device_capability() in BUILT_FOR:
++if paths.enabled() and not paths.missing() and current_platform.get_device_capability() in BUILT_FOR:
+     torch.ops.load_library(str(paths.library()))
+     torch.ops.load_library(str(paths.prefill_library()))
+ 
+diff --git a/fa2/python/fa2_fp8kv_vllm/paths.py b/fa2/python/fa2_fp8kv_vllm/paths.py
+index 31dfaf7..6cd80fd 100644
+--- a/fa2/python/fa2_fp8kv_vllm/paths.py
++++ b/fa2/python/fa2_fp8kv_vllm/paths.py
+@@ -6,6 +6,10 @@ from pathlib import Path
+ 
+ PACKAGE = Path(__file__).resolve().parent
+ 
++# Arch table: install.sh builds sm_86 only; that cubin also runs on sm_89 (same major). sm_80 and
++# sm_120 are not built, so the extension stays off there and FLASH_ATTN is left alone.
++BUILT_FOR = ((8, 6), (8, 9))
++
+ 
+ def enabled():
+     return os.environ.get("FA2_FP8KV") == "1"
+@@ -19,7 +23,11 @@ def prefill_library():
+     return Path(os.environ.get("FA2_FP8KV_PREFILL_LIBRARY") or PACKAGE / "fa2_fp8kv_prefill.so")
+ 
+ 
++def missing():
++    return [str(p) for p in (library(), prefill_library()) if not p.is_file()]
++
++
+ def check():
+-    missing = [str(p) for p in (library(), prefill_library()) if not p.is_file()]
+-    if missing:
+-        sys.exit("fa2_fp8kv: missing " + ", ".join(missing) + " (bash fa2/install.sh builds and installs them)")
++    gone = missing()
++    if gone:
++        sys.exit("fa2_fp8kv: missing " + ", ".join(gone) + " (bash fa2/install.sh builds and installs them)")

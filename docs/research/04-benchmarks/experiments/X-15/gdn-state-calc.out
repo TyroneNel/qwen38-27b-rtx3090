@@ -1,0 +1,4 @@
+DFlash2 k=7 bf16 (CTX=fast)    state/layer=1,777,664 B block=448 page=14,680,064 B pool=380 pages/resident=54 -> 0.738 GiB = 14.2% of pool-1
+DFlash2 k=15 bf16              state/layer=1,941,504 B block=480 page=15,728,640 B pool=354 pages/resident=102 -> 1.494 GiB = 28.9% of pool-1
+k=4 bf16 (doc's 'MTP k=4')     state/layer=1,716,224 B block=432 page=14,155,776 B pool=394 pages/resident=36 -> 0.475 GiB = 9.2% of pool-1
+k=3 bf16 (MTP default)         state/layer=1,695,744 B block=416 page=13,631,488 B pool=409 pages/resident=30 -> 0.381 GiB = 7.4% of pool-1
