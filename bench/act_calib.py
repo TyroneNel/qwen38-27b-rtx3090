@@ -9,11 +9,36 @@ safe to run with int8 activations, the rest cost perplexity. On Qwen3.8-27B the
 GDN in_proj (early layers) and down_proj (last layers) are the worst.
 Usage: PATH=venv/bin:$PATH VLLM_ENABLE_V1_MULTIPROCESSING=0 VLLM_USE_FLASHINFER_SAMPLER=0 \
        python bench/act_calib.py models/Qwen3.8-27B-W4A16-AutoRound act_calib.json
+
+--modes per-token,per-128,hadamard-128 (or `all`; quant-1 step 1) measures each named
+activation quantizer side by side on the same rows (bench/act_quant.py: per-token,
+per-128, per-128-pow2, hadamard-128, hadamard-128-g128, and `floor`, the measurement's
+own bf16 noise). In this mode the quant math is fp32 and the dequantized input reaches
+the layer at fp32 precision (hi + lo split), so its per-token column reads a little
+lower than the default run's; compare modes within one run. It prints a per-layer table
+with each mode's ratio to per-token, counts the layers whose error falls by at least
+--threshold (default 3, the quant-1 GPU validation bar), and ends with one ACT_CALIB line.
+The JSON is {"modes", "threshold", "layers": {layer: {mode: {...}}}, "summary"}.
+Exit 0, or 2 if no layer was measured. Without --modes the run is the original one.
 """
-import json, os, sys, glob, re, torch
+import json, os, sys, glob, re, torch, argparse
 import pyarrow.parquet as pq
 
-model_path, out_path = sys.argv[1], sys.argv[2]
+_ap = argparse.ArgumentParser(description="Per-layer error that int8 activations add (see module docstring).")
+_ap.add_argument("model_path")
+_ap.add_argument("out_path")
+_ap.add_argument("--modes", default=None,
+                 help="comma list of act_quant.py modes, or 'all'; per-token is always added (default: the original per-token run)")
+_ap.add_argument("--threshold", type=float, default=3.0,
+                 help="with --modes: a layer passes when per-token err / mode err >= this (default 3)")
+_args = _ap.parse_args()
+model_path, out_path = _args.model_path, _args.out_path
+modes = None
+if _args.modes is not None:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import act_quant
+    try: modes = act_quant.parse_modes(_args.modes)
+    except ValueError as e: _ap.error(str(e))
 os.environ.setdefault("VLLM_ENABLE_V1_MULTIPROCESSING", "0")
 os.environ.pop("VLLM_MARLIN_INPUT_DTYPE", None)
 os.environ["VLLM_USE_FLASHINFER_SAMPLER"] = "0"
@@ -55,6 +80,28 @@ print("model:", type(model).__name__, flush=True)
 
 pat = re.compile(r"(gate_up_proj|down_proj|in_proj_qkvz|out_proj|qkv_proj|o_proj)$")
 stats = {}
+mode_stats = {}
+def make_mode_hook(name):
+    def hook(m, inputs):
+        if getattr(m, "_calib_off", False): return
+        x = inputs[0]
+        x2 = x.reshape(-1, x.shape[-1])
+        n = min(x2.shape[0], 64)
+        idx = torch.linspace(0, x2.shape[0]-1, n).long().to(x2.device) if x2.shape[0] > n else torch.arange(x2.shape[0], device=x2.device)
+        xs = x2[idx]
+        def fwd(t):
+            y = m(t)
+            return y[0] if isinstance(y, tuple) else y
+        with torch.no_grad():
+            m._calib_off = True
+            try:
+                errs = act_quant.layer_errors(fwd, xs, modes)
+            finally:
+                m._calib_off = False
+        d = mode_stats.setdefault(name, {})
+        for mode, (err, xerr) in errs.items():
+            s = d.setdefault(mode, [0.0, 0.0, 0]); s[0] += err; s[1] += xerr; s[2] += 1
+    return hook
 def make_hook(name, mod):
     def hook(m, inputs):
         x = inputs[0]
@@ -80,7 +127,7 @@ def make_hook(name, mod):
 count = 0
 for name, mod in model.named_modules():
     if pat.search(name) and "mtp" not in name and "lm_head" not in name and hasattr(mod, "forward") and "Linear" in type(mod).__name__:
-        mod.register_forward_pre_hook(make_hook(name, mod)); count += 1
+        mod.register_forward_pre_hook(make_hook(name, mod) if modes is None else make_mode_hook(name)); count += 1
 print("hooked layers:", count, flush=True)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -99,6 +146,65 @@ texts = [t for t in texts if t and t.strip()]
 print("calibration texts:", len(texts), flush=True)
 sp = SamplingParams(max_tokens=32, temperature=0)
 llm.generate(texts, sp)
+KINDS = ["gate_up_proj", "down_proj", "in_proj_qkvz", "out_proj", "qkv_proj", "o_proj"]
+if modes is not None:
+    import statistics
+    thr = _args.threshold
+    layers = {k: {mode: {"out_err": s[0]/s[2], "act_err": s[1]/s[2], "n": s[2]} for mode, s in d.items()}
+              for k, d in mode_stats.items()}
+    if not layers:
+        print("ACT_CALIB INVALID: no layer was measured", flush=True)
+        sys.exit(2)
+    base = act_quant.BASELINE
+    def ratio(v, mode):
+        if mode not in v or base not in v: return None
+        return v[base]["out_err"] / max(v[mode]["out_err"], 1e-12)
+    cmp_modes = [md for md in modes if md != base and md != act_quant.FLOOR]
+    print(f"per-layer relative output error (ratio = per-token / mode; >= {thr:g} passes):")
+    print("  " + "  ".join(f"{md:>20s}" for md in modes) + "  layer")
+    for k, v in layers.items():
+        cells = []
+        for md in modes:
+            if md not in v: cells.append(f"{'-':>20s}"); continue
+            r = ratio(v, md)
+            cell = f"{v[md]['out_err']:.4f}" + (f" ({r:5.1f}x)" if r is not None and md in cmp_modes else "")
+            cells.append(f"{cell:>20s}")
+        print("  " + "  ".join(cells) + f"  {k}")
+    summary = {}
+    for md in modes:
+        per_kind = {}
+        for kind in KINDS:
+            ks = [k for k in layers if k.endswith(kind) and md in layers[k]]
+            if not ks: continue
+            vals = [layers[k][md]["out_err"] for k in ks]
+            rs = [ratio(layers[k], md) for k in ks]
+            per_kind[kind] = {"n": len(ks), "median": statistics.median(vals), "max": max(vals),
+                              "ge_threshold": sum(1 for r in rs if r is not None and r >= thr) if md in cmp_modes else None,
+                              "median_ratio": statistics.median(rs) if md in cmp_modes else None}
+        tot = [k for k in layers if md in layers[k]]
+        summary[md] = {"n": len(tot), "per_kind": per_kind,
+                       "ge_threshold": sum(1 for k in tot if (ratio(layers[k], md) or 0) >= thr) if md in cmp_modes else None}
+        for kind, s in per_kind.items():
+            extra = f" >= {thr:g}x: {s['ge_threshold']}/{s['n']} median ratio {s['median_ratio']:.2f}x" if md in cmp_modes else ""
+            print(f"{md}: {kind}: n={s['n']} median={s['median']:.4f} max={s['max']:.4f}{extra}")
+    # quant-1 GPU validation: down_proj and GDN in_proj errors fall >= 3x, on every such layer
+    gate = {}
+    for md in cmp_modes:
+        pk = summary[md]["per_kind"]
+        gk = [pk[kd] for kd in ("down_proj", "in_proj_qkvz") if kd in pk]
+        gate[md] = bool(gk) and all(s["ge_threshold"] == s["n"] for s in gk)
+    json.dump({"modes": modes, "threshold": thr, "layers": layers, "summary": summary, "gate_down_in_proj": gate},
+              open(out_path, "w"), indent=1)
+    parts = []
+    for md in cmp_modes:
+        pk = summary[md]["per_kind"]
+        kinds = ",".join(f"{kd}={pk[kd]['ge_threshold']}/{pk[kd]['n']}" for kd in KINDS if kd in pk)
+        parts.append(f"{md}:ge{thr:g}x={summary[md]['ge_threshold']}/{summary[md]['n']},{kinds},gate={'yes' if gate[md] else 'no'}")
+    if act_quant.FLOOR in modes:
+        fl = [v[act_quant.FLOOR]["out_err"] for v in layers.values() if act_quant.FLOOR in v]
+        parts.append(f"floor:median={statistics.median(fl):.5f},max={max(fl):.5f}")
+    print(f"ACT_CALIB layers={len(layers)} " + " ".join(parts), flush=True)
+    sys.exit(0)
 res = {k: {"out_err": v[0]/v[2], "act_err": v[1]/v[2], "n": v[2]} for k, v in stats.items()}
 json.dump(res, open(out_path, "w"), indent=1)
 rows = sorted(res.items(), key=lambda kv: -kv[1]["out_err"])
