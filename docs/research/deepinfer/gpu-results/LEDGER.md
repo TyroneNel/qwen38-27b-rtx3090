@@ -49,7 +49,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | drafter-1a | Host-side confidence trim, stage 0 | runtime-2 | todo | | | |
 | spec-2 | Fresh-confidence device trim | spec-1 | todo | | | |
 | spec-4 | Lookup-aware confidences | spec-1 | todo | | | |
-| runtime-3 | Bound the tail of forced tool calls | – | todo | | | |
+| runtime-3 | Bound the tail of forced tool calls | – | done | WIN | runaways 6–10/40 → 0/40, valid calls 31–34/40 → 40/40, batch and single, required and named (`VLLM_TOOL_CALL_BOUND=1`) | [runtime-3.md](runtime-3.md) |
 
 ## Phase 4: kernel prototypes
 

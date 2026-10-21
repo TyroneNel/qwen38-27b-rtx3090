@@ -1,0 +1,113 @@
+runtime-3: bound the tail of forced tool calls (whitespace runaway to max_tokens).
+
+Research experiment for docs/research/deepinfer/runtime.md runtime-3. NOT in patches/series.
+Off unless VLLM_TOOL_CALL_BOUND=1; with it unset (or anything but 1) get_model_structural_tag
+builds exactly the structural tag it builds today.
+
+The fault (docs/vllm-0.31.md, "What is still unproven"): a forced get_time call decodes
+whitespace after <function=get_time> until max_tokens, 1-2 of 20 seeds on 0.31.0. In the image
+the qwen_3_coder builtin tag is compiled with max_whitespace_cnt=None, so the argument grammar
+of a tool with no parameters is root ::= [ \n\r\t]* and xgrammar accepts the call with 2,000
+newlines inside it; with tool_choice=required (TriggeredTagsFormat, at_least_one, parallel
+calls) any text may also follow </tool_call> until EOS. xgrammar's disable_any_whitespace is
+JSON-only and does not reach either.
+
+With VLLM_TOOL_CALL_BOUND=1, for tool_choice required or named (never auto), xgrammar builtin
+models only:
+  - max_whitespace_cnt=VLLM_TOOL_CALL_MAX_WS (default 16) caps every whitespace run in the
+    argument grammar; qwen_xml string values (TagDispatch) are not affected, so code with deep
+    indentation inside a <parameter> still matches;
+  - required's TriggeredTagsFormat becomes TagsWithSeparatorFormat(separator="\n") followed by
+    at most VLLM_TOOL_CALL_MAX_WS whitespace characters, after which only EOS is legal. This is
+    the grammar-level form of DeepInfer's bound (structure_output/matcher.py): the output ends at
+    </tool_call> instead of admitting a free tail.
+Behaviour change when on: text after a required call is no longer allowed (it was returned as
+content); a pretty-printed JSON argument deeper than 16 whitespace characters is forced compact.
+
+Kind: experiment
+Cut-against: ghcr.io/syv-ai/hyperqwen:latest site-packages/vllm (0.31.0 + patches/series)
+Apply: patch -p1 --forward --fuzz 0 -d <site-packages/vllm> -i runtime3-tool-call-bound.patch
+
+--- a/tool_parsers/structural_tag_registry.py
++++ b/tool_parsers/structural_tag_registry.py
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ 
++import os
+ from collections.abc import Callable, Sequence
+ from typing import Any, Literal, TypeAlias
+ 
+@@ -188,6 +189,17 @@
+             f"tokens and cannot apply token_suffix={token_suffix!r}"
+         )
+ 
++    max_ws = _forced_tool_call_max_ws(dumped_tools, dumped_tool_choice)
++    if max_ws is not None:
++        tag = get_xgrammar_model_structural_tag(
++            model=model,
++            tools=dumped_tools,
++            tool_choice=dumped_tool_choice,
++            reasoning=reasoning,
++            max_whitespace_cnt=max_ws,
++        )
++        return StructuralTag(format=_bound_tool_call_tail(tag.format, max_ws))
++
+     return get_xgrammar_model_structural_tag(
+         model=model,
+         tools=dumped_tools,
+@@ -196,6 +208,54 @@
+     )
+ 
+ 
++# runtime-3 experiment (docs/research/deepinfer/runtime.md), off unless VLLM_TOOL_CALL_BOUND=1.
++# A forced call (tool_choice required or named) under xgrammar's builtin templates can decode
++# whitespace until max_tokens: the qwen_xml argument grammar allows any run of whitespace
++# (root ::= [ \n\r\t]* for a tool with no parameters), and tool_choice=required lets any text
++# follow the call until EOS. With the knob on, for forced calls only:
++#   - every whitespace run inside the arguments is capped at VLLM_TOOL_CALL_MAX_WS characters
++#     (default 16; xgrammar's max_whitespace_cnt). String values are not touched;
++#   - required's free text between and after calls becomes calls joined by "\n", then at most
++#     VLLM_TOOL_CALL_MAX_WS whitespace characters, after which the grammar admits only EOS.
++# tool_choice=auto is never changed.
++_TOOL_CALL_BOUND = os.environ.get("VLLM_TOOL_CALL_BOUND", "0") == "1"
++_TOOL_CALL_MAX_WS = (
++    int(os.environ.get("VLLM_TOOL_CALL_MAX_WS", "16")) if _TOOL_CALL_BOUND else None
++)
++if _TOOL_CALL_MAX_WS is not None and _TOOL_CALL_MAX_WS < 1:
++    raise ValueError(f"VLLM_TOOL_CALL_MAX_WS must be >= 1, got {_TOOL_CALL_MAX_WS}")
++
++
++def _forced_tool_call_max_ws(
++    tools: list[dict[str, Any]], tool_choice: dict[str, Any] | str | None
++) -> int | None:
++    if _TOOL_CALL_MAX_WS is None:
++        return None
++    if normalize_tool_choice(tools, tool_choice)[2] == "auto":
++        return None
++    return _TOOL_CALL_MAX_WS
++
++
++def _bound_tool_call_tail(fmt: Any, max_ws: int) -> Any:
++    if isinstance(fmt, TriggeredTagsFormat) and fmt.at_least_one:
++        return SequenceFormat(
++            elements=[
++                TagsWithSeparatorFormat(
++                    tags=fmt.tags,
++                    separator="\n",
++                    at_least_one=True,
++                    stop_after_first=fmt.stop_after_first,
++                ),
++                RegexFormat(pattern=f"[ \\t\\r\\n]{{0,{max_ws}}}"),
++            ]
++        )
++    if isinstance(fmt, SequenceFormat):
++        return SequenceFormat(
++            elements=[_bound_tool_call_tail(e, max_ws) for e in fmt.elements]
++        )
++    return fmt
++
++
+ def _dump_tool_for_xgrammar(
+     tool: ChatCompletionToolsParam | ResponsesTool,
+ ) -> dict[str, Any]:

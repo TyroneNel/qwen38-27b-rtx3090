@@ -49,6 +49,8 @@ DeepInfer's ZOS (`DeepInfer/csrc/engine/zos.cpp`) hides schedule(N+1) and post-p
 
 ### runtime-3: bound the tail of forced tool calls
 
+**Measured (2026-10-21):** WIN. The structural-tag bound (`VLLM_TOOL_CALL_BOUND=1`) takes forced-call runaways from 6–10/40 to 0/40, with 40/40 valid calls, in batch and single mode. The off-rate here, 15–25%, is higher than the doc's 5–10%. [gpu-results/runtime-3.md](gpu-results/runtime-3.md)
+
 - **HyperQwen.** A forced tool call sometimes keeps decoding whitespace inside the `qwen3_coder` XML until `max_tokens`. This happened in 2 of 20 seeds on 0.31.0 batch, 1 of 20 single-user and 5 of 20 on 0.30.0, and xgrammar's `disable_any_whitespace` (JSON only) doesn't reach it. The doc says "Not fixed here" (`docs/vllm-0.31.md:161-165`).
 - **DeepInfer.** Its structured-output matcher has trigger tokens plus a bound token, so it caps the tokens allowed after the grammar completes (`DeepInfer/deepinfer/structure_output/matcher.py:58-134`). vLLM already gates grammar on the end of reasoning. The bounded tail is the piece vLLM lacks.
 - **Gain.** No throughput change. It removes a 5–10% chance that a forced tool call runs to `max_tokens`, which saves latency and tokens for agents.
