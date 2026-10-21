@@ -2,7 +2,7 @@
 
 Qwen3.8-27B W4A16 on one RTX 3090 (sm86, 24 GB, WSL2). Can ideas from EAGLE-4 make it faster or better?
 
-Phase 6, 2026-10-21. Branch `research/eagle4-expedition`, cut from our project at `95ac251` (D4). All paths below are relative to `docs/research/`.
+Phase 6, 2026-10-21. Branch `research/eagle4-expedition`. The research studied our project at `95ac251` (D4). After phase 6, `main` was fast-forwarded and this branch rebased onto `upstream/main` `63f7581` (D22). All paths below are relative to `docs/research/`.
 
 **How to read the numbers (D19, [00-meta/decisions.md](00-meta/decisions.md)).** Every number carries one of three labels:
 
@@ -31,13 +31,13 @@ Phase 6, 2026-10-21. Branch `research/eagle4-expedition`, cut from our project a
 
 | # | Recommendation | Expected gain (label) | Finding / roadmap | Queue rows |
 |---|---|---|---|---|
-| 1 | Fast-forward to `upstream/main` `63f7581`. This turns on int8 PTH KV by default for `SPEC=mtp CTX=long` | **+12-22% D decode at 66-93k vs our checkout** (measured (reported), upstream PR #345); **0 vs the stock image**, which already has it | [F-P1-01](05-findings/p1-speed-inference.md), Q1 | bench-15, bench-9, bench-5 |
+| 1 | Fast-forward to `upstream/main` `63f7581`: **done (D22)** for `main` and this branch. This turns on int8 PTH KV by default for `SPEC=mtp CTX=long` | **+12-22% D decode at 66-93k vs the old checkout `95ac251`** (measured (reported), upstream PR #345); **0 vs the stock image**, which already has it | [F-P1-01](05-findings/p1-speed-inference.md), Q1 | bench-15, bench-9, bench-5 |
 | 2 | Use int8 per-token-head KV (TRITON) on mode B through `EXTRA_ARGS`. Adopt it only after bench-16 confirms it | **KV pool 1.70×, N=8 preemptions 23→1, C1 a tie** (measured (reported), `cline/gf59cdmh` S-2) | [F-P1-02](05-findings/p1-speed-inference.md), Q2 | bench-16 |
 | 3 | Gate correctness with a near-tie classifier on greedy divergences, using the EAGLE-4 method plus replay | **no speed**; a gate that keeps benign fp near-ties from being reported as real divergences | [F-P1-03](05-findings/p1-speed-inference.md), Q3 | bench-7, bench-14 |
 | 4 | Load the EAGLE-4 drafter as EAGLE-3 (V3) and measure its acceptance. This is an information gate | **0 speed by itself**. Serving it pays off only at ≥ 1.12-1.31× DFlash2 tok/step (estimated break-even); low prior. Shipping is blocked on D11 | [F-P1-05](05-findings/p1-speed-inference.md), N6 | bench-17 |
 | 5 | Run a fitted per-concurrency k table, checked only at the N=3 boundary | **about +5% at N=3 only** (estimated); 0-2% at N=4/8, which is a negative result (estimated) | [F-P1-06](05-findings/p1-speed-inference.md), N3 | bench-18 |
 
-Items 1 and 2 are the only ones with a credible speed or capacity gain, and neither comes from EAGLE-4. Both are KV-format changes that already exist in upstream or on a fork branch. Item 1 also removes a trap: a baseline measured on our checkout without `PTH_FA` pinned reads about 25-37% low at C1 on the box (63-75 against about 100 tok/s, so the pinned run reads 33-58% higher; measured (reported) magnitude, F-P1-13).
+Items 1 and 2 are the only ones with a credible speed or capacity gain, and neither comes from EAGLE-4. Both are KV-format changes that already exist in upstream or on a fork branch. Item 1 also removed a trap: a baseline measured on the old checkout without `PTH_FA` pinned reads about 25-37% low at C1 on the box (63-75 against about 100 tok/s, so the pinned run reads 33-58% higher; measured (reported) magnitude, F-P1-13).
 
 ### Bottom line on EAGLE-4 for this box
 
@@ -56,7 +56,7 @@ What does carry over is method: the near-tie gate, cost-table thinking about k, 
 From [05-findings/roadmap.md](05-findings/roadmap.md), "Decisions needed from the human":
 
 1. **D11 licence.** Does shipping a low-rank candidate head, the EAGLE-4 draft, or weights derived from it count as a "Competing Offering"? This decides L1, L3 and L5. Local evaluation under §2(a) is allowed.
-2. **Fast-forward target.** Should `research/eagle4-expedition`, `main`, or both be fast-forwarded to `63f7581` (Q1)? The merge is conflict-free.
+2. **Fast-forward target: resolved (D22).** `main` (local and origin) and `research/eagle4-expedition` now sit on `upstream/main` `63f7581`.
 3. **Box `.env` default** (`CTX=fast VISION=1`). This matters for everyday serving only, because every queue arm already overrides it.
 4. **Import policy** (refuse or fall back loudly). This is now moot for Q6, because the F5c patch works with "refuse".
 5. **Inputs:**
@@ -88,14 +88,14 @@ Full map: [01-project/architecture.md](01-project/architecture.md) (§2 has the 
 | A | batch, 64 seats | fp8 KV, W4A8 | throughput mode, no spec |
 | B | `SPEC=dflash2 CTX=fast` | bf16 KV, FLASH_ATTN | 7 drafts + lookup, 64k |
 | C | B + `DFLASH_TOKENS=15` | as B | copy-heavy workloads |
-| D | `SPEC=mtp CTX=long` | our checkout: fp8 FlashInfer; stock image / upstream: int8 pthfa (PTH_FA=1) | the checkout/image skew, see F-P1-01 |
+| D | `SPEC=mtp CTX=long` | int8 pthfa (PTH_FA=1) on the stock image, upstream and this branch; the old checkout `95ac251` gave fp8 FlashInfer | skew closed by D22, see F-P1-01 |
 | D′ | `SPEC=dflash2 CTX=long` | int8 PTH (default) | |
 | E | `SPEC=dflash2 CTX=huge` | KVarN K4V2 | 240k context |
 
 **Upstream state** ([01-project/upstream-diff.md](01-project/upstream-diff.md)):
 
-- Upstream is 5 commits ahead of `95ac251`: `433b050`, `b4b97ec`, `373a695`, `2cf50a0` and `63f7581`.
-- The fast-forward has 0 conflicts and touches 25 files (+444/−140).
+- Upstream was 5 commits ahead of `95ac251`: `433b050`, `b4b97ec`, `373a695`, `2cf50a0` and `63f7581`. After phase 6, `main` and this branch moved to `63f7581` (D22).
+- The fast-forward had 0 conflicts and touched 25 files (+444/−140).
 - `b4b97ec` (#345) is the PTH_FA default that recommendation 1 adopts.
 - Open PRs 353-366: 353/354 matter for benchmark validity (P1), 359 for quality (P2), and 366 re-vendors pthfa.
 
@@ -121,7 +121,7 @@ Source: [04-benchmarks/baseline.md](04-benchmarks/baseline.md), re-derived from 
 Reading notes, all from [04-benchmarks/baseline.md](04-benchmarks/baseline.md):
 
 - **Native-Linux doc figures** (measured (reported); no raw files): A 942 (948 per the README), B 127.1, C 381, D 100.3, E 67. The 6-14% gap is put down to WSL2.
-- **The prior D baseline already ran with PTH_FA=1**, because the stock image contains `b4b97ec`. A boot from our checkout without `PTH_FA` lands at about 63-75. This is why D10 pins `PTH_FA` in every arm.
+- **The prior D baseline already ran with PTH_FA=1**, because the stock image contains `b4b97ec`. A boot from the old checkout (`95ac251`) without `PTH_FA` lands at about 63-75. This is why D10 pins `PTH_FA` in every arm.
 - **Thermal settling** cost −9.4% over about 4 min (62 → 83 °C). Cold short runs read high.
 - **The boot-to-boot spread is about 1-2%.** This sets the win bars:
   - C1 needs ≥ +3% median over ≥ 3 interleaved boots, and ≥ 5 boots when the gain is under +5%;
@@ -138,7 +138,7 @@ There are 31 findings across three files. The tables below are summaries; claims
 
 | ID | Short claim | Expected impact (label) | Status |
 |---|---|---|---|
-| F-P1-01 | Fast-forward turns on int8 PTH for mtp/long | +12-22% D at 66-93k vs our checkout (measured (reported)); 0 vs the stock image | adopt; confirm with bench-15 |
+| F-P1-01 | Fast-forward turns on int8 PTH for mtp/long | +12-22% D at 66-93k vs the old checkout (measured (reported)); 0 vs the stock image | done (D22); confirm with bench-15 |
 | F-P1-02 | int8 TRITON KV on mode B | pool 1.70×, N=8 preemptions 23→1, C1 tie (measured (reported)) | bench-16 |
 | F-P1-03 | Near-tie + replay divergence classifier | correctness gate, no speed | bench-7, bench-14 |
 | F-P1-04 | Spec-timing variant image | tool; ≤ 0.7% overhead (estimated) | bench-13 |
@@ -277,8 +277,8 @@ Details: [01-project/upstream-diff.md](01-project/upstream-diff.md), reviewed by
 
 | Gap | Evidence (label) | Action |
 |---|---|---|
-| Our checkout lacks the #345 PTH_FA default (`b4b97ec`) | upstream: +9% native at 1 boot; +12.2% / +14.0% native at 2 boots; +21.3% / +22.1% WSL2 at 3 boots; GSM8K 0.9507 vs 0.9522; pool −1.5% (all measured (reported)) | Q1 fast-forward; bench-15 confirms on the box |
-| The image is ahead of the checkout (image `2cf50a0`, checkout `95ac251`) | every prior measured baseline came from the image (D2) | D10 pins PTH_FA; N1 re-baselines on the fast-forwarded tree |
+| The old checkout `95ac251` lacked the #345 PTH_FA default (`b4b97ec`) | upstream: +9% native at 1 boot; +12.2% / +14.0% native at 2 boots; +21.3% / +22.1% WSL2 at 3 boots; GSM8K 0.9507 vs 0.9522; pool −1.5% (all measured (reported)) | closed by the Q1 fast-forward (D22); bench-15 confirms on the box |
+| The image was ahead of the checkout (image `2cf50a0`, checkout `95ac251`). Since D22 the checkout is `63f7581`, which differs from the image in docs only | every prior measured baseline came from the image (D2) | closed; D10 still pins PTH_FA; N1 re-baselines on the fast-forwarded tree |
 | The int8 pool can refuse `MAX_LEN` 150000 | upstream-diff divergences | queue rows set context explicitly |
 | Open PRs 353/354 (benchmark validity), 359 (corpus), 366 (pthfa re-vendor) | upstream-diff, open-PR table | take with upstream (F-P1-13, F-P2-12, F-P3-06) |
 | Fork branches: `dynamic-k-results`, `cline/gf59cdmh` (the int8 TRITON on B evidence), `ctx-profile-sweep`, `master` (`paired_run.sh`, `canary.sh`) | read-only via `git show` | the S-2 rows feed Q2 |
@@ -364,7 +364,7 @@ Full roadmap with dependencies and the deferred table: [05-findings/roadmap.md](
 
 | Item | Gain (label) | Rows |
 |---|---|---|
-| Q1 Fast-forward to `63f7581` | +12-22% D at 66-93k vs our checkout (measured (reported)); 0 vs the stock image | bench-15, 9, 5 |
+| Q1 Fast-forward to `63f7581`: **done (D22)** | +12-22% D at 66-93k vs the old checkout (measured (reported)); 0 vs the stock image | bench-15, 9, 5 |
 | Q2 int8 TRITON KV on mode B, adopted after bench-16 | pool 1.70×, N=8 preemptions 23→1, C1 tie (measured (reported)) | bench-16 |
 | Q3 Correctness gate | gate, no speed | bench-7, 14 |
 | Q4 Benchmark-validity fixes (PTH_FA pinning, timing, harness defaults) | avoids a 9-22% to about 33-58% wrong comparison (measured (reported) magnitude) | code; bench-2 smoke |
@@ -402,10 +402,10 @@ Roadmap counts: 6 quick wins, 6 next-sprint items, 6 larger bets. Of the 13 corr
 **Measurement risks**
 
 - **The box may not reproduce the prior baseline.** D15 aborts a row when C1 is more than 10% below the prior. WSL2 runs 6-14% below native, and cold runs read up to about 9% high, so a careless comparison can create or hide any gain on the roadmap (F-P1-13).
-- **Checkout/image skew.** Until Q1 lands, a "D" boot can mean fp8 FlashInfer (63-75 tok/s) or int8 pthfa (about 100 tok/s), depending on the source tree. D10 pins this, and every report row must record `PTH_FA`.
+- **Checkout/image skew (closed by D22).** Before the fast-forward, a "D" boot could mean fp8 FlashInfer (63-75 tok/s) or int8 pthfa (about 100 tok/s), depending on the source tree. A box checkout older than `63f7581` still has this skew, so D10 still pins `PTH_FA`, and every report row must record it.
 - **Small gains sit near the noise.** The boot spread is 1-2%. N3 (about +5%), L2 (0-3%), L5 (+1.7-3.1%) and L6 (≤ 1-2%) are at or below the win bars. Expect NEUTRAL verdicts.
 - **N3 rests on interpolation.** N=3 was never measured, and V(N=3, k) is interpolated between N=2 and N=4. A step between them could erase the gain (X-02a).
-- **Timing.** The `labd_bench.py` in our checkout still uses `time.time()`. The prior box's copy is believed to use `perf_counter`; bench-3 settles this.
+- **Timing.** Since D22 our checkout includes `373a695`, so its `labd_bench.py` uses `perf_counter`; the old `95ac251` copy used `time.time()`. Whether the prior box's copy used `perf_counter` is still open; bench-3 settles this.
 
 **Evidence risks**
 
@@ -433,7 +433,7 @@ From [00-meta/plan.md](00-meta/plan.md); the drafter row is from [02-eagle4/over
 
 | Source | Commit |
 |---|---|
-| our project (HyperQwen checkout) | `95ac251bc3b71017c883e83004cf4fb188d066a4` |
+| our project (HyperQwen checkout), as studied | `95ac251bc3b71017c883e83004cf4fb188d066a4`; branch rebased onto `63f7581` after phase 6 (D22) |
 | upstream `main` | `63f7581804afe05f23f240c2f584a00ac18c488b` |
 | EAGLE-4 repo | `7b7b5a522d7a7284b9eeb9889d03c8c2038c112f` (tag v0.1.0 = `75436712`) |
 | EAGLE-4 drafter (HF) | `EAGLE-Corp/Qwen3.8-27B-EAGLE4` @ `f58a598` |
@@ -459,7 +459,7 @@ Environments:
   - phase 5: 23 claims traced.
 
   `[review: …]` marks win over the text they annotate.
-- **Decisions.** D1-D21 are in [00-meta/decisions.md](00-meta/decisions.md). The ones that shape this report:
+- **Decisions.** D1-D22 are in [00-meta/decisions.md](00-meta/decisions.md). The ones that shape this report:
   - D1/D2: no GPU, so the baseline is the prior runs;
   - D3: DeepInfer is context only;
   - D10: pin PTH_FA;

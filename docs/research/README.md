@@ -18,7 +18,7 @@ No speedup from this expedition is measured yet.
 
 | Folder | Contents |
 |---|---|
-| [00-meta/](00-meta/) | the [brief](00-meta/brief.md), [plan and ranked hypotheses](00-meta/plan.md), [decisions D1-D21](00-meta/decisions.md), the [agent log](00-meta/agent-log.md), the [GPU queue](00-meta/gpu-queue.md), and [reviews/](00-meta/reviews/) (one independent review per phase output) |
+| [00-meta/](00-meta/) | the [brief](00-meta/brief.md), [plan and ranked hypotheses](00-meta/plan.md), [decisions D1-D22](00-meta/decisions.md), the [agent log](00-meta/agent-log.md), the [GPU queue](00-meta/gpu-queue.md), and [reviews/](00-meta/reviews/) (one independent review per phase output) |
 | [01-project/](01-project/) | a map of our project: [inventory](01-project/inventory.md), [architecture and modes](01-project/architecture.md), [DFlash and spec decode](01-project/dflash-specdec.md), [quantisation](01-project/quantisation.md), [heads and drafters](01-project/heads-drafters.md), and the [upstream diff](01-project/upstream-diff.md) |
 | [02-eagle4/](02-eagle4/) | EAGLE-4: [overview and licence](02-eagle4/overview.md), [architecture](02-eagle4/architecture.md), [training recipe](02-eagle4/training-recipe.md), [build and kernels](02-eagle4/build-and-kernels.md), and [transferability to the 3090](02-eagle4/transferability.md) with its calculator |
 | [03-vllm/](03-vllm/) | the [vLLM integration paths](03-vllm/integration-paths.md) for spec decode, quant, attention and KV |

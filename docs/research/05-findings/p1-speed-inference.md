@@ -13,7 +13,7 @@ Win bars (plan [review (phase 5): `plan.md:36` and the queue's ≥ 5-boot rule; 
 
 | ID | Claim | Expected impact (label) | Effort | Status | Maps to |
 |---|---|---|---|---|---|
-| F-P1-01 | Fast-forwarding to `upstream/main` turns on int8 PTH KV for `SPEC=mtp CTX=long` | +12-22% D decode at 66-93k vs our checkout (measured (reported)); 0 vs the stock image | S | adopt now, confirm with X-01b | H01, U-01, X-01a/b |
+| F-P1-01 | Fast-forwarding to `upstream/main` turns on int8 PTH KV for `SPEC=mtp CTX=long` | +12-22% D decode at 66-93k vs the old checkout `95ac251` (measured (reported)); 0 vs the stock image | S | done (D22), confirm with X-01b | H01, U-01, X-01a/b |
 | F-P1-02 | int8 per-token-head KV (TRITON) on mode B via `EXTRA_ARGS` | pool 1.70×, N=8 preemptions 23→1, C1 tie (measured (reported)) | S | needs GPU run X-04′ | H04′, X-04′ |
 | F-P1-03 | A near-tie + replay classifier separates benign greedy divergences from real ones | correctness gate, no speed | S | needs GPU run X-08 | H08, E-18, I-08 |
 | F-P1-04 | The spec-timing variant image measures draft vs verify per step | tool; ≤0.7% overhead (estimated) | S | needs GPU run X-17 | X-17, I-04, I-06 |
@@ -33,7 +33,7 @@ Win bars (plan [review (phase 5): `plan.md:36` and the queue's ≥ 5-boot rule; 
 
 - **Priority:** P1.
 - **Claim:** after the fast-forward (b4b97ec, PR #345), an unset-`PTH_FA` `SPEC=mtp CTX=long` launch on cc 8.6 resolves to int8 KV on the pth kernel instead of fp8 on FlashInfer, and it decodes faster at long context.
-- **Expected impact:** +12-22% D decode at 66-93k vs our checkout (**measured (reported)**). The runs:
+- **Expected impact:** +12-22% D decode at 66-93k vs the old checkout `95ac251` (**measured (reported)**). The runs:
   - +21.3% / +22.1% on WSL2, 3 boots per arm, `GPU_UTIL=0.89`;
   - +12.2% / +14.0% native, 2 boots;
   - +9% native, 1 boot.
@@ -42,14 +42,14 @@ Win bars (plan [review (phase 5): `plan.md:36` and the queue's ≥ 5-boot rule; 
   - the WSL2 3-boot run: `01-project/upstream-diff.md:126`;
   - the native runs: `upstream-diff.md:28`;
   - the gate code: `resolve_config.sh:105-121` (upstream);
-  - our checkout resolves to fp8 FlashInfer, not FA2_FP8KV: `04-benchmarks/experiments/X-01a/run.out:3,75` and `00-meta/reviews/phase4-cpu-experiments.md:9,41-45`;
+  - our checkout at `95ac251` resolves to fp8 FlashInfer, not FA2_FP8KV: `04-benchmarks/experiments/X-01a/run.out:3,75` and `00-meta/reviews/phase4-cpu-experiments.md:9,41-45`;
   - the FF has 0 conflicts: `upstream-diff.md:9,18`.
 - **Effort:** S. A `--ff-only` merge of 5 commits (25 files) plus `bash pthfa/install.sh` on any box without the package.
 - **Risks:**
   - The gain mixes the kernel with FULL vs PIECEWISE CUDA graphs, so it is not the kernel alone.
   - These settings silently fall back to the old path: `VISION=1`, `DRAFT_TOKENS≠3`, `DYNAMIC_K`, KV offload, any `FA2_FP8KV`, and the listed `EXTRA_ARGS` flags (`X-01a/README.md`). The box `.env` sets `CTX=fast VISION=1`, so the default never fires there (`upstream-diff.md:129`). [review (phase 5): this only affects a boot that inherits the box `.env` unchanged. Every queue arm strips SPEC/CTX/PTH_FA/VISION from the base, sets `VISION=0` and pins `PTH_FA` (`gpu-agent-prompt.md:78` and each arm_env), and the prior baseline did the same (`raw/prior-3090/baseline.md:10`, `ENVIRONMENT.md:27`). It does not block bench-15; it matters for everyday use of the box and for user installs with `VISION=1`.]
   - The ≈1.9% smaller int8 pool can make vLLM refuse to boot at `MAX_LEN` 150000 near the edge (`upstream-diff.md:127`).
-- **Status:** **adopt now**, because the change is S and reversible with `PTH_FA=0`. The fast-forward itself is a decision for the human (roadmap). The size on our box needs GPU run **X-01b** (bench-15), gate ratio ≥ 1.10 at both cells.
+- **Status:** **done (D22)**: `main` and this branch were fast-forwarded to `63f7581` after phase 6. The change is reversible with `PTH_FA=0`. The size on our box needs GPU run **X-01b** (bench-15), gate ratio ≥ 1.10 at both cells.
 - **Maps to:** H01, U-01, I-13, I-09; X-01a (CPU, confirmed), X-01b.
 
 ## F-P1-02 int8 TRITON KV on mode B
@@ -236,7 +236,7 @@ Win bars (plan [review (phase 5): `plan.md:36` and the queue's ≥ 5-boot rule; 
 
 - **Priority:** P1 (method).
 - **Claim:** several gaps would make an A/B in this repo compare the wrong things.
-  - Image/checkout skew: the box runs `sha-2cf50a0` launchers baked in, while our checkout at 95ac251 lacks b4b97ec and 373a695.
+  - Image/checkout skew (closed by D22): the box runs `sha-2cf50a0` launchers baked in, while our checkout at 95ac251 lacked b4b97ec and 373a695. Since D22 the checkout is `63f7581`.
   - Silent PTH_FA fall-outs (F-P1-01).
   - The pre-373a695 `time.time()` WSL2 clock step (≈2.3 s every ≈28 s).
   - SSE streams accepted without `[DONE]` (PR 354).

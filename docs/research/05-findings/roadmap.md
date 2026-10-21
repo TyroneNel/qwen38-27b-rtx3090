@@ -12,7 +12,7 @@ Within each tier, items are ordered by gain × confidence ÷ effort. Licence-gat
 
 | Tier | Item | Findings | Expected gain (label) | Rows |
 |---|---|---|---|---|
-| Quick win | Q1 Fast-forward to upstream/main | F-P1-01, F-P1-13, F-P3-04 | +12-22% D decode at 66-93k vs our checkout (measured (reported)) | bench-15, bench-9, bench-5 |
+| Quick win | Q1 Fast-forward to upstream/main (done, D22) | F-P1-01, F-P1-13, F-P3-04 | +12-22% D decode at 66-93k vs the old checkout `95ac251` (measured (reported)) | bench-15, bench-9, bench-5 |
 | Quick win | Q2 int8 TRITON KV on mode B | F-P1-02, F-P2-12 | pool 1.70×, N=8 preemptions 23→1, C1 tie (measured (reported)) [review: adopt after bench-16, not before] | bench-16 |
 | Quick win | Q3 Correctness gate | F-P1-03, F-P3-04 | gate, no speed | bench-7, bench-14 |
 | Quick win | Q4 Benchmark-validity lifts | F-P1-13 | prevents a 9-22% (long context) to ≈33-58% (C1 on the box) wrong comparison (measured (reported) magnitude) [review] | none (code); bench-2 smoke |
@@ -35,10 +35,10 @@ Within each tier, items are ordered by gain × confidence ÷ effort. Licence-gat
 
 These are small and reversible, and need no GPU or only one confirmation run.
 
-**Q1 Fast-forward to `upstream/main` (63f7581).**
+**Q1 Fast-forward to `upstream/main` (63f7581). Done (D22).**
 - **Findings:** F-P1-01, F-P1-13, F-P3-04.
-- **Gain:** +12-22% D decode at 66-93k vs our checkout (**measured (reported)**, 3 runs, same direction). 0 vs the stock image. It also brings `perf_counter` timing and the mtp/long launcher test.
-- **First:** the human approves the fast-forward, then `--ff-only` (0 conflicts, `01-project/upstream-diff.md:9`). Run `bash pthfa/install.sh` on the box. Mode-D arms set `VISION=0` and pin `PTH_FA`, because the box `.env` sets `CTX=fast VISION=1` and the default never fires there. [review (phase 5): the queue already does this for every arm (`gpu-agent-prompt.md:78`, each arm_env), as the prior baseline did, so the box defaults do not block bench-15. They matter only for everyday use of the box.]
+- **Gain:** +12-22% D decode at 66-93k vs the old checkout `95ac251` (**measured (reported)**, 3 runs, same direction). 0 vs the stock image. It also brings `perf_counter` timing and the mtp/long launcher test.
+- **First:** the human approved the fast-forward, and it ran `--ff-only` with 0 conflicts (D22; `01-project/upstream-diff.md:9`). Run `bash pthfa/install.sh` on the box. Mode-D arms set `VISION=0` and pin `PTH_FA`, because the box `.env` sets `CTX=fast VISION=1` and the default never fires there. [review (phase 5): the queue already does this for every arm (`gpu-agent-prompt.md:78`, each arm_env), as the prior baseline did, so the box defaults do not block bench-15. They matter only for everyday use of the box.]
 - **Rows:** bench-15 (X-01b, 3 interleaved boots per arm at `GPU_UTIL=0.89`), with bench-9 and bench-5 as the long-context baselines.
 - **Kill:** ratio < 1.10 at either cell keeps the FF but drops the speed claim from docs. Any of these pins `PTH_FA=0` on mtp/long: ratio < 1.00, a GSM8K drop > 1 pt, or a boot refusal at `MAX_LEN` 150000.
 
@@ -187,7 +187,7 @@ DeepInfer overlap, for context only (D3):
 ## Decisions needed from the human
 
 1. **D11:** does shipping a low-rank candidate head, an EAGLE-4 draft, or weights derived from it (adapted or quantised) in HyperQwen fall under the licence's "Competing Offering" clause? It decides L1, L3 and L5. Local evaluation (N6) is allowed under §2(a).
-2. **Fast-forward:** fast-forward `research/eagle4-expedition`, `main`, or both to `upstream/main` 63f7581 (Q1)? It is conflict-free and removes the image/checkout skew.
+2. **Fast-forward: resolved (D22).** `main` (local and origin) and `research/eagle4-expedition` now sit on `upstream/main` 63f7581, which removes the image/checkout skew.
 3. **Box defaults:** the box `.env` is `CTX=fast VISION=1`. Keep it and set `VISION=0` per mode-D arm, or change the box default? [review (phase 5): not needed for the benchmarks; every queue arm already strips these keys and sets `VISION=0`. This is only about the box's everyday serving default.]
 4. **Import policy:** "refuse" or "fall back loudly" when a kernel package cannot load (Q6)? [review (phase 5): moot for Q6; the patch is compatible with refuse.]
 5. **Inputs:**
