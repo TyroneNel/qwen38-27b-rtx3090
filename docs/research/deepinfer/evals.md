@@ -95,6 +95,8 @@ DeepInfer runs AIME/GPQA/HLE-style 32-sample evals (`DeepInfer/eval/run_eval.py:
 
 ### evals-5: special-token injection hardening
 
+**Measured (2026-10-21):** INFO. Typed `<|im_end|>` / `<|im_start|>` / `<tool_call>` encode as control ids in user and tool content, and an injected system turn gets obeyed. The escape patch removes the control ids (0/3), with api_smoke 13/13 and C1 within noise, but the model still follows the spelled-out injection. [gpu-results/evals-5.md](gpu-results/evals-5.md)
+
 - **deepseek-recipe.** The renderer records the byte ranges of the control tokens it inserted, and only those encode as special. Any spelling of them in user, tool-result or tool-argument text encodes as plain text (`recipe/docs/tokenizer.md:77-85`; also `DeepInfer/doc/inference_deployment_qa.md`). The lane confirmed the stock behaviour with recipe's own tokenizer: a typed control token comes back as the control id.
 - **HyperQwen.** No mitigation exists, and vLLM 0.31.0 has no `split_special_tokens` (git grep is empty). Qwen's `<|im_start|>`, `<|im_end|>` and tool markers are added tokens, so a coding agent pasting a chat template or tokenizer config into a tool result **(inferred)** can end a turn or open a fake system turn.
 - **Plan.** Probe first: `bench/special_token_probe.py` posts content containing `<|im_end|>` and checks with `/tokenize` (served via the `tokenize-v1-route` patch) whether the control id appears. Only if it reproduces, write `patches/serve-escape-special-tokens.patch` against vLLM's HF renderer.
