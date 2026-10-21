@@ -29,7 +29,7 @@ Goal: make `qwen38-27b-rtx3090` faster and better on one RTX 3090 (24 GB, sm86).
 | 3 Transferability | `02-eagle4/transferability.md`, ranked hypotheses below; independent review | done: ACCEPT WITH CHANGES (reviews/phase3-transferability.md), ranking corrected |
 | 4 Experiments | CPU-feasible experiments here; GPU experiments packaged for the GPU box | CPU done: X-01a, X-02a, X-08, X-15, X-16, X-17 re-run by reviewers (reviews/phase4-*.md); GPU packaged as bench-13..25, rows ≤2 h, hand-off READY WITH FIXES (reviews/phase4-gpu-handoff.md) |
 | 5 Findings | `05-findings/*`, roadmap; review | done: 31 findings, roadmap 6/6/6, PASS WITH CORRECTIONS (reviews/phase5-findings.md) |
-| 6 Report | `REPORT.md`, fact check, README, commit, push branch to fork | running |
+| 6 Report | `REPORT.md`, fact check, README, commit, push branch to fork | done (fact check PASS WITH CORRECTIONS, 7 fixes applied) |
 
 ## Ranked hypotheses
 
