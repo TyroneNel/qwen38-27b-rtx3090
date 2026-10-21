@@ -29,7 +29,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | e-profile | Torch profile of E at 200k: attention share per step | health | done | INFO | at ~170k: attention 78% of a 151 ms step (KVarN stage1 117 ms, ~40× DRAM floor); E = 11.5 tok/s there | [e-profile.md](e-profile.md) |
 | evals-5 | Special-token injection check (tokenizer on `<\|im_end\|>`), hardening if needed | health | todo | | | |
 | evals-6 | Streamed tool-call test, tool case in `api_smoke` | health | done | INFO | parser 1,005 chunked streams 0 diffs; streamed tool call passes in all 6 modes | [evals-6.md](evals-6.md) |
-| evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | todo | | | |
+| evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | done | INFO | fresh boot, canary first: MATCH 8/8, Δlogp 0; after a session of other traffic: 3/8 diverge (B and D) | [evals-7.md](evals-7.md) |
 | evals-8 | Per-component GPU time (nsys) | health | todo | | | |
 | evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | todo | | | |
 | evals-10 | Throughput vs per-user Pareto sweep per mode | baseline | done | INFO | A knee N=16–32 (647 tok/s agg at N=32); at N=2–8 D (MTP) beats B (DFlash2): 423 vs 236 tok/s at N=8 | [evals-10.md](evals-10.md) |
