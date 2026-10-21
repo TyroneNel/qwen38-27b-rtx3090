@@ -39,6 +39,8 @@ DeepInfer's ZOS (`DeepInfer/csrc/engine/zos.cpp`) hides schedule(N+1) and post-p
 
 ### runtime-2: step-cost curve tool (ms per step vs verified tokens on the 3090)
 
+**Measured (2026-10-21):** INFO, per verify token: FA2-fp8 ~0.03 ms (flat), pthfa ~1.2 ms up to q=4 then 2.6 ms at 150k for 4→8, KVarN 13.9 ms at 150k and 22.3 ms at 240k. [gpu-results/runtime-2.md](gpu-results/runtime-2.md)
+
 - **DeepInfer.** Profiles graph size against ms at boot and caches the curve on disk (`DeepInfer/deepinfer/worker/decode_perf_cache.py`).
 - **HyperQwen.** `DFLASH_TOKENS=15` (mode C) and the draft counts were tuned by end-to-end sweeps. There is no recorded curve of ms per step against total query tokens.
 - **Value.** It supplies the unmeasured slope for runtime-1 and the spec-lane policies, and it puts any `DFLASH_TOKENS` retune on a curve instead of a sweep. There's no runtime change.
