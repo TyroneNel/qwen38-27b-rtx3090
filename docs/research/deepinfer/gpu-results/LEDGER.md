@@ -31,7 +31,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | evals-6 | Streamed tool-call test, tool case in `api_smoke` | health | done | INFO | parser 1,005 chunked streams 0 diffs; streamed tool call passes in all 6 modes | [evals-6.md](evals-6.md) |
 | evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | done | INFO | fresh boot, canary first: MATCH 8/8, Δlogp 0; after a session of other traffic: 3/8 diverge (B and D) | [evals-7.md](evals-7.md) |
 | evals-8 | Per-component GPU time (nsys) | health | todo | | | |
-| evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | todo | | | |
+| evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | done | INFO | B forced tok/step: humaneval 7.40 … arena-hard 3.36 (pooled 4.89); T=1 sampling −8% pooled | [evals-9.md](evals-9.md) |
 | evals-10 | Throughput vs per-user Pareto sweep per mode | baseline | done | INFO | A knee N=16–32 (647 tok/s agg at N=32); at N=2–8 D (MTP) beats B (DFlash2): 423 vs 236 tok/s at N=8 | [evals-10.md](evals-10.md) |
 | evals-11 | Automatic warmup detection | health | done | INFO | WARM after 3–4 runs; settling is thermal (C1 −9.4% over ~4 min, 62 → 83 °C), not JIT: the first run is the fastest | [evals-11.md](evals-11.md) |
 

@@ -35,6 +35,8 @@ none, and the `.sh` scripts ask `/v1/models`. The `.sh` measurements take `PORT`
 
 | file | kind | needs | exit | what it does |
 |---|---|---|---|---|
+| `accept_panel.py` | measurement | server, a panel JSONL from `accept_panel_data.py` | 0, 1 if the server ignores `return_tokens_as_token_ids`, 2 if no server, no speculation or nothing counted | Acceptance by domain on DeepSpec's nine eval sets: labd_accept's teacher-forced chunk-resync arm and an optional `--sampled` free-running arm; tok/step, accept@position and decode with bootstrap CIs. |
+| `accept_panel_data.py` | data tool | CPU, network | 0 | Downloads DeepSpec's eval JSONLs at a pinned commit and selects 50 items per set (DeepSpec's own selection) into a local, uncommitted panel file. |
 | `act_calib.py` | measurement | GPU, model | 0, or 2 with `--modes` if no layer was measured | Error that int8 activations add to each linear layer. Picks `INT8_LAYERS`. `--modes per-token,per-128,hadamard-128` (or `all`) compares activation quantizers per layer and counts the layers whose error falls by `--threshold` (3×). Needs `venv/bin` on `PATH` (ninja). |
 | `act_quant.py` | library and check | torch | 0 | The activation quantizers that `act_calib.py --modes` and `humming_probe.py` use, copied from check (a) in `docs/research/deepinfer/cpu-checks/`. Run alone, it reproduces check (a)'s numbers. |
 | `api_smoke.py` | smoke test, run by hand | server | 0 if all 13 features pass, 2 if no request reaches a server, else 1 | Request-level API features: logprobs, n, stop, seeds, structured output, penalties, streaming, thinking, a streamed tool call (`tool_choice=required`, reassembled and parsed). |
