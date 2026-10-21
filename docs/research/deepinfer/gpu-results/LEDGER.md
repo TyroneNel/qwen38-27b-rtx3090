@@ -33,7 +33,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | evals-8 | Per-component GPU time (nsys) | health | todo | | | |
 | evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | todo | | | |
 | evals-10 | Throughput vs per-user Pareto sweep per mode | baseline | todo | | | |
-| evals-11 | Automatic warmup detection | health | todo | | | |
+| evals-11 | Automatic warmup detection | health | done | INFO | WARM after 3–4 runs; settling is thermal (C1 −9.4% over ~4 min, 62 → 83 °C), not JIT: the first run is the fastest | [evals-11.md](evals-11.md) |
 
 ## Phase 3: config and patch experiments
 
