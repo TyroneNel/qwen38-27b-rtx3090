@@ -1,0 +1,15 @@
+total params              3089.04 M  (header: 3089.08 M incl. norms)
+decoder layer              435.16 M = 0.870 GB bf16
+emb+lm_head share       82.3 %
+resident if emb shared  3.635 GB bf16
+resident if nothing shared 6.178 GB bf16
+draft KV/token 20480 B, target KV/token 65536 B, ratio 31.25 %
+SWA window KV           80 MiB = 0.084 GB
+step, efficient head    1.024 GB  -> 1.094 ms
+step, full lm_head      3.497 GB  -> 3.736 ms
+cut                     70.7 %
+depth-6 round           6.30 GB -> 6.73 ms
+W4A16 layer step        0.370 GB -> 0.40 ms
+MTP step                0.323 GB (module 0.215 + head 0.108)
+GDN state/row fp32 144 MiB, fp16 72 MiB
+width-16 tree: fp32 2.25 GiB, fp16 1.12 GiB; align-mode 2+k=17 slots fp16 1.20 GiB

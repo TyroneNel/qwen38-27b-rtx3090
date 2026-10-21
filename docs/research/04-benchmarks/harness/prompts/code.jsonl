@@ -1,0 +1,8 @@
+{"id": "cd0", "prompt": "Write a Python function that merges overlapping intervals given as a list of (start, end) tuples. Include type hints and a docstring, plus three pytest cases."}
+{"id": "cd1", "prompt": "Refactor this for readability and explain each change:\n\n```python\ndef f(xs):\n    r=[]\n    for i in range(len(xs)):\n        if xs[i]%2==0:\n            r.append(xs[i]*xs[i])\n    return r\n```"}
+{"id": "cd2", "prompt": "Find and fix the bug, then explain it:\n\n```python\ndef moving_avg(xs, k):\n    out = []\n    for i in range(len(xs)):\n        out.append(sum(xs[i:i+k]) / k)\n    return out\n```"}
+{"id": "cd3", "prompt": "Write a SQL query that returns the top 3 customers by total order value per country, given tables customers(id, name, country) and orders(id, customer_id, total). Explain the window function used."}
+{"id": "cd4", "prompt": "Write a bash script that watches a directory and prints a line whenever a new .log file appears, using only coreutils and inotifywait. Handle Ctrl-C cleanly."}
+{"id": "cd5", "prompt": "Implement an LRU cache class in Python using OrderedDict with get and put in O(1). Add a short usage example."}
+{"id": "cd6", "prompt": "Write a TypeScript function debounce<T extends (...args: any[]) => void>(fn: T, ms: number) with correct typings, and explain why `this` handling matters."}
+{"id": "cd7", "prompt": "Explain what this regex matches and give three strings that match and three that do not: ^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*)@(?:[a-z0-9-]+\\.)+[a-z]{2,}$"}

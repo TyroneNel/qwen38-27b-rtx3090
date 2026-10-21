@@ -1,0 +1,70 @@
+metadata {'torchspec_version': '0.1.0'} header bytes 1976
+  efficient_lm_head.weight                      BF16 [248320, 128]
+  efficient_lm_head_down_proj.weight            BF16 [128, 5120]
+  embed_tokens.weight                           BF16 [248320, 5120]
+  fc.weight                                     BF16 [5120, 15360]
+  fc_norm.0.weight                              BF16 [5120]
+  fc_norm.1.weight                              BF16 [5120]
+  fc_norm.2.weight                              BF16 [5120]
+  layers.0.hidden_norm.weight                   BF16 [5120]
+  layers.0.input_layernorm.weight               BF16 [5120]
+  layers.0.mlp.down_proj.weight                 BF16 [5120, 16384]
+  layers.0.mlp.gate_proj.weight                 BF16 [16384, 5120]
+  layers.0.mlp.up_proj.weight                   BF16 [16384, 5120]
+  layers.0.post_attention_layernorm.weight      BF16 [5120]
+  layers.0.self_attn.k_proj.weight              BF16 [5120, 10240]
+  layers.0.self_attn.o_proj.weight              BF16 [5120, 5120]
+  layers.0.self_attn.q_proj.weight              BF16 [5120, 10240]
+  layers.0.self_attn.v_proj.weight              BF16 [5120, 10240]
+  lm_head.weight                                BF16 [248320, 5120]
+  norm.weight                                   BF16 [5120]
+embed_tokens             1271.40 M   41.2%
+lm_head                  1271.40 M   41.2%
+layers.0                  435.17 M   14.1%
+fc                         78.64 M    2.5%
+efficient_lm_head          32.44 M    1.1%
+fc_norm                     0.02 M    0.0%
+norm                        0.01 M    0.0%
+total params 3,089,075,200  data bytes 6,178,150,400  file bytes 6,178,152,384
+
+P_body 0.5138B  P_lm 1.2714B  P_factors 32.44M
+K=1: 10.71 GFLOP/token (teacher once); 10.71 if teacher recomputed per depth (train_mtp.py style)
+K=3: 27.05 GFLOP/token (teacher once); 32.13 if teacher recomputed per depth (train_mtp.py style)
+K=7: 59.72 GFLOP/token (teacher once); 74.98 if teacher recomputed per depth (train_mtp.py style)
+K=7, lm_head trainable: 77.5 GFLOP/token
+our trainer depth 2 (all rows): 11.83 GFLOP/token -> 47.3 TFLOP/s at 4k tok/s
+our trainer depth 2 (response rows only): 10.14 GFLOP/token -> 40.6 TFLOP/s at 4k tok/s
+4k tok/s check: 7.2M tokens / 4000 = 30 min (README says ~30 min/epoch)
+
+gen rate 682 tok/s; cache 40960 B/token
+--- 25 TFLOP/s
+P-a 3.58 GFLOP/token -> 17.2 min/epoch
+P-c 1M tokens K=7 -> 39.8 min train + 14.2 min capture
+P-d 3.77 GFLOP/token -> 18.1 min/epoch (7.2M rows need 295 GB 4-tap cache)
+  D=   7.2M train     4.8 h  gen    2.9 h  capture    1.7 h  total     9.4 h  cache  0.29 TB  H100@300   0.4 h
+  D=  50.0M train    33.2 h  gen   20.4 h  capture   11.8 h  total    65.4 h  cache  2.05 TB  H100@300   2.8 h
+  D= 200.0M train   132.7 h  gen   81.5 h  capture   47.2 h  total   261.4 h  cache  8.19 TB  H100@300  11.1 h
+  D=1000.0M train   663.6 h  gen  407.4 h  capture  236.1 h  total  1307.1 h  cache 40.96 TB  H100@300  55.3 h
+  candidate stage 50M: 2.1 h
+--- 40 TFLOP/s
+P-a 3.58 GFLOP/token -> 10.7 min/epoch
+P-c 1M tokens K=7 -> 24.9 min train + 14.2 min capture
+P-d 3.77 GFLOP/token -> 11.3 min/epoch (7.2M rows need 295 GB 4-tap cache)
+  D=   7.2M train     3.0 h  gen    2.9 h  capture    1.7 h  total     7.6 h  cache  0.29 TB  H100@300   0.4 h
+  D=  50.0M train    20.7 h  gen   20.4 h  capture   11.8 h  total    52.9 h  cache  2.05 TB  H100@300   2.8 h
+  D= 200.0M train    82.9 h  gen   81.5 h  capture   47.2 h  total   211.7 h  cache  8.19 TB  H100@300  11.1 h
+  D=1000.0M train   414.7 h  gen  407.4 h  capture  236.1 h  total  1058.3 h  cache 40.96 TB  H100@300  55.3 h
+  candidate stage 50M: 1.3 h
+--- 44 TFLOP/s
+P-a 3.58 GFLOP/token -> 9.8 min/epoch
+P-c 1M tokens K=7 -> 22.6 min train + 14.2 min capture
+P-d 3.77 GFLOP/token -> 10.3 min/epoch (7.2M rows need 295 GB 4-tap cache)
+  D=   7.2M train     2.7 h  gen    2.9 h  capture    1.7 h  total     7.3 h  cache  0.29 TB  H100@300   0.4 h
+  D=  50.0M train    18.9 h  gen   20.4 h  capture   11.8 h  total    51.0 h  cache  2.05 TB  H100@300   2.8 h
+  D= 200.0M train    75.4 h  gen   81.5 h  capture   47.2 h  total   204.1 h  cache  8.19 TB  H100@300  11.1 h
+  D=1000.0M train   377.0 h  gen  407.4 h  capture  236.1 h  total  1020.6 h  cache 40.96 TB  H100@300  55.3 h
+  candidate stage 50M: 1.2 h
+
+body fp32+Adam 8.2 GB; body+lm_head 28.6 GB
+frozen bf16 embed+draft lm_head 5.09 GB; + target lm_head for teacher 7.63 GB
+T-01 bytes: factors 64.9 MB bf16; int4 slice 104.9 MB (+scales)

@@ -1,0 +1,96 @@
+# 1. bytes per category (measured from safetensors headers)
+== dbirks/Qwen3.8-27B-W4A16-AutoRound@1f05c441
+  body linears int4 (packed+scales)       12,543,596,800 B   11.682 GiB
+  embed_tokens                             2,542,796,800 B    2.368 GiB
+  lm_head                                  2,542,796,800 B    2.368 GiB
+  vision tower (bf16)                        921,460,192 B    0.858 GiB
+  mtp.linears                                744,488,960 B    0.693 GiB
+  mtp.fc                                     104,857,600 B    0.098 GiB
+  gdn in_proj_a/b (bf16)                      47,185,920 B    0.044 GiB
+  gdn conv1d/A_log/dt/norm                     3,953,664 B    0.004 GiB
+  norms/other                                  1,337,344 B    0.001 GiB
+  mtp.norms                                       52,224 B    0.000 GiB
+  TOTAL                                   19,452,526,304 B   18.117 GiB
+== syvai/qwen3.8-27b-3090-fast-variant@124c14e7
+  lm_head                                    655,564,816 B    0.611 GiB
+  mtp.linears                                191,938,672 B    0.179 GiB
+  mtp.draft_lm_head                          108,134,416 B    0.101 GiB
+  mtp.fc                                      27,033,616 B    0.025 GiB
+  mtp.norms                                       52,224 B    0.000 GiB
+  TOTAL                                      982,723,744 B    0.915 GiB
+== incoai/Qwen3.8-27B-DFlash2@015e7956
+  5 layers mlp                             2,673,868,800 B    2.490 GiB
+  5 layers attn q/k/v/o                      524,290,560 B    0.488 GiB
+  fc (5 taps x 5120 -> 5120)                 262,144,000 B    0.244 GiB
+  selector predecessor_codebook              127,139,840 B    0.118 GiB
+  selector successor_codebook                127,139,840 B    0.118 GiB
+  5 layers dynamic conv (attn)                65,740,800 B    0.061 GiB
+  5 layers dynamic conv (mlp)                 65,740,800 B    0.061 GiB
+  selector hidden_projection                   2,621,440 B    0.002 GiB
+  norms                                          122,880 B    0.000 GiB
+  TOTAL                                    3,848,808,960 B    3.584 GiB
+== syvai/Qwen3.8-27B-DFlash2-W4A16@4d30ec73
+  5 layers mlp                               689,357,040 B    0.642 GiB
+  5 layers attn q/k/v/o                      135,170,880 B    0.126 GiB
+  selector predecessor_codebook              127,139,840 B    0.118 GiB
+  selector successor_codebook                127,139,840 B    0.118 GiB
+  fc (5 taps x 5120 -> 5120)                  67,584,016 B    0.063 GiB
+  5 layers dynamic conv (attn)                65,740,800 B    0.061 GiB
+  5 layers dynamic conv (mlp)                 65,740,800 B    0.061 GiB
+  selector hidden_projection                   2,621,440 B    0.002 GiB
+  norms                                          122,880 B    0.000 GiB
+  TOTAL                                    1,280,617,536 B    1.193 GiB
+
+# 2. parameter counts (measured from header shapes)
+MTP module (bf16 source): {'mtp.fc': '52,428,800', 'mtp.norms': '26,112', 'mtp.linears': '372,244,480'} total 424,699,392
+incoai/Qwen3.8-27B-DFlash2: total 1,924,404,480 params, int4 0, bf16 1,924,404,480
+  5 layers mlp                         1,336,934,400
+  5 layers attn q/k/v/o                  262,145,280
+  fc (5 taps x 5120 -> 5120)             131,072,000
+  selector predecessor_codebook           63,569,920
+  selector successor_codebook             63,569,920
+  5 layers dynamic conv (attn)            32,870,400
+  5 layers dynamic conv (mlp)             32,870,400
+  selector hidden_projection               1,310,720
+  norms                                       61,440
+syvai/Qwen3.8-27B-DFlash2-W4A16: total 1,924,404,480 params, int4 1,730,150,400, bf16 194,254,080
+  5 layers mlp                         1,336,934,400
+  5 layers attn q/k/v/o                  262,145,280
+  fc (5 taps x 5120 -> 5120)             131,072,000
+  selector predecessor_codebook           63,569,920
+  selector successor_codebook             63,569,920
+  5 layers dynamic conv (attn)            32,870,400
+  5 layers dynamic conv (mlp)             32,870,400
+  selector hidden_projection               1,310,720
+  norms                                       61,440
+
+# 3. int8 g128 symmetric heads written by prepare/ (estimated: q bytes + 16-bit scale per 128)
+  lm_head int8 1,291,264,000 B (1.203 GiB); embed int8 1.203 GiB; draft_lm_head int8 (40,960 rows) 0.198 GiB
+  MTP linears int8 0.352 GiB + fc int8 0.050 GiB
+
+# 4. resident weights per variant, language-model-only (estimated, sums of rows above)
+  body (int4 linears + bf16 GDN/norms)                  11.731 GiB
+  base heads: lm_head int8 + embed int8                  2.405 GiB
+  fast heads: lm_head int4 GPTQ + embed int8             1.813 GiB
+  MTP base (int8 linears+fc, int8 draft head)            0.600 GiB
+  MTP fast (int4 GPTQ linears+fc, int4 draft head)       0.305 GiB
+  DFlash2 W4A16 file                                     1.193 GiB
+  A batch, base, no drafter                14.136 GiB
+  D SPEC=mtp, fast variant                 13.849 GiB
+  D SPEC=mtp, base variant                 14.736 GiB
+  B/C/E SPEC=dflash2, fast target          14.737 GiB
+  B with the bf16 DFlash2 instead          17.129 GiB
+
+# 5. KV page geometry, launcher formula (start_qwen.sh:566-616); pool/block checked against bench/test_resident_print.sh:75-99
+  B  CTX=fast bf16 k=7                   block  448 page  14.00 MiB pool 380 pages matches test; state/request 54 pages = 0.738 GiB; context 65,536 B/token (2 attention groups)
+  D' CTX=long int8 k=7 (FA2_FP8KV=0)     block  864 page  13.92 MiB pool 382 pages matches test; state/request 54 pages = 0.734 GiB; context 33,792 B/token (2 attention groups)
+     CTX=long fp8 k=7 (FA2_FP8KV=1)      block  880 page  13.75 MiB pool 387 pages matches test; state/request 54 pages = 0.725 GiB; context 32,768 B/token (2 attention groups)
+  C  CTX=fast bf16 k=15                  block  480 page  15.00 MiB pool 354 pages (no logged pool); state/request 102 pages = 1.494 GiB; context 65,536 B/token (2 attention groups)
+
+# 6. effective bytes per logged pool token = KV_MEM / pool (pins: start_qwen.sh:497,505,515,519; pools: long-context.md:125-126,190, README.md:102, long-context.md:571)
+  B bf16 k=7                   5.20 GiB / 69,758 =    80,040 B per pool token; 1 GiB of KV_MEM =   13,415 tokens
+  C bf16 k=15                  5.20 GiB / 57,669 =    96,819 B per pool token; 1 GiB of KV_MEM =   11,090 tokens
+  D' int8 k=7, prefix cache    5.20 GiB / 136,429 =    40,926 B per pool token; 1 GiB of KV_MEM =   26,236 tokens
+  dflash2 long fp8 FA2         5.20 GiB / 140,902 =    39,627 B per pool token; 1 GiB of KV_MEM =   27,097 tokens
+  E KVarN k=7                  4.90 GiB / 268,169 =    19,619 B per pool token; 1 GiB of KV_MEM =   54,728 tokens
+  D EMBED_UVA A/B: 1.203 GiB freed (row 3) -> 204,336 to 236,479 tokens (single-user/README.md:443): 40,172 B per pool token

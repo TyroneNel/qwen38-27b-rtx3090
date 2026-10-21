@@ -1,0 +1,9 @@
+dbirks/Qwen3.8-27B-W4A16-AutoRound {'attn_layers': 0.865, 'embed': 2.543, 'gdn_layers': 2.906, 'lm_head': 2.543, 'mlp': 8.824, 'mtp': 0.849, 'norm': 0.001, 'vision': 0.921} total GB 19.453
+syvai/qwen3.8-27b-3090-fast-variant {'lm_head': 0.656, 'mtp': 0.327} total GB 0.983
+incoai/Qwen3.8-27B-DFlash2 {'attn_layers': 0.524, 'mlp': 2.674, 'norm': 0.0, 'other': 0.651} total GB 3.849
+syvai/Qwen3.8-27B-DFlash2-W4A16 {'attn_layers': 0.135, 'mlp': 0.689, 'norm': 0.0, 'other': 0.456} total GB 1.281
+EFFECTIVE fast-variant {'attn_layers': 0.865, 'embed': 2.543, 'gdn_layers': 2.906, 'lm_head': 0.656, 'mlp': 8.824, 'mtp': 0.327, 'norm': 0.001, 'vision': 0.921}
+target streamed per step (layers + norms + int4 lm_head; excl. vision, mtp, embed): 13.252 GB
+drafter W4A16 file: 1.281 GB = 1.193 GiB
+@ 936 GB/s  target floor 14.15 ms | drafter 1.37 ms | drafter+lm_head re-read 2.07 ms
+@ 796 GB/s  target floor 16.65 ms | drafter 1.61 ms | drafter+lm_head re-read 2.43 ms

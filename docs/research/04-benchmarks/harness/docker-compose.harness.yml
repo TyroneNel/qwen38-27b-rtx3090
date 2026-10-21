@@ -1,0 +1,13 @@
+# Compose override: bind-mounts the harness (read-only) at /harness and a results dir at /results in both serve
+# services. Chain it AFTER the box's own override files (paths resolve against the first -f file's directory):
+#   export COMPOSE_FILE=docker-compose.yml:docker-compose.override.yml:docs/research/04-benchmarks/harness/docker-compose.harness.yml
+# Changing the mounts recreates the container, so put it in COMPOSE_FILE before the boot you will measure.
+services:
+  single:
+    volumes:
+      - ./docs/research/04-benchmarks/harness:/harness:ro
+      - ./docs/research/04-benchmarks/results:/results
+  batch:
+    volumes:
+      - ./docs/research/04-benchmarks/harness:/harness:ro
+      - ./docs/research/04-benchmarks/results:/results

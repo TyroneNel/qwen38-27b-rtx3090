@@ -1,0 +1,83 @@
+# GPU results ledger
+
+One row per item. The GPU agent keeps this file current and commits it with every result. Run instructions are in [../gpu-agent-prompt.md](../gpu-agent-prompt.md). Protocols and win criteria are in each item's "GPU validation" bullet in its appendix.
+
+Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` (clears the appendix's win criterion and the baseline spread) · `LOSS` · `NEUTRAL` (inside noise) · `INVALID` (correctness or lossless check failed) · `INFO` (measurement only, no win criterion).
+
+## Phase 1: health and baselines
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| env | Box inventory: GPU, driver, power limit, WSL, Docker, models | – | done | INFO | 3090 at 250 W, driver 610.88, WSL2; bf16 DFlash2 fetched | [ENVIRONMENT.md](ENVIRONMENT.md) |
+| health | `make verify` plus the repo's GPU-applicable `bench/test_*` | – | done | INFO | verify 0 FAIL; 39 tests pass/skip, 2 fail outside the serving path (stale 0.31 test API; WSL banner order) | [health.md](health.md) |
+| cpu-checks | Re-run every script in `cpu-checks/`; compare with committed `.out` | – | done | INFO | 11/12 byte-identical; `quant_d_gptq` float noise only | [cpu-checks.md](cpu-checks.md) |
+| baseline | Headline numbers per mode A–E on this box | health | done | INFO | A 814, B 110.4 e2e, C copy 358, D 99.8, D′ 55.7/48.8, E 57.8 tok/s; 6–14% under native docs (WSL2), A spills at 0.93 → 0.91 | [baseline.md](baseline.md) |
+
+## Phase 2: measurement tools and probes
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| quant-2-check | `quant_real_ckpt_check.py` on the real checkpoint | – | done | INFO | 50.4% negative groups, 100% of them use −8; fold error 0.069% of weight energy | [quant-2-check.md](quant-2-check.md) |
+| runtime-2 | `bench/step_curve.py`: ms/step vs verified tokens, per backend and depth | baseline | todo | | | |
+| evals-2 | `VLLM_GPU_SYNC_CHECK=warn` boot per mode | health | todo | | | |
+| evals-1 | Decode-vs-prefill KL probe per mode | health | todo | | | |
+| evals-4 | Thinking-on speed and acceptance cohort | baseline | done | INFO | C1 thinking on (xhigh): B −14.8% (117.6 → 100.2), D −9.7%; 0 streams reached `</think>` in 1,024 tokens | [evals-4.md](evals-4.md) |
+| evals-3 | Paired quality battery | health | done | INFO | known pair (all-linear int8): ppl +4.00% (docs +4.1%); greedy GSM8K b=2 c=3 p=1; sampled pooled b=14 c=6 p=0.115 | [evals-3.md](evals-3.md) |
+| spec-5 | Σ min(p, q) acceptance telemetry | health | done | INFO | exact at T=0 (3.486 = 3.486); variance ratio across prompts only 1.03–1.07 | [spec-5.md](spec-5.md) |
+| quant-1-calib | `bench/act_calib.py` per-128 and Hadamard-128 modes | health | todo | | | |
+| attn-ncu | ncu on pthfa at 150k, T=8 (attention-kv open question 1) | health | todo | | | |
+| e-profile | Torch profile of E at 200k: attention share per step | health | done | INFO | at ~170k: attention 78% of a 151 ms step (KVarN stage1 117 ms, ~40× DRAM floor); E = 11.5 tok/s there | [e-profile.md](e-profile.md) |
+| evals-5 | Special-token injection check (tokenizer on `<\|im_end\|>`), hardening if needed | health | todo | | | |
+| evals-6 | Streamed tool-call test, tool case in `api_smoke` | health | done | INFO | parser 1,005 chunked streams 0 diffs; streamed tool call passes in all 6 modes | [evals-6.md](evals-6.md) |
+| evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | todo | | | |
+| evals-8 | Per-component GPU time (nsys) | health | todo | | | |
+| evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | todo | | | |
+| evals-10 | Throughput vs per-user Pareto sweep per mode | baseline | done | INFO | A knee N=16–32 (647 tok/s agg at N=32); at N=2–8 D (MTP) beats B (DFlash2): 423 vs 236 tok/s at N=8 | [evals-10.md](evals-10.md) |
+| evals-11 | Automatic warmup detection | health | done | INFO | WARM after 3–4 runs; settling is thermal (C1 −9.4% over ~4 min, 62 → 83 °C), not JIT: the first run is the fastest | [evals-11.md](evals-11.md) |
+
+## Phase 3: config and patch experiments
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| quant-1 | Per-128 int8 activation scales, route A (Humming) | quant-1-calib, evals-1 | todo | | | |
+| quant-2 | Lossless negative-scale fold, fix A | quant-2-check shows negative groups use −8 | todo | | | |
+| quant-7 | int4 embedding where `EMBED_UVA` can't be used | evals-1 | todo | | | |
+| quant-5 | Batch-mode lm_head as W4A8 | evals-1 | todo | | | |
+| spec-0 | `DFLASH_TOKENS=3/5/7` ladder at 90k, 150k, 240k | runtime-2 | todo | | | |
+| spec-1 | GDN opt-in to adaptive verification (= runtime-1) | runtime-2 | todo | | | |
+| kvarn-varlen | Root-cause KVarN corruption on verify-length change (`start_qwen.sh:399-428`) | – | todo | | | |
+| drafter-1a | Host-side confidence trim, stage 0 | runtime-2 | todo | | | |
+| spec-2 | Fresh-confidence device trim | spec-1 | todo | | | |
+| spec-4 | Lookup-aware confidences | spec-1 | todo | | | |
+| runtime-3 | Bound the tail of forced tool calls | – | todo | | | |
+
+## Phase 4: kernel prototypes
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| attn-1.1 | pthfa unpadded 48-row tiles at T=8 (lossless) | attn-ncu | todo | | | |
+| attn-1.2 | PV fp16 accumulate | attn-1.1 | todo | | | |
+| attn-1.3 | int8 QK | attn-1.2, evals-1 | todo | | | |
+| attn-3 | int8-QK prefill on quantized-KV arms | evals-1 | todo | | | |
+| quant-6 | Fuse int8 activation quant into its producer | quant-1 | todo | | | |
+| attn-5 | Hadamard-rotated int8/int4 per-token-head KV | evals-1 | todo | | | |
+
+## Phase 5: drafter tools
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| drafter-2 | Offline DFlash2 gate (`drafter/eval_dflash2.py`) | – | todo | | | |
+| quant-3 | Better GPTQ for the int4 drafter and lm_head | drafter-2 | todo | | | |
+| drafter-3 | TV-loss repair of the W4A16 DFlash2 | drafter-2 | todo | | | |
+| drafter-1b | Learned confidence head, stage 1 | drafter-1a or spec-2 shows a win | todo | | | |
+
+## Phase 6: gated stretch
+
+| ID | What | Gate | Status | Verdict | Key number | Evidence |
+|---|---|---|---|---|---|---|
+| attn-2 | KVarN verify on a pthfa-family CUDA kernel | e-profile: attention ≥ 25% of E's step at 200k; attn-1.1 done | todo | | | |
+| spec-3 | RecoverSSM for GDN | spec-1 WIN | todo | | | |
+| quant-4 | Block-Hadamard-128 rotation of linear inputs | quant-1 route A blocked or slower than Marlin by > 5% | todo | | | |
+| attn-4 | Training-free top-k sparse attention | attn-2 done; needle and GSM8K gates ready | todo | | | |
+| attn-6 | Device-side balanced split scheduler | appendix expects ~0; probe only if attn-ncu shows split imbalance | todo | | | |
+| drafter-4 | Own-distribution fine-tune | needs an 80 GB GPU: out of scope here | skipped | | | |

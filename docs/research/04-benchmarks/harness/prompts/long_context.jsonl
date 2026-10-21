@@ -1,0 +1,4 @@
+{"id": "copy", "question": "Gengiv ordret de første 60 linjer af dokumentet. Ingen kommentarer, kun teksten."}
+{"id": "quote", "question": "Citér ordret de afsnit der handler om hukommelse og KV-cache, og forklar dem."}
+{"id": "summary", "question": "Skriv en grundig, struktureret opsummering på dansk."}
+{"id": "qa", "question": "Svar udførligt: hvilke optimeringer gav mest, og hvorfor?"}

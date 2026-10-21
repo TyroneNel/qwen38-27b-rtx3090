@@ -1,0 +1,97 @@
+# selfcheck.sh output, 2026-10-21T09:10:27Z, research box (no GPU). Every number below comes from mock_server.py: plumbing proof, NOT a measurement of the stack. (post-review: spill + GPU-from-env checks added)
+== 1. run_suite.sh against the mock (spec on: acceptance counters move)
+label=selfcheck-spec out=$TMP/suite phases=snap probe sweep ladder greedy spill
+PTH_FA=0 SPEC=<unset> CTX=<unset>
+wrote $TMP/suite/snapshot_pre_ubuntu.txt
+[11:10:27] probe: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/vendor/warmup_probe.py --tokens 24 --out $TMP/suite/warmup_probe.json
+run 1: C1 decode 1082.7 tok/s agg 730.1 tok/s ttft_med 7ms  C4 decode 1094.8 tok/s agg 2957.4 tok/s ttft_med 7ms
+run 2: C1 decode 1092.6 tok/s agg 769.4 tok/s ttft_med 6ms (+0.9%)  C4 decode 1109.8 tok/s agg 3029.1 tok/s ttft_med 7ms (+1.4%)
+SUMMARY warmup_probe WARM runs=2 tol=3% c1=1092.6 c4=1109.8
+[11:10:28] sweep_short_chat: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec --set short_chat --conc 1,2 --reps 3 --warmup 1 --max-tokens 24 --salt selfcheck-spec --out $TMP/suite
+| short_chat | - | 1 | 26 | 7 ± 0 (cv 1.4%) | 931.3 ± 5.4 (cv 0.6%) | 762.8 ± 3.0 (cv 0.4%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+| short_chat | - | 2 | 26 | 7 ± 0 (cv 0.3%) | 930.2 ± 3.7 (cv 0.4%) | 1514.5 ± 3.0 (cv 0.2%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+
+wrote $TMP/suite/sweep_selfcheck-spec_short_chat.json
+[11:10:30] sweep_code: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec --set code --conc 1,2 --reps 3 --warmup 1 --max-tokens 24 --salt selfcheck-spec --out $TMP/suite
+| code | - | 1 | 26 | 6 ± 0 (cv 0.3%) | 933.3 ± 10.7 (cv 1.1%) | 765.2 ± 3.8 (cv 0.5%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+| code | - | 2 | 26 | 7 ± 0 (cv 0.4%) | 943.5 ± 4.5 (cv 0.5%) | 1530.7 ± 5.5 (cv 0.4%) | 3.29 ± 0.00 (cv 0.0%) | 0.327 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+
+wrote $TMP/suite/sweep_selfcheck-spec_code.json
+[11:10:31] sweep_long_1000: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/sweep.py selfcheck-spec-1000 --set long_context --ctx 1000 --conc 1,2 --reps 3 --warmup 1 --max-tokens 16 --salt selfcheck-spec --out $TMP/suite
+| long_context | 1000 | 1 | 562 | 7 ± 0 (cv 0.4%) | 611.4 ± 5.1 (cv 0.8%) | 503.3 ± 3.4 (cv 0.7%) | 2.43 ± 0.00 (cv 0.0%) | 0.204 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+| long_context | 1000 | 2 | 562 | 7 ± 0 (cv 0.8%) | 605.6 ± 1.9 (cv 0.3%) | 993.3 ± 3.8 (cv 0.4%) | 2.43 ± 0.00 (cv 0.0%) | 0.204 ± 0.000 (cv 0.0%) | n/a | 3/3 ok |
+
+wrote $TMP/suite/sweep_selfcheck-spec-1000_long_context.json
+[11:10:32] ladder_44: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/vram.py $TMP/suite/ladder_44_vram.json -- /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/bench/conc_ladder.py --n 1,2 --ctx-tokens 44 --out 16 --reps 3 --salt selfcheck-spec --label selfcheck-spec-44 --json $TMP/suite/ladder_44.json
+| ms/pass | 10.5 | 5.3 |
+| preemptions | 0 | 0 |
+
+wrote $TMP/suite/ladder_44.json
+[11:10:32] greedy: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/greedy_equal.py record selfcheck-spec --max-tokens 24 --out $TMP/suite
+code/cd5: 24 tokens, finish=length
+code/cd6: 24 tokens, finish=length
+code/cd7: 24 tokens, finish=length
+wrote $TMP/suite/greedy_selfcheck-spec.json
+[11:10:33] spill: /usr/bin/python3 /home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness/gpumem_summary.py $TMP/suite/gpumem.csv $TMP/suite/spill.json
+SUMMARY spill flat first=370 max=378 last=378 growth=8 MiB (n=3)
+wrote $TMP/suite/snapshot_post_ubuntu.txt
+done: 0 failed phase(s); results in $TMP/suite
+ok   run_suite.sh (all phases) (exit 0)
+probe rc=0
+sweep_short_chat rc=0
+sweep_code rc=0
+sweep_long_1000 rc=0
+ladder_44 rc=0
+greedy rc=0
+spill rc=0
+-- snapshot (no GPU here, must degrade gracefully):
+
+## date
+2026-10-21T09:10:27Z
+ubuntu
+6.17.13-2-pve
+
+## nvidia-smi
+nvidia-smi: not found (no GPU on this box)
+
+## env knobs (keys redacted)
+HARNESS=/home/tyrone/qwen38-27b-rtx3090/docs/research/04-benchmarks/harness
+HARNESS_CORPUS=$TMP/corpus.txt
+-- sweep json: acceptance and spread are present:
+conc=2 ttft_mean_ms=6.6 sd=0.0 reps=3 tok_step=3.29 accept_rate=0.327 vram={'gpu': '0', 'source': 'nvidia-smi memory.used, secondary: misses WDDM spill (see spill.json)', 'idle_mib': None, 'peak_mib': None, 'samples': 0}
+ok   sweep json: n>=3, tok/step and accept rate read from /metrics, vram None without nvidia-smi (exit 0)
+== 1b. run_suite.sh refuses an arm with PTH_FA unpinned
+PTH_FA is unset in this container: pin PTH_FA=0 or 1 in .env and reboot (README, 'Arm rules')
+ok   unpinned PTH_FA is refused (exit 2)
+PTH_FA=0
+== 1c. sweep decode rate keeps the EOS-only last step in its window (non-spec mock, 300 tok/s; review fix)
+decode 279.9 tok/s/stream vs mock 300 (without the fix: ~+17%, 7 tokens over 6 steps)
+ok   decode rate = (ntok-1) over first content -> finish chunk (exit 0)
+== 2. greedy_equal: non-spec vs spec (must be identical)
+SUMMARY greedy_equal nospec vs selfcheck-spec: 16/16 identical, 0 near-tie, 0 real
+ok   identical spec vs non-spec (exit 0)
+== 3. greedy_equal: injected divergence at token 5
+code/cd7: DIVERGES at token 5/24 (A margin 0.8044, B margin 0.8044) -> REAL
+SUMMARY greedy_equal nospec vs real: 0/16 identical, 0 near-tie, 16 real
+ok   real divergence is flagged (exit 1)
+code/cd7: DIVERGES at token 5/24 (A margin 0.01, B margin 0.01) -> near-tie
+SUMMARY greedy_equal tieA vs tieB: 0/16 identical, 16 near-tie, 0 real
+ok   near-tie divergence is flagged and classified (exit 1)
+== 4. quality_guard on synthetic battery results (not real measurements)
+SUMMARY quality_guard PASS
+ok   guard passes a lossless result (exit 0)
+SUMMARY quality_guard FAIL ppl all, ppl en, ppl da, ppl code
+ok   guard fails +4% ppl (the prior all-linear-int8 pair) (exit 1)
+INVALID: KeyError: 'ppl'
+ok   guard: invalid input (exit 2)
+== 4b. gpumem_summary: flat vs SPILL (synthetic samples)
+ok   suite wrote spill.json, flat (exit 0)
+SUMMARY spill SPILL first=370 max=698 last=698 growth=328 MiB (n=2)
+ok   370 -> 698 MiB is SPILL (the prior A at GPU_UTIL=0.93) (exit 1)
+== 4c. vram.py takes the GPU from CUDA_VISIBLE_DEVICES
+gpu GPU-abc
+ok   first CUDA_VISIBLE_DEVICES entry (exit 0)
+== 5. vram.py wrapper without nvidia-smi
+ok   vram.py exits with the wrapped command's status (exit 0)
+{"gpu": "0", "source": "nvidia-smi memory.used, secondary: misses WDDM spill (see spill.json)", "idle_mib": null, "peak_mib": null, "samples": 0}
+SELFCHECK PASS
