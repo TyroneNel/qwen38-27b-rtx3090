@@ -1,0 +1,10 @@
+# hq:exp-prof — the stock image plus Nsight Compute and Nsight Systems (attn-ncu, evals-8).
+# Serving is unchanged: only profiler binaries are added.
+#   docker build -f docs/research/deepinfer/experiments/docker/Dockerfile.prof -t hq:exp-prof .
+ARG BASE=ghcr.io/syv-ai/hyperqwen:latest
+FROM ${BASE}
+RUN apt-get update && apt-get install -y --no-install-recommends cuda-nsight-compute-13-0 cuda-nsight-systems-13-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf $(ls -d /opt/nvidia/nsight-compute/*/ | tail -1)ncu /usr/local/bin/ncu \
+    && (command -v nsys || ln -sf $(ls /opt/nvidia/nsight-systems/*/bin/nsys | tail -1) /usr/local/bin/nsys) \
+    && ncu --version && nsys --version

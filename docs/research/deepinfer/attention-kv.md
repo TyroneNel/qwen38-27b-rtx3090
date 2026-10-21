@@ -199,6 +199,7 @@ The generators are synthetic. Real Qwen3.8 q/k channel statistics would settle t
 ## Open questions
 
 1. ncu on a **3090** at 150k, T=8: tensor-pipe vs DRAM utilisation. This decides attn-1; the 3080 calibration and the pthfa header are the only evidence so far.
+   **Measured (2026-10-21):** ncu blocked: no performance-counter access under WSL2. A microbenchmark gives T=8 at 150k as 1,398 µs/layer, 24% of DRAM bandwidth, against 47–54% for the T ≤ 4 decode kernel on the same bytes. So it is on-chip-bound, not DRAM-bound; the pipe-level split is unmeasured. [gpu-results/attn-ncu.md](gpu-results/attn-ncu.md)
 2. `docs/optimizations.md:152` says int8 runs at "2x the fp16 rate". The GA102 whitepaper gives 284 TOPS int8 against 71 TFLOPS for fp16 with fp32 accumulate (4×) and 142 with fp16 accumulate (2×). Which baseline did the doc mean?
 3. Is D's fp8 FA2/FlashInfer decode near its 5.25 ms DRAM floor at 150k? If not, D's gain is in that backend, not in the MMA mode.
 4. E's per-step attention cost at 200k+ on a 3090. attn-2's +21% rests on it.
