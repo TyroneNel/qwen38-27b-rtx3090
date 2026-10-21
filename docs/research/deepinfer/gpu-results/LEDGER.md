@@ -26,7 +26,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | spec-5 | Σ min(p, q) acceptance telemetry | health | todo | | | |
 | quant-1-calib | `bench/act_calib.py` per-128 and Hadamard-128 modes | health | todo | | | |
 | attn-ncu | ncu on pthfa at 150k, T=8 (attention-kv open question 1) | health | todo | | | |
-| e-profile | Torch profile of E at 200k: attention share per step | health | todo | | | |
+| e-profile | Torch profile of E at 200k: attention share per step | health | done | INFO | at ~170k: attention 78% of a 151 ms step (KVarN stage1 117 ms, ~40× DRAM floor); E = 11.5 tok/s there | [e-profile.md](e-profile.md) |
 | evals-5 | Special-token injection check (tokenizer on `<\|im_end\|>`), hardening if needed | health | todo | | | |
 | evals-6 | Streamed tool-call test, tool case in `api_smoke` | health | done | INFO | parser 1,005 chunked streams 0 diffs; streamed tool call passes in all 6 modes | [evals-6.md](evals-6.md) |
 | evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | todo | | | |

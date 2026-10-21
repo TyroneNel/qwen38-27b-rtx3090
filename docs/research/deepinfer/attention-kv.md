@@ -104,6 +104,8 @@ E's 67 tok/s was measured at `--ctx 20000`: 3.15 tokens per step, so about 47 ms
 
 ### attn-2: KVarN verify on a pthfa-family CUDA kernel (mode E)
 
+**Measured (2026-10-21):** INFO (e-profile), gate open: attention is 78% of E's step at ~170k (117.7 of 150.8 ms), `_kvarn_fused_decode_stage1` at ~40× its DRAM floor; E decodes 11.5 tok/s there. [gpu-results/e-profile.md](gpu-results/e-profile.md)
+
 - **DeepInfer.** Stores the main KV at 4 bits in production: e2m1 per 16 with an e4m3 scale (`DeepInfer/deepinfer/model_executor/layers/tilelang_ops/cache_common.py:119-127`, `DeepInfer/doc/inference_deployment_qa.md:213-221`). It reads those bytes with one hand-tuned kernel (FlashMLA, SM90/100 only). The lesson is the kernel, not the format.
 - **HyperQwen.**
   - E reads KVarN k4v2 through Triton `tl.dot` with an fp32 accumulator (`kvarn/files/vllm/v1/attention/ops/triton_kvarn_decode.py:525, 538, 1245`). Decode is "~20% slower than fp8 at 100k" (`kvarn/README.md:113`).
