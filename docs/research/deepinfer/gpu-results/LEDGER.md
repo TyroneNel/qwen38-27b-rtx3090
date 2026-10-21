@@ -22,8 +22,8 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | evals-2 | `VLLM_GPU_SYNC_CHECK=warn` boot per mode | health | todo | | | |
 | evals-1 | Decode-vs-prefill KL probe per mode | health | todo | | | |
 | evals-4 | Thinking-on speed and acceptance cohort | baseline | done | INFO | C1 thinking on (xhigh): B −14.8% (117.6 → 100.2), D −9.7%; 0 streams reached `</think>` in 1,024 tokens | [evals-4.md](evals-4.md) |
-| evals-3 | Paired quality battery | health | todo | | | |
-| spec-5 | Σ min(p, q) acceptance telemetry | health | todo | | | |
+| evals-3 | Paired quality battery | health | done | INFO | known pair (all-linear int8): ppl +4.00% (docs +4.1%); greedy GSM8K b=2 c=3 p=1; sampled pooled b=14 c=6 p=0.115 | [evals-3.md](evals-3.md) |
+| spec-5 | Σ min(p, q) acceptance telemetry | health | done | INFO | exact at T=0 (3.486 = 3.486); variance ratio across prompts only 1.03–1.07 | [spec-5.md](spec-5.md) |
 | quant-1-calib | `bench/act_calib.py` per-128 and Hadamard-128 modes | health | todo | | | |
 | attn-ncu | ncu on pthfa at 150k, T=8 (attention-kv open question 1) | health | todo | | | |
 | e-profile | Torch profile of E at 200k: attention share per step | health | done | INFO | at ~170k: attention 78% of a 151 ms step (KVarN stage1 117 ms, ~40× DRAM floor); E = 11.5 tok/s there | [e-profile.md](e-profile.md) |

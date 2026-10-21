@@ -22,6 +22,13 @@ again.
 SPEC=off, SPEC=dflash2 and CTX=fast were never affected, so the published quality
 tables are not implicated.
 Usage: python bench/quality_battery.py <tag> [--ppl-only] [--gsm-only] [--gsm-n 200]
+                                       [--jsonl PATH] [--seeds N] [--temperature T]
+--jsonl PATH writes one row per GSM8K item per arm ({kind:"gsm8k", arm, idx, correct, finish_reason,
+extracted_via, completion_tokens, text}; extracted_via is "final_answer", "last_number" for the fallback, or
+"none") and one row per perplexity corpus ({kind:"ppl", corpus, ppl, tokens, nll}), for
+bench/compare_quality.py. --seeds N adds N sampled GSM8K arms, arm k with seed=k on every request, at the
+server's default sampling (generation_config) unless --temperature T. The greedy arm and its output are
+unchanged by either flag.
 """
 import json, os, sys, glob, re, math, time, random
 from concurrent.futures import ThreadPoolExecutor
@@ -35,6 +42,10 @@ Q = os.environ.get("QUALITY_DATA", os.path.join(HERE, "quality-data"))
 tag = sys.argv[1]
 ppl_only = "--ppl-only" in sys.argv; gsm_only = "--gsm-only" in sys.argv
 gsm_n = int(sys.argv[sys.argv.index("--gsm-n")+1]) if "--gsm-n" in sys.argv else 200
+jsonl = sys.argv[sys.argv.index("--jsonl")+1] if "--jsonl" in sys.argv else None
+n_seeds = int(sys.argv[sys.argv.index("--seeds")+1]) if "--seeds" in sys.argv else 0
+temperature = float(sys.argv[sys.argv.index("--temperature")+1]) if "--temperature" in sys.argv else None
+jrows = []  # --jsonl rows
 
 def docs():
     out = []
@@ -84,29 +95,50 @@ def extract_num(s):
     m = re.findall(r"-?\d[\d,]*\.?\d*", s.replace("$",""))
     return m[-1].replace(",","") if m else None
 
-def gsm_one(row):
+def gsm_one(row, seed=None):
+    """One item; seed None is the greedy arm, else a sampled arm at that seed (server-default sampling unless
+    --temperature). Returns (correct, completion_tokens, the --jsonl fields)."""
     q, a = row
     gold = a.split("####")[-1].strip().replace(",","")
-    r = harness.post("/v1/chat/completions", {"messages":[{"role":"user","content":q+"\n\nSolve step by step, then give the final answer as 'Final answer: <number>'."}],
-        "max_tokens":768,"temperature":0,"chat_template_kwargs":{"enable_thinking":False}})
+    payload = {"messages":[{"role":"user","content":q+"\n\nSolve step by step, then give the final answer as 'Final answer: <number>'."}],
+        "max_tokens":768,"temperature":0,"chat_template_kwargs":{"enable_thinking":False}}
+    if seed is not None:
+        del payload["temperature"]
+        if temperature is not None: payload["temperature"] = temperature
+        payload["seed"] = seed
+    r = harness.post("/v1/chat/completions", payload)
     txt = r["choices"][0]["message"]["content"] or ""
     m = re.search(r"Final answer:\s*\**\s*\$?(-?[\d,]*\.?\d+)", txt)
     pred = (m.group(1).replace(",","") if m else extract_num(txt))
     try: ok = abs(float(pred) - float(gold)) < 1e-6
     except Exception: ok = False
-    return ok, r["usage"]["completion_tokens"]
+    via = "final_answer" if m else "last_number" if pred is not None else "none"
+    return ok, r["usage"]["completion_tokens"], {"correct": ok, "finish_reason": r["choices"][0].get("finish_reason"),
+        "extracted_via": via, "pred": pred, "gold": gold, "completion_tokens": r["usage"]["completion_tokens"], "text": txt}
 
-def run_gsm():
+def run_gsm(seed=None):
     t = pq.read_table(f"{Q}/gsm8k/main/test-00000-of-00001.parquet")
     rows = list(zip(t.column("question").to_pylist(), t.column("answer").to_pylist()))[:gsm_n]
-    with ThreadPoolExecutor(32) as ex: res = list(ex.map(gsm_one, rows))
-    acc = sum(1 for ok,_ in res if ok)/len(res); toks = sum(n for _,n in res)/len(res)
+    with ThreadPoolExecutor(32) as ex: res = list(ex.map(lambda r: gsm_one(r, seed), rows))
+    arm = "greedy" if seed is None else f"seed{seed}"
+    jrows.extend({"kind": "gsm8k", "arm": arm, "idx": i, **d} for i, (_, _, d) in enumerate(res))
+    acc = sum(1 for ok,_,_ in res if ok)/len(res); toks = sum(n for _,n,_ in res)/len(res)
     return acc, toks
 
 t0=time.perf_counter(); result={"tag":tag}
 if not gsm_only:
     result["ppl"] = run_ppl(); print(tag, "PPL", {k:(round(v[0],4),v[1]) for k,v in result["ppl"].items()}, f"{time.perf_counter()-t0:.0f}s", flush=True)
+    jrows.extend({"kind": "ppl", "corpus": k, "ppl": p, "tokens": n, "nll": math.log(p)*n} for k,(p,n) in result["ppl"].items())
 if not ppl_only:
     t1=time.perf_counter(); acc, toks = run_gsm(); result["gsm8k"]={"n":gsm_n,"acc":acc,"mean_tokens":toks}
     print(tag, f"GSM8K n={gsm_n} acc={acc:.3f} mean_tokens={toks:.0f} {time.perf_counter()-t1:.0f}s", flush=True)
+    for seed in range(1, n_seeds+1):
+        t1=time.perf_counter(); acc, toks = run_gsm(seed)
+        result.setdefault("gsm8k_sampled", {})[f"seed{seed}"]={"n":gsm_n,"acc":acc,"mean_tokens":toks,"temperature":temperature}
+        print(tag, f"GSM8K[seed{seed}{'' if temperature is None else f' T={temperature}'}] n={gsm_n} acc={acc:.3f} mean_tokens={toks:.0f} {time.perf_counter()-t1:.0f}s", flush=True)
 with open(os.path.join(Q, f"result_{tag}.json"),"w") as f: json.dump(result,f)
+if jsonl:
+    with open(jsonl, "w") as f:
+        f.write(json.dumps({"kind": "meta", "tag": tag, "gsm_n": gsm_n, "seeds": n_seeds, "temperature": temperature}) + "\n")
+        for r in jrows: f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    print(tag, f"JSONL {len(jrows)} rows -> {jsonl}", flush=True)

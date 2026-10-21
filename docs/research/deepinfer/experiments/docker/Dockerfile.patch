@@ -1,0 +1,19 @@
+# Variant image: the stock image plus experimental vLLM patches from experiments/patches/ and, optionally,
+# the repo's launcher (for experiments that add a launcher knob). Build context: the repo root.
+#   docker build -f docs/research/deepinfer/experiments/docker/Dockerfile.patch \
+#     --build-arg PATCHES="gdn-adaptive-verify-optin.patch" --build-arg LAUNCHER=1 -t hq:exp-spec1 .
+# Each patch is applied with --forward --fuzz 0 to the image's installed vLLM; the build fails if one does not apply.
+# Every patch and launcher knob is inert unless its env knob is set, so the variant serves what the stock
+# image serves by default.
+ARG BASE=ghcr.io/syv-ai/hyperqwen:latest
+FROM ${BASE}
+ARG PATCHES
+ARG LAUNCHER=0
+COPY docs/research/deepinfer/experiments/patches/ /tmp/di-patches/
+COPY single-user/start_qwen.sh /tmp/di-launcher/start_qwen.sh
+COPY resolve_config.sh /tmp/di-launcher/resolve_config.sh
+RUN set -e; SP=/app/venv/lib/python3.12/site-packages/vllm; for p in $PATCHES; do \
+      echo "applying $p"; patch -p1 --forward --fuzz 0 -d $SP -i /tmp/di-patches/$p; done; \
+    if [ "$LAUNCHER" = 1 ]; then cp /tmp/di-launcher/start_qwen.sh /app/single-user/start_qwen.sh; \
+      cp /tmp/di-launcher/resolve_config.sh /app/resolve_config.sh; fi; \
+    printf 'patches: %s\nlauncher: %s\n' "$PATCHES" "$LAUNCHER" > /app/DI_PATCHES.txt

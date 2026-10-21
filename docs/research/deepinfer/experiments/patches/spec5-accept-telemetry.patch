@@ -1,0 +1,362 @@
+spec-5: expected-acceptance telemetry, sum_x min(p, q), from the MRv2 rejection sampler.
+
+Research experiment for docs/research/deepinfer/spec-decode.md spec-5. NOT in patches/series.
+Off unless SPEC5_TELEMETRY_DIR is set; with it unset rejection_sample gets accept_stats=None and
+runs exactly the upstream kernels.
+
+Why a server patch: the client never sees q. /v1/completions returns target logprobs for the
+emitted tokens only, so the draft distribution, the rejected draft token and its target
+probability are all invisible from outside, and sum_x min(p, q) needs all three.
+
+With SPEC5_TELEMETRY_DIR=<dir>, after _rejection_kernel one extra Triton kernel (one program per
+request) writes four rows per draft position i:
+  overlap   sum_x min(p_i, q_i)                       (DeepInfer's accept_probs, fused_sample.py)
+  survival  prod_{j<=i} min(1, p_j(d_j) / q_j(d_j))   E[accept at i | the drafts]
+  drafts    1 per verified position
+  accepted  1 if i < the accepted length              (the realised count, for the identity check)
+p is the processed target distribution the sampler tests against, one-hot at the argmax for a
+greedy request; q is softmax(draft_logits / T), or one-hot at the draft for a speculator that
+passes no draft logits. Rows are summed over requests into a float64 [4, k] device tensor;
+each verify step copies it non-blocking into pinned memory and the next step writes it to
+<dir>/spec5-<pid>.json (cumulative since boot), so nothing waits on the GPU and the file lags
+the device by one verify step. Greedy requests make survival == accepted exactly.
+
+Cost when on: one launch per verify chunk plus a full-vocab pass per draft position only when
+the speculator passes draft logits at T > 0; a ~200-byte D2H copy and a JSON write per step.
+MRv2 only (v1/worker/gpu/spec_decode); the V1 runner's v1/sample/rejection_sampler.py is untouched.
+
+Kind: experiment
+Cut-against: ghcr.io/syv-ai/hyperqwen:latest site-packages/vllm (0.31.0 + patches/series)
+Apply: patch -p1 --forward --fuzz 0 -d <site-packages/vllm> -i spec5-accept-telemetry.patch
+
+--- a/v1/worker/gpu/spec_decode/rejection_sampler.py
++++ b/v1/worker/gpu/spec_decode/rejection_sampler.py
+@@ -1,5 +1,8 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++import json
++import os
++import time
+ from collections.abc import Iterable, Iterator
+ from typing import Any
+ 
+@@ -39,6 +42,74 @@
+     return max(1, MAX_CHUNK_BYTES // (vocab_size * _FP32_BYTES))
+ 
+ 
++class _Spec5Telemetry:
++    """spec-5 acceptance telemetry, on when SPEC5_TELEMETRY_DIR names a directory.
++
++    Adds the four per-position rows of _spec5_accept_stats_kernel (overlap
++    sum_x min(p, q), survival, drafts, realised accepts) into a float64 device
++    tensor and publishes it as <dir>/spec5-<pid>.json, cumulative since boot.
++    The device-to-host copy is non-blocking into pinned memory and the next
++    verify step publishes it once its event has completed, so no step waits on
++    the GPU and the file lags the device by one verify step.
++    """
++
++    def __init__(
++        self, out_dir: str, num_speculative_steps: int, device: torch.device
++    ):
++        self.acc = torch.zeros(
++            4, num_speculative_steps, dtype=torch.float64, device=device
++        )
++        self.is_cuda = self.acc.is_cuda
++        try:
++            self.host = torch.zeros(
++                self.acc.shape, dtype=self.acc.dtype, pin_memory=self.is_cuda
++            )
++        except RuntimeError:
++            # No pinned memory: the copy below is then synchronous.
++            self.host = torch.zeros(self.acc.shape, dtype=self.acc.dtype)
++        self.event = torch.cuda.Event() if self.is_cuda else None
++        self.pending = False
++        self.calls = 0
++        self.copied_calls = 0
++        self.started = time.time()
++        os.makedirs(out_dir, exist_ok=True)
++        self.path = os.path.join(out_dir, f"spec5-{os.getpid()}.json")
++
++    def step(self) -> None:
++        self.calls += 1
++        if self.pending:
++            assert self.event is not None
++            if not self.event.query():
++                return
++            self._publish()
++        self.host.copy_(self.acc, non_blocking=self.is_cuda)
++        self.copied_calls = self.calls
++        if self.event is not None:
++            self.event.record()
++            self.pending = True
++        else:
++            self._publish()
++
++    def _publish(self) -> None:
++        overlap, survival, drafts, accepted = self.host.tolist()
++        body = {
++            "pid": os.getpid(),
++            "started": self.started,
++            "updated": time.time(),
++            "calls": self.copied_calls,
++            "k": len(drafts),
++            "overlap": overlap,
++            "survival": survival,
++            "drafts": drafts,
++            "accepted": accepted,
++        }
++        tmp = self.path + ".tmp"
++        with open(tmp, "w") as f:
++            json.dump(body, f)
++        os.replace(tmp, self.path)
++        self.pending = False
++
++
+ def _iter_request_chunks(
+     cu_num_logits: np.ndarray, max_chunk_logits: int
+ ) -> Iterator[tuple[int, int]]:
+@@ -173,6 +244,12 @@
+             )
+         elif rejection_sample_method == "block":
+             self.use_block_verification = True
++        spec5_dir = os.environ.get("SPEC5_TELEMETRY_DIR")
++        self.spec5 = (
++            _Spec5Telemetry(spec5_dir, self.num_speculative_steps, device)
++            if spec5_dir
++            else None
++        )
+ 
+     def _get_logprobs_tensors(
+         self,
+@@ -272,6 +349,7 @@
+             self.synthetic_conditional_rates,
+             use_fp64=self.sampler.use_fp64_gumbel,
+             use_block_verification=self.use_block_verification,
++            accept_stats=None if self.spec5 is None else self.spec5.acc,
+             **self._watermarking_kwargs(
+                 draft_sampled, expanded_idx_mapping, expanded_local_pos
+             ),
+@@ -388,6 +466,8 @@
+             chunk_logit_limit,
+             max_num_logprobs,
+         )
++        if self.spec5 is not None:
++            self.spec5.step()
+ 
+         num_sampled, num_rejected = get_num_sampled_and_rejected(
+             num_sampled,
+--- a/v1/worker/gpu/spec_decode/rejection_sampler_utils.py
++++ b/v1/worker/gpu/spec_decode/rejection_sampler_utils.py
+@@ -995,6 +995,159 @@
+     )
+ 
+ 
++@triton.jit
++def _spec5_accept_stats_kernel(
++    # [num_reqs, 4, num_speculative_steps], zero-initialised
++    stats_ptr,
++    # [num_reqs] accepted draft count, as _rejection_kernel stored it
++    num_accepted_ptr,
++    # [num_logits, V]
++    target_logits_ptr,
++    target_logits_stride,
++    # [num_logits, num_blocks]
++    target_local_argmax_ptr,
++    target_local_argmax_stride,
++    # [num_logits, num_blocks]
++    target_local_max_ptr,
++    target_local_max_stride,
++    # [num_logits, num_blocks]
++    target_local_sumexp_ptr,
++    target_local_sumexp_stride,
++    # [num_logits]
++    draft_sampled_ptr,
++    # [max_num_reqs, num_speculative_steps, V]
++    draft_logits_ptr,
++    draft_logits_stride_0,
++    draft_logits_stride_1,
++    # [num_logits, num_blocks]
++    draft_local_max_ptr,
++    draft_local_max_stride,
++    # [num_logits, num_blocks]
++    draft_local_sumexp_ptr,
++    draft_local_sumexp_stride,
++    # [num_reqs + 1]
++    cu_num_logits_ptr,
++    # [num_reqs]
++    idx_mapping_ptr,
++    # [max_num_reqs]
++    temp_ptr,
++    vocab_size,
++    vocab_num_blocks,
++    num_speculative_steps,
++    BLOCK_SIZE: tl.constexpr,
++    PADDED_VOCAB_NUM_BLOCKS: tl.constexpr,
++    HAS_DRAFT_LOGITS: tl.constexpr,
++):
++    # spec-5 telemetry. Per request and draft position i, four rows:
++    #   0: overlap   sum_x min(p_i(x), q_i(x)), the probability that position i
++    #                accepts a fresh draft given the drafted prefix
++    #   1: survival  prod_{j<=i} min(1, p_j(d_j) / q_j(d_j)), the probability
++    #                that the coins accept d_1..d_i; its sum over positions is
++    #                E[accepted | drafts], an unbiased, lower-variance stand-in
++    #                for the realised count
++    #   2: drafts    1 for every position the step verified
++    #   3: accepted  the realised accept, 1 if i < the accepted length
++    # Greedy requests use p = one-hot(target argmax), so rows 1 and 3 agree
++    # exactly; that identity is the patch's self-check.
++    req_idx = tl.program_id(0)
++    req_state_idx = tl.load(idx_mapping_ptr + req_idx).to(tl.int64)
++    start_idx = tl.load(cu_num_logits_ptr + req_idx).to(tl.int64)
++    end_idx = tl.load(cu_num_logits_ptr + req_idx + 1)
++    num_draft_tokens = end_idx - start_idx - 1
++    num_accepted = tl.load(num_accepted_ptr + req_idx)
++    temp = tl.load(temp_ptr + req_state_idx).to(tl.float32)
++    is_greedy = temp == 0.0
++    row_ptr = stats_ptr + req_idx * 4 * num_speculative_steps
++    survival = 1.0
++    for i in range(num_draft_tokens):
++        logit_idx = start_idx + i
++        draft_token = tl.load(draft_sampled_ptr + logit_idx + 1).to(tl.int64)
++        is_valid_draft = draft_token >= 0
++        draft_token = tl.maximum(0, draft_token)
++        accept_prob = 0.0
++        overlap = 0.0
++        if is_greedy:
++            target_argmax = _compute_global_target_argmax(
++                target_local_max_ptr,
++                target_local_max_stride,
++                target_local_argmax_ptr,
++                target_local_argmax_stride,
++                logit_idx,
++                vocab_num_blocks,
++                PADDED_VOCAB_NUM_BLOCKS,
++            )
++            accept_prob = tl.where(target_argmax == draft_token, 1.0, 0.0)
++            overlap = accept_prob
++        else:
++            target_logprob, draft_logprob, target_lse, draft_lse = (
++                _compute_global_logprobs_and_logsumexp(
++                    draft_token,
++                    True,  # mask
++                    logit_idx,
++                    req_state_idx,
++                    i,
++                    temp,
++                    target_logits_ptr,
++                    target_logits_stride,
++                    target_local_max_ptr,
++                    target_local_max_stride,
++                    target_local_sumexp_ptr,
++                    target_local_sumexp_stride,
++                    draft_logits_ptr,
++                    draft_logits_stride_0,
++                    draft_logits_stride_1,
++                    draft_local_max_ptr,
++                    draft_local_max_stride,
++                    draft_local_sumexp_ptr,
++                    draft_local_sumexp_stride,
++                    vocab_num_blocks,
++                    PADDED_VOCAB_NUM_BLOCKS,
++                    HAS_DRAFT_LOGITS,
++                )
++            )
++            accept_prob = tl.minimum(tl.exp(target_logprob - draft_logprob), 1.0)
++            if HAS_DRAFT_LOGITS:
++                for block_idx in range(vocab_num_blocks):
++                    offsets = block_idx * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
++                    mask = offsets < vocab_size
++                    target_logits = tl.load(
++                        target_logits_ptr + logit_idx * target_logits_stride + offsets,
++                        mask=mask,
++                        other=float("-inf"),
++                    ).to(tl.float32)
++                    # draft_logits is stored pre-temperature, as in the stats kernel.
++                    draft_logits = (
++                        tl.load(
++                            draft_logits_ptr
++                            + req_state_idx * draft_logits_stride_0
++                            + i * draft_logits_stride_1
++                            + offsets,
++                            mask=mask,
++                            other=float("-inf"),
++                        ).to(tl.float32)
++                        / temp
++                    )
++                    overlap += tl.sum(
++                        tl.minimum(
++                            tl.exp(target_logits - target_lse),
++                            tl.exp(draft_logits - draft_lse),
++                        )
++                    )
++            else:
++                # One-hot draft: sum_x min(p(x), q(x)) = p(d).
++                overlap = tl.exp(target_logprob)
++        accept_prob = tl.where(is_valid_draft, accept_prob, 0.0)
++        overlap = tl.where(is_valid_draft, overlap, 0.0)
++        survival = survival * accept_prob
++        tl.store(row_ptr + i, overlap)
++        tl.store(row_ptr + num_speculative_steps + i, survival)
++        tl.store(row_ptr + 2 * num_speculative_steps + i, 1.0)
++        tl.store(
++            row_ptr + 3 * num_speculative_steps + i,
++            tl.where(i < num_accepted, 1.0, 0.0),
++        )
++
++
+ def rejection_sample(
+     # [num_logits, V]
+     target_logits: torch.Tensor,
+@@ -1024,6 +1177,8 @@
+     contexts: torch.Tensor | None = None,
+     watermarking: torch.Tensor | None = None,
+     watermark_key: int | None = None,
++    # [4, num_speculative_steps] float64; spec-5 telemetry adds into it when set
++    accept_stats: torch.Tensor | None = None,
+ ) -> tuple[torch.Tensor, torch.Tensor]:
+     assert target_logits.ndim == 2 and target_logits.stride(-1) == 1
+     assert draft_logits is None or (
+@@ -1234,6 +1389,43 @@
+         num_warps=1,
+     )
+ 
++    if accept_stats is not None:
++        # num_sampled still holds the accepted draft count here; the resample
++        # below is what adds the bonus or recovered token to it.
++        spec5_stats = target_logits.new_zeros(
++            num_reqs, 4, num_speculative_steps, dtype=torch.float32
++        )
++        _spec5_accept_stats_kernel[(num_reqs,)](
++            spec5_stats,
++            num_sampled,
++            target_logits,
++            target_logits.stride(0),
++            target_local_argmax,
++            target_local_argmax.stride(0),
++            target_local_max,
++            target_local_max.stride(0),
++            target_local_sumexp,
++            target_local_sumexp.stride(0),
++            draft_sampled,
++            draft_logits,
++            draft_logits_stride_0,
++            draft_logits_stride_1,
++            draft_local_max,
++            draft_local_max.stride(0),
++            draft_local_sumexp,
++            draft_local_sumexp.stride(0),
++            cu_num_logits,
++            idx_mapping,
++            temperature,
++            vocab_size,
++            vocab_num_blocks,
++            num_speculative_steps,
++            BLOCK_SIZE=VOCAB_BLOCK_SIZE,
++            PADDED_VOCAB_NUM_BLOCKS=padded_vocab_num_blocks,
++            HAS_DRAFT_LOGITS=has_draft_logits,
++        )
++        accept_stats += spec5_stats.sum(dim=0, dtype=torch.float64)
++
+     # Resample the rejected/bonus tokens.
+     RESAMPLE_BLOCK_SIZE = 1024
+     resample_num_blocks = triton.cdiv(vocab_size, RESAMPLE_BLOCK_SIZE)

@@ -106,6 +106,8 @@ Modes: A batch; B DFlash2 chat (T=8); C quoting (`DFLASH_TOKENS=15`); D `SPEC=mt
 
 ### spec-5: expected-acceptance telemetry (for the evals lane)
 
+**Measured (2026-10-21):** INFO, telemetry exact at T=0 (survival 3.486 = realised 3.486 tok/step), but the variance across prompts drops only 3–7% (ratio 1.03–1.07). [gpu-results/spec-5.md](gpu-results/spec-5.md)
+
 DeepInfer logs accept_probs = Σ min(p, q) per position (`tilelang_ops/fused_sample.py:195-248`; `common.py:53`) and uses it as the label for confidence error (`sampler.py:440-560`). HyperQwen counts realised accepts, which are noisy: "The 16% DFlash2 acceptance regression … was invisible on one README prompt" (`docs/gotchas.md:1163-1170`). The Rao-Blackwellised count has lower variance, so 1–4% effects like spec-1 and spec-2 become measurable. Effort S: a counter in the rejection-sampler path exported as a Prometheus metric. See [evals.md](evals.md).
 
 ## Why DFlash2 loses 2:1 past 64k

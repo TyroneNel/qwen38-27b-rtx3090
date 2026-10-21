@@ -79,11 +79,15 @@ DeepInfer runs AIME/GPQA/HLE-style 32-sample evals (`DeepInfer/eval/run_eval.py:
 
 ### evals-3: an auditable, paired quality battery
 
+**Measured (2026-10-21):** INFO, known pair reproduced: all-linear int8 perplexity +4.00% (docs +4.1%); greedy GSM8K cannot separate it (b=2, c=3), sampled pooled arm leans to a loss (b=14, c=6, p=0.115). [gpu-results/evals-3.md](gpu-results/evals-3.md)
+
 - **DeepInfer.** It keeps raw generations between generate and score, and records `coverage_complete`, `finish_reasons` and truncation warnings (`DeepInfer/eval/score.py:132-167, 222-224`). Pass@k uses the unbiased estimator (`DeepInfer/eval/common/passk.py`).
 - **Plan.** Write one JSONL row per item: `{idx, correct, finish_reason, extracted_via, completion_tokens, text}`. Add `--seeds N` for a sampled arm. Mode B ships sampling, and quant effects on acceptance are larger under sampling (`drafter/README.md:89-90`). Add a stdlib `bench/compare_quality.py` that prints Wilson 95% intervals, McNemar discordant counts, an exact binomial p and the perplexity delta. The T4 GSM8K bar should fail only on a significant paired loss (p < 0.05). Warn on `finish_reason=length` or a fallback extraction.
 - **Validation.** Re-run the known pairs in `docs/quality.md` (fp32 vs fp16 state, all-linear int8) and confirm the verdicts match the perplexity columns.
 
 ### evals-4: thinking-on speed and acceptance cohort
+
+**Measured (2026-10-21):** INFO, thinking on at default effort decodes 14.8% (B) and 9.7% (D) slower at C1 on the same prompts; no request reached `</think>` within 1,024 tokens. [gpu-results/evals-4.md](gpu-results/evals-4.md)
 
 - **Evidence.** HyperQwen's harnesses hard-code thinking off (above), and `docs/benchmarks.md` says so. DeepSpec also evaluates thinking-off (`DeepSpec/deepspec/eval/base_evaluator.py:538`, with the True line commented out). DeepInfer's own evals run thinking-mode at temperature 1.0. The drafter data (`drafter/gen_data.py`) already covers both.
 - **Plan.** Add `--think` to `bench/conc_ladder.py` and to the single-user path of `run_benchmarks.sh`. In a copy of `labd_accept.py`, split the per-position counters at the `</think>` position. Report tok/s, tokens/step and the fraction of tokens spent reasoning.
@@ -97,6 +101,8 @@ DeepInfer runs AIME/GPQA/HLE-style 32-sample evals (`DeepInfer/eval/run_eval.py:
 - **Risk.** Escaping changes how affected prompts tokenize, and so changes their prefix-cache keys.
 
 ### evals-6: streamed tool calls under speculative decoding
+
+**Measured (2026-10-21):** INFO, 1,005 chunked streams match the one-shot parse; the streamed tool call passes in all six modes. [gpu-results/evals-6.md](gpu-results/evals-6.md)
 
 - Upstream's qwen3_coder parser test streams one token per delta (`vllm@v0.31.0:tests/tool_parsers/test_qwen3coder_tool_parser.py:173-202`). Under speculation the server emits up to K+1 tokens per step, so deltas that span several tokens and split markers are realistic, and nothing tests them. deepseek-recipe re-chunks its tests down to one character per chunk and compares against the unchunked parse (`recipe/deepseek-recipe/src/stream/processor.rs:564-567`).
 - **Plan.** Add a CPU test, `bench/test_tool_parser_chunks.py`: 5 canned outputs with 1–3 calls and nested JSON arguments, split at random sizes 1–8 over 200 seeds, asserting that the streamed `tool_calls` equal the one-shot parse. Add `t_tool_call_stream` to `api_smoke.py`, which has no tool case today. Gotcha 36 records an earlier tool-call failure under a speculator.
@@ -114,6 +120,8 @@ DeepInfer records `cudaEventRecord` nodes inside captured graphs and re-points t
 Start with no new code: an `nsys` capture of a 10 s C1 run per mode, with the breakdown written into the docs. That tells the priority-1 speed work where the 7.9 ms per DFlash2 step goes. Graph probe timers (a patch) are worth building only if continuous attribution is needed.
 
 ### evals-9 to evals-11
+
+**Measured (2026-10-21), evals-11:** INFO, settling on this box is thermal (C1 −9.4% over ~4 min as the card heats), not JIT; the first run is the fastest. [gpu-results/evals-11.md](gpu-results/evals-11.md)
 
 - **evals-9.** DeepSpec ships nine evaluation sets (gsm8k, math500, aime25, humaneval, mbpp, livecodebench, mt-bench, alpaca, arena-hard-v2; `DeepSpec/eval.py:11-27`). Taking 50 items per set and running them through `labd_accept.py`'s chunk-resync loop gives acceptance by domain. Keep one free-running sampled arm. The dataset licences are unchecked, so keep a local, uncommitted copy. Note that DeepSpec's "acceptance length" is accepted + 1 per proposal, so check the definition before comparing it with HyperQwen's tokens/step.
 - **evals-10.** Extend `bench/conc_ladder.py` to N ∈ {1, 2, 4, 8, 16, 32, 64} with JSONL output and an optional Pareto plot, modelled on `DeepInfer/examples/sweep/run_sweep.sh`. The 8–64 range has no curve today.
