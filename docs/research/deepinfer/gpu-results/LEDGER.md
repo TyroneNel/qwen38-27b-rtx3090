@@ -11,7 +11,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | env | Box inventory: GPU, driver, power limit, WSL, Docker, models | – | done | INFO | 3090 at 250 W, driver 610.88, WSL2; bf16 DFlash2 fetched | [ENVIRONMENT.md](ENVIRONMENT.md) |
 | health | `make verify` plus the repo's GPU-applicable `bench/test_*` | – | done | INFO | verify 0 FAIL; 39 tests pass/skip, 2 fail outside the serving path (stale 0.31 test API; WSL banner order) | [health.md](health.md) |
 | cpu-checks | Re-run every script in `cpu-checks/`; compare with committed `.out` | – | done | INFO | 11/12 byte-identical; `quant_d_gptq` float noise only | [cpu-checks.md](cpu-checks.md) |
-| baseline | Headline numbers per mode A–E on this box | health | todo | | | |
+| baseline | Headline numbers per mode A–E on this box | health | done | INFO | A 814, B 110.4 e2e, C copy 358, D 99.8, D′ 55.7/48.8, E 57.8 tok/s; 6–14% under native docs (WSL2), A spills at 0.93 → 0.91 | [baseline.md](baseline.md) |
 
 ## Phase 2: measurement tools and probes
 
