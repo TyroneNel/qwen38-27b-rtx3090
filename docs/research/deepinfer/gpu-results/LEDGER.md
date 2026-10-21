@@ -39,7 +39,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
-| quant-1 | Per-128 int8 activation scales, route A (Humming) | quant-1-calib, evals-1 | todo | | | |
+| quant-1 | Per-128 int8 activation scales, route A (Humming) | quant-1-calib, evals-1 | done | LOSS | Humming int8 g128 at 0.26–0.41× of Marlin W4A8 at decode M≤64; +19% only at prefill M≥256; flag falls back to W4A16 | [quant-1.md](quant-1.md) |
 | quant-2 | Lossless negative-scale fold, fix A | quant-2-check shows negative groups use −8 | todo | | | |
 | quant-7 | int4 embedding where `EMBED_UVA` can't be used | evals-1 | todo | | | |
 | quant-5 | Batch-mode lm_head as W4A8 | evals-1 | todo | | | |
