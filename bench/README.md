@@ -89,6 +89,7 @@ none, and the `.sh` scripts ask `/v1/models`. The `.sh` measurements take `PORT`
 | `tune_gdn.py` | measurement | GPU | 0 | The Gated DeltaNet decode kernel over block sizes and warp counts. |
 | `verbatim.py` | library and test | CPU | 0 or 1 | How much of an answer copies its source. The two sweeps use it. Run alone, it tests itself. |
 | `warmup.sh` | lifecycle | server | 0 or 1 | Warms the serving path after boot. `single-user/qwen-server.sh` runs it when `WARMUP=1`. |
+| `warmup_probe.py` | lifecycle measurement | server | 0 if WARM, 2 if NOT-WARM after `--max-runs` or a request failed | Repeats 8 prompts × 256 tokens at C1 and C4 until two consecutive runs' decode tok/s agree within 3%. |
 
 One test outside `bench/` gates CI too:
 
