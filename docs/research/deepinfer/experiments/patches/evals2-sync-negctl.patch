@@ -1,0 +1,14 @@
+evals-2 negative control: with DI_SYNC_NEGCTL=1, one deliberate .item() per sample_tokens call.
+Research experiment only (docs/research/deepinfer/gpu-results/evals-2.md). Inert unless DI_SYNC_NEGCTL=1.
+
+--- a/v1/worker/gpu/model_runner.py	2026-10-21 03:33:36.775310625 +0000
++++ b/v1/worker/gpu/model_runner.py	2026-10-21 03:33:36.788684280 +0000
+@@ -2089,6 +2089,8 @@
+         hidden_states = self.execute_model_state.hidden_states
+         aux_hidden_states = self.execute_model_state.aux_hidden_states
+         dp_sync = self.execute_model_state.dp_sync
++        if __import__("os").environ.get("DI_SYNC_NEGCTL") == "1":  # evals-2 negative control
++            torch.zeros(1, device=hidden_states.device).item()
+         finished_req_ids = self.execute_model_state.finished_req_ids
+         ec_connector_output = self.execute_model_state.ec_connector_output
+         cudagraph_stats = self.execute_model_state.cudagraph_stats

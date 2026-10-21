@@ -1,0 +1,8 @@
+# Hot-path GPU<->CPU sync sites that bench/sync_check.sh accepts (DeepInfer evals-2).
+# One site per line: <path>:<line> [kind]  # why it is legitimate
+#   path  relative to site-packages (vllm/...) or to the repo (kvarn/..., pthfa/...)
+#   kind  sync | copy_-H2D | to-H2D | cuda-H2D | copy_-D2H; omit to accept every kind at that line
+# A re-pin moves line numbers, so a moved site reads as new and is reviewed again. A legitimate sync
+# belongs inside upstream's gpu_sync_allowed() in the patch that adds it (noted in PATCHES.md); list it
+# here only until that lands. `bash bench/sync_check.sh <log> --record --mode <mode>` appends a boot's
+# new sites for review.

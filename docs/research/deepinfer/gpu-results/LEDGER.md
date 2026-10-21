@@ -19,8 +19,8 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 |---|---|---|---|---|---|---|
 | quant-2-check | `quant_real_ckpt_check.py` on the real checkpoint | – | done | INFO | 50.4% negative groups, 100% of them use −8; fold error 0.069% of weight energy | [quant-2-check.md](quant-2-check.md) |
 | runtime-2 | `bench/step_curve.py`: ms/step vs verified tokens, per backend and depth | baseline | done | INFO | ms per verify token: FA2 ~0.03 (flat); pthfa 1.2 (q≤4), 2.6 at 150k for 4→8; KVarN 13.9 at 150k, 22.3 at 240k | [runtime-2.md](runtime-2.md) |
-| evals-2 | `VLLM_GPU_SYNC_CHECK=warn` boot per mode | health | todo | | | |
-| evals-1 | Decode-vs-prefill KL probe per mode | health | todo | | | |
+| evals-2 | `VLLM_GPU_SYNC_CHECK=warn` boot per mode | health | done | INFO | A, B, C, D, D′: 0 sites; E: 13 sites (KVarN metadata build, 3 syncs per step); negative control caught | [evals-2.md](evals-2.md) |
+| evals-1 | Decode-vs-prefill KL probe per mode | health | done | INFO | k3 @4k: B 1.3e-4, D/D′ 1.4e-4, E 1.25e-3 (9.6×), A 4.3e-3 (33×), all-linear int8 1.1e-2 (88×); deterministic within a boot | [evals-1.md](evals-1.md) |
 | evals-4 | Thinking-on speed and acceptance cohort | baseline | done | INFO | C1 thinking on (xhigh): B −14.8% (117.6 → 100.2), D −9.7%; 0 streams reached `</think>` in 1,024 tokens | [evals-4.md](evals-4.md) |
 | evals-3 | Paired quality battery | health | done | INFO | known pair (all-linear int8): ppl +4.00% (docs +4.1%); greedy GSM8K b=2 c=3 p=1; sampled pooled b=14 c=6 p=0.115 | [evals-3.md](evals-3.md) |
 | spec-5 | Σ min(p, q) acceptance telemetry | health | done | INFO | exact at T=0 (3.486 = 3.486); variance ratio across prompts only 1.03–1.07 | [spec-5.md](spec-5.md) |
