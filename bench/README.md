@@ -36,7 +36,7 @@ none, and the `.sh` scripts ask `/v1/models`. The `.sh` measurements take `PORT`
 | file | kind | needs | exit | what it does |
 |---|---|---|---|---|
 | `act_calib.py` | measurement | GPU, model | 0 | Error that int8 activations add to each linear layer. Picks `INT8_LAYERS`. |
-| `api_smoke.py` | smoke test, run by hand | server | 0 if all 12 features pass, 2 if no request reaches a server, else 1 | Request-level API features: logprobs, n, stop, seeds, structured output, penalties, streaming, thinking. |
+| `api_smoke.py` | smoke test, run by hand | server | 0 if all 13 features pass, 2 if no request reaches a server, else 1 | Request-level API features: logprobs, n, stop, seeds, structured output, penalties, streaming, thinking, a streamed tool call (`tool_choice=required`, reassembled and parsed). |
 | `bugb_sweep.py` | reproducer | server, model | 0, or 1 if a length is broken | The prompt lengths you give, against the broken-length defect (gotcha 37). |
 | `conc_ladder.py` | measurement | server | 0 | Decode tok/s per stream at N=1..8, with passes, preemptions and KV occupancy. `--salt S` fixes the prompts across boots for an A/B. |
 | `concurrent_collapse.py` | reproducer | server | 0, or 1 if a trial collapsed or a request errored | The "!!!!" collapse from #208. |
@@ -84,6 +84,7 @@ none, and the `.sh` scripts ask `/v1/models`. The `.sh` measurements take `PORT`
 | `test_spec_decode_bigpool.py` | kernel test | GPU | 0 or 1. The fp8 part skips below sm89 or without the fp8 path. | int32 overflow in `_spec_attn_partial` on a large pool (#86). |
 | `test_spec_decode_fp8.py` | kernel test | GPU, sm89+ | 0 or 1. Skips below sm89 or without the fp8 path. | The fp8 path of the split-KV kernel. The timing rows are informational. |
 | `test_t4_battery.py` | test | CPU, bash | 0 or 1 | `t4_battery.py`'s dry-run plan, parsers, restart gate (on a fake `/proc`), verdict, and one run against a stub launcher. |
+| `test_tool_parser_chunks.py` | test | image, the model's tokenizer (`-v /mnt/g/models:/app/models:ro`) | 0, 1 if a stream differs, 2 if a case's one-shot parse is not its call list, 3 if the dropped-token negative control still matches | The served qwen3_coder + qwen3 parser through `parse_delta`: five canned outputs (1-3 calls, nested JSON, thinking on), deltas of 1-8 tokens over 200 seeds, against the one-shot parse. |
 | `tune_gdn.py` | measurement | GPU | 0 | The Gated DeltaNet decode kernel over block sizes and warp counts. |
 | `verbatim.py` | library and test | CPU | 0 or 1 | How much of an answer copies its source. The two sweeps use it. Run alone, it tests itself. |
 | `warmup.sh` | lifecycle | server | 0 or 1 | Warms the serving path after boot. `single-user/qwen-server.sh` runs it when `WARMUP=1`. |

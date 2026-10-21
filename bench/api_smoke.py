@@ -1,7 +1,7 @@
 """API feature smoke test against the running server: the request-level features a different
 model runner could break (logprobs, n, stop, seeds, structured outputs, penalties, streaming,
-thinking, prompt_logprobs, a 20k-token prompt). Prints PASS/FAIL per feature, and exits 1
-unless all of them pass. It exits 2 when no request reaches a server.
+thinking, prompt_logprobs, a 20k-token prompt, a streamed tool call). Prints PASS/FAIL per feature,
+and exits 1 unless all 13 pass. It exits 2 when no request reaches a server.
 
   venv/bin/python bench/api_smoke.py          # server and key from bench/harness.py (PORT=18020 by default)
 """
@@ -86,12 +86,33 @@ def t_thinking_budget():
     capped, answer = reasoning(thinking_token_budget=16)
     ok = free is not None and capped is not None and capped <= 16 < free and bool(answer)
     return ok, f"reasoning {free} tokens unbudgeted, {capped} with budget 16, answer {answer[:20]!r}"
+def t_tool_call_stream():
+    # tool_choice=required: with VLLM_ENFORCE_STRICT_TOOL_CALLING (on by default) the qwen3_coder parser takes
+    # required like auto under a structural tag, so the XML parser streams the call. Under a speculator a delta
+    # can carry several tokens and split the markup (evals-6; gotcha 36).
+    tools = [{"type": "function", "function": {"name": "get_time", "description": "Current time in an IANA timezone.",
+              "parameters": {"type": "object", "properties": {"timezone": {"type": "string"}}, "required": ["timezone"]}}}]
+    calls, finish, frames = {}, None, 0
+    for ev in harness.stream("/v1/chat/completions", {"messages": [{"role": "user", "content": "Hvad er klokken i København lige nu?"}],
+                             "tools": tools, "tool_choice": "required", "max_tokens": 128, "temperature": 0, "stream": True,
+                             "chat_template_kwargs": {"enable_thinking": False}}, timeout=600):
+        frames += 1
+        for ch in ev.get("choices", []):
+            finish = ch.get("finish_reason") or finish
+            for tc in (ch.get("delta") or {}).get("tool_calls") or []:
+                c = calls.setdefault(tc.get("index", 0), {"name": "", "arguments": ""})
+                fn = tc.get("function") or {}
+                c["name"] += fn.get("name") or ""
+                c["arguments"] += fn.get("arguments") or ""
+    args = [json.loads(c["arguments"]) for c in calls.values()]  # a reassembly that does not parse raises: FAIL
+    ok = len(calls) == 1 and calls[min(calls)]["name"] == "get_time" and isinstance(args[0], dict) and bool(args[0].get("timezone"))
+    return ok, f"{frames} frames, finish={finish}, calls={[(c['name'], a) for c, a in zip(calls.values(), args)]}"
 
 for name, fn in [("greedy determinism", t_greedy_det), ("seeded sampling determinism", t_seed), ("logprobs/top_logprobs", t_logprobs),
                  ("n=2", t_n2), ("stop strings", t_stop), ("json_schema structured output", t_json_schema),
                  ("min_tokens + penalties", t_min_tokens_penalty), ("streaming", t_stream), ("thinking mode", t_thinking),
                  ("completions echo+logprobs (prompt_logprobs)", t_completions_echo_logprobs), ("20k-token prompt", t_long_ctx_greedy),
-                 ("thinking_token_budget enforced", t_thinking_budget)]:
+                 ("thinking_token_budget enforced", t_thinking_budget), ("streamed tool call", t_tool_call_stream)]:
     check(name, fn)
 print("SUMMARY", sum(1 for _, ok, _ in results if ok), "/", len(results), "passed")
 if len(unreached) == len(results):

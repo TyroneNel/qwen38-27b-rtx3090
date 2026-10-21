@@ -28,7 +28,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | attn-ncu | ncu on pthfa at 150k, T=8 (attention-kv open question 1) | health | todo | | | |
 | e-profile | Torch profile of E at 200k: attention share per step | health | todo | | | |
 | evals-5 | Special-token injection check (tokenizer on `<\|im_end\|>`), hardening if needed | health | todo | | | |
-| evals-6 | Streamed tool-call test, tool case in `api_smoke` | health | todo | | | |
+| evals-6 | Streamed tool-call test, tool case in `api_smoke` | health | done | INFO | parser 1,005 chunked streams 0 diffs; streamed tool call passes in all 6 modes | [evals-6.md](evals-6.md) |
 | evals-7 | Golden greedy canary keyed by (GPU, pin, mode) | health | todo | | | |
 | evals-8 | Per-component GPU time (nsys) | health | todo | | | |
 | evals-9 | Acceptance panel from DeepSpec's datasets (local copy, uncommitted) | health | todo | | | |
