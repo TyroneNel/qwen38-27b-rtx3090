@@ -40,12 +40,12 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
 | quant-1 | Per-128 int8 activation scales, route A (Humming) | quant-1-calib, evals-1 | done | LOSS | Humming int8 g128 at 0.26–0.41× of Marlin W4A8 at decode M≤64; +19% only at prefill M≥256; flag falls back to W4A16 | [quant-1.md](quant-1.md) |
-| quant-2 | Lossless negative-scale fold, fix A | quant-2-check shows negative groups use −8 | todo | | | |
+| quant-2 | Lossless negative-scale fold, fix A | quant-2-check shows negative groups use −8 | running | | ppl −1.0% (8.583 → 8.498, mode A); tests bit-exact; throughput −1.2% measured after a spilling ppl pass, spill-free re-run queued (see STATE.md) | |
 | quant-7 | int4 embedding where `EMBED_UVA` can't be used | evals-1 | todo | | | |
 | quant-5 | Batch-mode lm_head as W4A8 | evals-1 | todo | | | |
-| spec-0 | `DFLASH_TOKENS=3/5/7` ladder at 90k, 150k, 240k | runtime-2 | todo | | | |
+| spec-0 | `DFLASH_TOKENS=3/5/7` ladder at 90k, 150k, 240k | runtime-2 | done | WIN | `DFLASH_TOKENS=3` vs 7 on E: +65% @90k, +56% @150k, +70% @235k (16.1 vs 9.5 tok/s); 2 boots/arm, spread ≤1% | [spec-0.md](spec-0.md) |
 | spec-1 | GDN opt-in to adaptive verification (= runtime-1) | runtime-2 | done | INVALID | greedy bit-identity fails at token 0–1 on all 6 tasks (0/23 clean chunks vs 18/23 off, off control identical); acceptance length 1.75 | [spec-1.md](spec-1.md) |
-| kvarn-varlen | Root-cause KVarN corruption on verify-length change (`start_qwen.sh:399-428`) | – | todo | | | |
+| kvarn-varlen | Root-cause KVarN corruption on verify-length change (`start_qwen.sh:399-428`) | – | running | | ~1 h of the 4 h timebox used: not reproduced (0 wrong at 6 residues); a hit inherits the previous request's verify schedule, and under the same schedule KV and GDN fingerprints are bit-identical (no corruption). Full 0–127 sweeps queued (see STATE.md) | |
 | drafter-1a | Host-side confidence trim, stage 0 | runtime-2 | todo | | | |
 | spec-2 | Fresh-confidence device trim | spec-1 | skipped | | gate failed: spec-1 INVALID | [spec-1.md](spec-1.md) |
 | spec-4 | Lookup-aware confidences | spec-1 | skipped | | gate failed: spec-1 INVALID | [spec-1.md](spec-1.md) |

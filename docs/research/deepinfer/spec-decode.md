@@ -32,6 +32,8 @@ Modes: A batch; B DFlash2 chat (T=8); C quoting (`DFLASH_TOKENS=15`); D `SPEC=mt
 
 ### spec-0: context-aware fixed verify width at 240k (mode E)
 
+**Measured (2026-10-21):** WIN. `DFLASH_TOKENS=3` against 7 on E gives +65% at ~90k, +56% at ~150k and +70% at ~235k (16.1 vs 9.5 tok/s), with tok/step nearly unchanged. KVarN's real cost per verify token is 14–22 ms, not the simulated 1–2. [gpu-results/spec-0.md](gpu-results/spec-0.md)
+
 - **DeepInfer** picks the verify length from a cost curve profiled at boot plus acceptance (`mtp_varlen.hpp:150-267`; `DeepInfer/deepinfer/worker/model_runner.py:562-622`). The lesson: the right k depends on the per-position cost, and that cost grows with context.
 - **HyperQwen** verifies 1+7 at every depth (`single-user/start_qwen.sh:382`, `DRAFT_TOKENS=${DFLASH_TOKENS:-7}`). A k that changes step to step is refused at `CTX=huge` with prefix caching, because a moving verify length corrupts a KVarN prefix-cache hit (`start_qwen.sh:399-428`, `:680-682`). A *fixed* lower k isn't refused.
 - **Cost per position (inferred).** Target attention over 16 layers at 128k is 5.63 ms per step at T=8 on a 3080 TP=2 rank (`docs/long-context.md:534-536`). Scaled to one 3090 (twice the KV heads, 68/82 SMs): about 9.3 ms per step, 1.2 ms per position at 128k, about 2.2 ms at 240k if linear in context. KVarN uses a different kernel, so this is a bracket.
