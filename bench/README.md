@@ -38,13 +38,14 @@ none, and the `.sh` scripts ask `/v1/models`. The `.sh` measurements take `PORT`
 | `act_calib.py` | measurement | GPU, model | 0 | Error that int8 activations add to each linear layer. Picks `INT8_LAYERS`. |
 | `api_smoke.py` | smoke test, run by hand | server | 0 if all 13 features pass, 2 if no request reaches a server, else 1 | Request-level API features: logprobs, n, stop, seeds, structured output, penalties, streaming, thinking, a streamed tool call (`tool_choice=required`, reassembled and parsed). |
 | `bugb_sweep.py` | reproducer | server, model | 0, or 1 if a length is broken | The prompt lengths you give, against the broken-length defect (gotcha 37). |
-| `conc_ladder.py` | measurement | server | 0 | Decode tok/s per stream at N=1..8, with passes, preemptions and KV occupancy. `--salt S` fixes the prompts across boots for an A/B. |
+| `conc_ladder.py` | measurement | server | 0 | Decode tok/s per stream at N=1..8 (`--levels` to 64), with passes, preemptions and KV occupancy. `--salt S` fixes the prompts across boots for an A/B; `--think` adds the reasoning/answer split; `--jsonl` appends one line per rep and per N. |
 | `concurrent_collapse.py` | reproducer | server | 0, or 1 if a trial collapsed or a request errored | The "!!!!" collapse from #208. |
 | `demo/` | demo | Node | n/a | The canvas renderer for the README video. See `demo/README.md`. |
 | `demo_capture.py` | demo | server | 0 | Records one lane of the demo video: each token and the time it arrived. |
 | `harness.py` | library | CPU | n/a | How the scripts reach the server: the key, the URL, the model, the request, the stream and `/metrics`. For the bash scripts, `python3 bench/harness.py spec` prints the drafts and accepted-token counters and `model` the served name. |
 | `interleave_dose.py` | measurement | server | 0 | Prefix reuse against a dose of interleaved traffic, with the single-conversation control. |
 | `labd_accept.py` | measurement | server | 0, or 1 if the server ignores `return_tokens_as_token_ids` | Teacher-forced tokens per step for lookup-augmented drafting. |
+| `labd_accept_think.py` | measurement | server | 0, 1 if the server ignores `return_tokens_as_token_ids`, 2 if `</think>` is not one token or no speculative step was counted | `labd_accept.py`'s teacher-forced tokens per step on thinking-on targets, split at `</think>`: tok/step, acceptance per draft position and decode rate per phase, and the fraction of tokens spent reasoning. |
 | `labd_bench.py` | measurement | server | 0 | Six long-context greedy tasks: decode speed and tokens per step. |
 | `labd_soak.py` | test | server | 0 or 1 | The long verify block at batch > 1. |
 | `make_long_corpus.py` | data tool | `~/bench/labd_corpus.txt`, vLLM source | 0, or 1 if an input is missing | Builds the long-context LABD corpus. |

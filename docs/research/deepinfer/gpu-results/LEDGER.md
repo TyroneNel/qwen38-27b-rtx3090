@@ -21,7 +21,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | runtime-2 | `bench/step_curve.py`: ms/step vs verified tokens, per backend and depth | baseline | todo | | | |
 | evals-2 | `VLLM_GPU_SYNC_CHECK=warn` boot per mode | health | todo | | | |
 | evals-1 | Decode-vs-prefill KL probe per mode | health | todo | | | |
-| evals-4 | Thinking-on speed and acceptance cohort | baseline | todo | | | |
+| evals-4 | Thinking-on speed and acceptance cohort | baseline | done | INFO | C1 thinking on (xhigh): B −14.8% (117.6 → 100.2), D −9.7%; 0 streams reached `</think>` in 1,024 tokens | [evals-4.md](evals-4.md) |
 | evals-3 | Paired quality battery | health | todo | | | |
 | spec-5 | Σ min(p, q) acceptance telemetry | health | todo | | | |
 | quant-1-calib | `bench/act_calib.py` per-128 and Hadamard-128 modes | health | todo | | | |

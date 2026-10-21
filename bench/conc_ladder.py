@@ -2,9 +2,10 @@
 WHY it falls off -- forward passes, preemptions, KV pool occupancy, and the spread
 across streams.
 
-  venv/bin/python bench/conc_ladder.py [--max-n 8 | --n 1,2,4,8] [--out 256] [--reps 2]
-                                       [--ctx-tokens 4096] [--shared] [--label L] [--salt S]
-                                       [--json f.json]
+  venv/bin/python bench/conc_ladder.py [--max-n 8 | --n 1,2,4,8 | --levels 1,2,4,8,16,32,64]
+                                       [--out 256] [--reps 2] [--ctx-tokens 4096] [--shared]
+                                       [--label L] [--salt S] [--think] [--json f.json]
+                                       [--jsonl f.jsonl]
 
 Three throughput columns, because they answer different questions and disagree:
 per-stream is each stream's own first-token-to-last-token rate, averaged -- what one
@@ -53,6 +54,21 @@ Written for issue #16 (a reported per-stream dip at exactly N=2, which did not
 reproduce here: 105 / 98 / 86 tok/s at N=1/2/3, SPEC=mtp k=3 PREFIX_CACHE=1) and
 extended for issue #25 (dflash2 reported to collapse from N=2 up on 4-8 independent
 long streams).
+
+--levels is --n under the name evals-10 uses; past N=8 the server's max_num_seqs and KV pool decide
+how many streams are resident at once, so read `run`, `waiting` and the * mark before reading a
+high-N row as batched decode. --jsonl appends one JSON object per line as the run goes: a
+`"kind": "rep"` line per repetition and a `"kind": "best"` line per N, each carrying the run's
+settings, so an interrupted 64-stream sweep keeps what it measured and sweeps from several boots
+concatenate into one file for a throughput-vs-per-user plot.
+
+--think sends `enable_thinking: True` (evals-4). The first token is then the first reasoning token,
+and each N also prints the reasoning/answer split: reasoning tokens from the server's
+`completion_tokens_details.reasoning_tokens` (present when it runs a reasoning parser) and the
+per-stream rate in each phase, timed from the first reasoning delta to the first answer delta and
+from there to the last. Thinking spends most of a short --out in reasoning, so give it --out 2048 or
+more if the answer phase is the question. Without a reasoning parser the server streams the thinking
+as content and the split reads `no reasoning_content`.
 """
 import json, sys, time, threading
 
@@ -66,7 +82,8 @@ def _arg(flag, default, cast=int):
 MAXN = _arg("--max-n", 8)
 # --n 1,2,4,8 runs those stream counts only. Long prompts make the full ladder mostly
 # prefill, and the interesting N are the powers of two.
-NLIST = ([int(x) for x in _arg("--n", "", str).split(",")] if "--n" in sys.argv
+_NFLAG = "--levels" if "--levels" in sys.argv else "--n"
+NLIST = ([int(x) for x in _arg(_NFLAG, "", str).split(",")] if _NFLAG in sys.argv
          else list(range(1, MAXN + 1)))
 NOUT = _arg("--out", 256)
 REPS = _arg("--reps", 2)
@@ -75,6 +92,8 @@ JSONOUT = _arg("--json", "", str)
 LABEL = _arg("--label", "", str)
 SALT = _arg("--salt", "", str)
 SHARED = "--shared" in sys.argv
+THINK = "--think" in sys.argv
+JSONL = _arg("--jsonl", "", str)
 
 FILLER = ("The RTX 3090 has 24 GB of GDDR6X and 82 streaming multiprocessors. "
           "Memory bandwidth is 936 GB/s, which is what decode is bound by. ")
@@ -119,23 +138,40 @@ def stream(i, salt, res, first_tok):
         "messages": [{"role": "user", "content": make_prompt(i, salt)}],
         "max_tokens": NOUT, "temperature": 0.0, "stream": True,
         "stream_options": {"include_usage": True},
-        "chat_template_kwargs": {"enable_thinking": False},
+        "chat_template_kwargs": {"enable_thinking": THINK},
     }
     t0 = time.perf_counter(); first = None; last = None; ntok = 0; cached = 0
+    answer = None; rtok = 0; saw_reasoning = False
     for d in harness.stream("/v1/chat/completions", payload, timeout=3600):
         if d.get("usage"):
             ntok = d["usage"]["completion_tokens"]
             cached = (d["usage"].get("prompt_tokens_details") or {}).get("cached_tokens") or 0
+            rtok = (d["usage"].get("completion_tokens_details") or {}).get("reasoning_tokens") or 0
         ch = d.get("choices") or []
-        if ch and ch[0].get("delta", {}).get("content"):
+        delta = ch[0].get("delta", {}) if ch else {}
+        # vLLM 0.31 streams the thinking as `reasoning`; older servers called it `reasoning_content`.
+        thought = THINK and bool(delta.get("reasoning") or delta.get("reasoning_content"))
+        saw_reasoning |= thought
+        if ch and (delta.get("content") or thought):
             now = time.perf_counter()
             if first is None:
                 first = now
                 first_tok[i] = now
+            if answer is None and delta.get("content"):
+                answer = now
             last = now
     res[i] = dict(ttft=(first - t0) if first else None,
                   decode_s=(last - first) if first and last else None, ntok=ntok, cached=cached,
                   rate=((ntok - 1) / (last - first)) if first and last and last > first else None)
+    if THINK:
+        # The reasoning phase runs from the first delta to the first answer delta (to the end when the
+        # answer never started), the answer phase from there to the last delta.
+        r_end = answer if answer is not None else last
+        res[i].update(
+            saw_reasoning=saw_reasoning, reasoning_tokens=rtok, answer_tokens=ntok - rtok,
+            reasoning_rate=((rtok - 1) / (r_end - first)) if first and r_end and r_end > first and rtok > 1
+            else None,
+            answer_rate=((ntok - rtok) / (last - answer)) if answer is not None and last > answer else None)
 
 
 def sampler(stop, peak):
@@ -206,18 +242,42 @@ def run_one(n, salt):
     dn = m1["num_drafts_total"] - m0["num_drafts_total"]
     da = m1["num_accepted_tokens_total"] - m0["num_accepted_tokens_total"]
     tps = (da / dn + 1) if dn else float("nan")
-    return dict(n=n, per=per, agg=agg, full=full,
-                decode_agg=(dgen / win if win > 0 else float("nan")),
-                tok_step=tps, tok_pass=toks_per_pass,
-                ms_pass=ms_per_pass, ttft=sum(v["ttft"] for v in good) / n * 1000,
-                preempt=m1["num_preemptions_total"] - m0["num_preemptions_total"],
-                kv=peak["kv"] * 100, running=peak["running"], waiting=peak["waiting"],
-                rates=[round(r, 1) for r in rates], cached=sum(v["cached"] for v in good))
+    out = dict(n=n, per=per, agg=agg, full=full,
+               decode_agg=(dgen / win if win > 0 else float("nan")),
+               tok_step=tps, tok_pass=toks_per_pass,
+               ms_pass=ms_per_pass, ttft=sum(v["ttft"] for v in good) / n * 1000,
+               preempt=m1["num_preemptions_total"] - m0["num_preemptions_total"],
+               kv=peak["kv"] * 100, running=peak["running"], waiting=peak["waiting"],
+               rates=[round(r, 1) for r in rates], cached=sum(v["cached"] for v in good))
+    if THINK:
+        rtok = sum(v["reasoning_tokens"] for v in good)
+        ntok = sum(v["ntok"] for v in good)
+        rr = [v["reasoning_rate"] for v in good if v["reasoning_rate"]]
+        ar = [v["answer_rate"] for v in good if v["answer_rate"]]
+        out.update(saw_reasoning=sum(v["saw_reasoning"] for v in good), reasoning_tokens=rtok,
+                   answer_tokens=ntok - rtok, reasoning_frac=rtok / ntok if ntok else float("nan"),
+                   reasoning_rate=sum(rr) / len(rr) if rr else float("nan"),
+                   answer_rate=sum(ar) / len(ar) if ar else float("nan"),
+                   answered=len(ar))
+    return out
+
+
+def jsonl(kind, r, rep=None):
+    """One line per rep or best row, carrying the run's settings so files from several runs concatenate."""
+    if not JSONL:
+        return
+    rec = {"kind": kind, "label": LABEL, "salt": SALT, "ctx_tokens": CTXTOK, "out": NOUT,
+           "shared": SHARED, "think": THINK, **r}
+    if rep is not None:
+        rec["rep"] = rep
+    with open(JSONL, "a") as f:
+        f.write(json.dumps(rec) + "\n")
 
 
 print(f"prompts: {'shared' if SHARED else 'distinct'}, ~{CTXTOK} ctx tokens, "
       f"out={NOUT}, reps={REPS}, N={','.join(str(n) for n in NLIST)}"
-      + (f", label={LABEL}" if LABEL else "") + (f", salt={SALT}" if SALT else ""))
+      + (f", label={LABEL}" if LABEL else "") + (f", salt={SALT}" if SALT else "")
+      + (", think" if THINK else ""))
 print(f"{'N':>2} {'per-stream':>11} {'decode agg':>11} {'e2e agg':>8} {'tok/step':>9} "
       f"{'tok/pass':>9} {'ms/pass':>8} {'preempt':>8} {'kv%':>6} {'run':>4} {'TTFT ms':>8}  spread")
 rows, allreps = [], []
@@ -229,6 +289,7 @@ for n in NLIST:
         if r is None:
             print(f"{n:>2}  incomplete"); continue
         allreps.append(dict(r, rep=rep))
+        jsonl("rep", r, rep)
         # Keep the rep with the best STEADY-STATE aggregate: a collapse that survives
         # the best of two runs is not a transient, and a healthy config is not penalised
         # by one slow rep. Selecting on per-stream instead would prefer the rep where the
@@ -237,12 +298,22 @@ for n in NLIST:
             best = r
     if best:
         rows.append(best)
+        jsonl("best", best)
         s = best["rates"]
         mark = "" if best["full"] else "*"
         print(f"{n:>2} {best['per']:>11.1f} {best['decode_agg']:>10.1f}{mark:1} {best['agg']:>8.1f} "
               f"{best['tok_step']:>9.2f} {best['tok_pass']:>9.1f} {best['ms_pass']:>8.1f} "
               f"{best['preempt']:>8.0f} {best['kv']:>6.1f} {best['running']:>4.0f} "
               f"{best['ttft']:>8.0f}  {s[0]:.0f}/{s[len(s)//2]:.0f}/{s[-1]:.0f}")
+        if THINK:
+            if best["saw_reasoning"]:
+                print(f"   think: reasoning {best['reasoning_frac'] * 100:.1f}% "
+                      f"({best['reasoning_tokens']}/{best['answer_tokens']} reasoning/answer tokens), "
+                      f"per-stream reasoning {best['reasoning_rate']:.1f} tok/s, "
+                      f"answer {best['answer_rate']:.1f} tok/s ({best['answered']}/{n} streams answered)")
+            else:
+                print("   think: no reasoning_content (the server runs no reasoning parser, so the "
+                      "thinking streamed as content)")
 print()
 if any(not r["full"] for r in rows):
     print("* no instant at which all N streams were decoding: the pool could not hold "
@@ -259,7 +330,16 @@ print("| tok/step | " + " | ".join(f"{r['tok_step']:.2f}" for r in rows) + " |")
 print("| tok/pass | " + " | ".join(f"{r['tok_pass']:.1f}" for r in rows) + " |")
 print("| ms/pass | " + " | ".join(f"{r['ms_pass']:.1f}" for r in rows) + " |")
 print("| preemptions | " + " | ".join(f"{r['preempt']:.0f}" for r in rows) + " |")
+if THINK:
+    print("| reasoning % of tokens | " + " | ".join(f"{r['reasoning_frac'] * 100:.1f}" for r in rows) + " |")
+    print("| reasoning tok/s per stream | " + " | ".join(f"{r['reasoning_rate']:.1f}" for r in rows) + " |")
+    print("| answer tok/s per stream | " + " | ".join(f"{r['answer_rate']:.1f}" for r in rows) + " |")
 if JSONOUT:
-    json.dump({"label": LABEL, "salt": SALT, "ctx_tokens": CTXTOK, "out": NOUT, "shared": SHARED,
-               "rows": rows, "reps": allreps}, open(JSONOUT, "w"), indent=1)
+    body = {"label": LABEL, "salt": SALT, "ctx_tokens": CTXTOK, "out": NOUT, "shared": SHARED,
+            "rows": rows, "reps": allreps}
+    if THINK:
+        body["think"] = True
+    json.dump(body, open(JSONOUT, "w"), indent=1)
     print(f"\nwrote {JSONOUT}")
+if JSONL:
+    print(f"\nappended {JSONL}")
