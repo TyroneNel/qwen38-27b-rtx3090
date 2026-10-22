@@ -1,0 +1,296 @@
+drafter-1a: host-side confidence trim of the DFlash2 verify length (stage 0).
+
+Research experiment for docs/research/deepinfer/drafter.md drafter-1 (stage 0; spec-2 is the
+device-side twin). NOT in patches/series. Written against the image's installed (already
+patched) vLLM: dflash2/speculator.py there carries patches/dflash2-lookup-drafting.patch.
+
+Off unless VLLM_DFLASH2_CONF_TRIM is 1 or 2; with it unset (0) next_num_draft_tokens returns
+exactly what the lookup returns today, no graphs are added, and the new env names are left out
+of the torch.compile cache key, so a default boot is the stock image.
+
+What it does, once per step on the host (DFlash2Speculator.next_num_draft_tokens):
+  - only when the lookup's decision is the drafter's own block (never trims the lookup's long
+    block, never a drafter-free chain step) and draft_max_seq_len >= CONF_TRIM_MIN_CTX;
+  - conf_j = max softmax of the realised selector scores at walk step j (candidate_sampler.scores,
+    the buffer vLLM's acceptance estimator reads), 1 at positions the lookup supplied;
+  - survival s_k = prod_{j<=k} conf_j, max over the batch;
+  - keep k = #{k : s_k >= thr}, rounded UP to an allowed count (CONF_TRIM_LENS, default
+    MIN_K..block), with thr = VLLM_DFLASH2_VERIFY_MS_PER_TOKEN x tokens-per-ms (EMA of emitted
+    tokens over host step period, read through pinned memory, no sync), or a fixed
+    VLLM_DFLASH2_CONF_TRIM_THR. This is check c3-c5's cost-aware threshold.
+  - CONF_TRIM=1 reads s_k fresh (a .cpu() that waits for the draft pass: the host loses its
+    overlap with the drafter, ~host prep time per step); CONF_TRIM=2 uses the previous step's
+    s_k from pinned memory (no sync, one step stale, which spec-2's sim says is worth ~0).
+cudagraph_utils.py captures a uniform decode graph for every allowed trimmed length, otherwise
+those steps would fall to the mixed/piecewise path.
+
+Needs synchronous scheduling (--no-async-scheduling, launcher ASYNC_SCHED=0): vLLM feeds the
+worker's draft count back to the scheduler only there. Lossless; greedy text may still move by
+rounding across verify widths (drafter/README.md:116-120). Refuse at CTX=huge with prefix
+caching (KVarN varlen corruption, single-user/start_qwen.sh, the LOOKUP_ADAPTIVE comment).
+
+Knobs: VLLM_DFLASH2_CONF_TRIM (0/1/2), VLLM_DFLASH2_VERIFY_MS_PER_TOKEN, VLLM_DFLASH2_CONF_TRIM_THR,
+VLLM_DFLASH2_CONF_TRIM_MIN_CTX (32768), VLLM_DFLASH2_CONF_TRIM_MIN_K (2),
+VLLM_DFLASH2_CONF_TRIM_LENS (""), VLLM_DFLASH2_CONF_TRIM_LOG_SEC (30; logs the chosen-count
+histogram, thr, tokens/ms and context: the evidence that the trim engaged).
+
+diff -r a/envs.py b/envs.py
+--- a/envs.py
++++ b/envs.py
+@@ -226,6 +226,13 @@
+     VLLM_DFLASH2_CHAIN_MINMATCH: int = 8
+     VLLM_DFLASH2_CHAIN_LOG_SEC: float = 30.0
+     VLLM_DFLASH2_CHAIN_GREEDY_ONLY: bool = True
++    VLLM_DFLASH2_CONF_TRIM: int = 0
++    VLLM_DFLASH2_VERIFY_MS_PER_TOKEN: float = 0.0
++    VLLM_DFLASH2_CONF_TRIM_THR: float = 0.0
++    VLLM_DFLASH2_CONF_TRIM_MIN_CTX: int = 32768
++    VLLM_DFLASH2_CONF_TRIM_MIN_K: int = 2
++    VLLM_DFLASH2_CONF_TRIM_LENS: list[int] = []
++    VLLM_DFLASH2_CONF_TRIM_LOG_SEC: float = 30.0
+     VLLM_INT4_MQ_3D: bool = False
+     VLLM_INT4_MQ_3D_DEBUG: bool = False
+     VLLM_MAMBA_ALIGN_KEEP_CHECKPOINTS: bool = False
+@@ -1657,6 +1664,22 @@
+     "VLLM_DFLASH2_CHAIN_MINMATCH": lambda: int(os.environ.get("VLLM_DFLASH2_CHAIN_MINMATCH", "8")),
+     "VLLM_DFLASH2_CHAIN_LOG_SEC": lambda: float(os.environ.get("VLLM_DFLASH2_CHAIN_LOG_SEC", "30")),
+     "VLLM_DFLASH2_CHAIN_GREEDY_ONLY": lambda: os.environ.get("VLLM_DFLASH2_CHAIN_GREEDY_ONLY", "1") == "1",
++    # drafter-1a (docs/research/deepinfer/drafter.md): host-side confidence trim of the
++    # verify length, stage 0. 0 = off (stock behaviour), 1 = fresh confidences (one
++    # event-style sync on the draft pass per step), 2 = previous step's (no sync).
++    "VLLM_DFLASH2_CONF_TRIM": lambda: int(os.environ.get("VLLM_DFLASH2_CONF_TRIM", "0")),
++    # Verify cost per extra query token in ms (runtime-2's slope). Threshold = this x the
++    # measured tokens per ms. Ignored when VLLM_DFLASH2_CONF_TRIM_THR > 0.
++    "VLLM_DFLASH2_VERIFY_MS_PER_TOKEN": lambda: float(os.environ.get("VLLM_DFLASH2_VERIFY_MS_PER_TOKEN", "0")),
++    "VLLM_DFLASH2_CONF_TRIM_THR": lambda: float(os.environ.get("VLLM_DFLASH2_CONF_TRIM_THR", "0")),
++    "VLLM_DFLASH2_CONF_TRIM_MIN_CTX": lambda: int(os.environ.get("VLLM_DFLASH2_CONF_TRIM_MIN_CTX", "32768")),
++    "VLLM_DFLASH2_CONF_TRIM_MIN_K": lambda: int(os.environ.get("VLLM_DFLASH2_CONF_TRIM_MIN_K", "2")),
++    # Allowed draft counts (comma list, e.g. "4,7" for pthfa's stair edges); empty = every
++    # count from MIN_K to the drafter's block. A decode graph is captured for each.
++    "VLLM_DFLASH2_CONF_TRIM_LENS": lambda: [
++        int(x) for x in os.environ.get("VLLM_DFLASH2_CONF_TRIM_LENS", "").split(",") if x.strip()
++    ],
++    "VLLM_DFLASH2_CONF_TRIM_LOG_SEC": lambda: float(os.environ.get("VLLM_DFLASH2_CONF_TRIM_LOG_SEC", "30")),
+     # split-KV verify kernel: force the query-row tile (0 = pick by row count)
+     # int4 per-token-head KV: the multi-query 3D verify path and its debug print
+     "VLLM_INT4_MQ_3D": lambda: os.environ.get("VLLM_INT4_MQ_3D", "0") == "1",
+@@ -2456,6 +2479,14 @@
+         "VLLM_ENGINE_STALL_SENTINEL_S",
+         "VLLM_MAMBA_ALIGN_KEEP_CHECKPOINTS",
+         "VLLM_DFLASH2_CHAIN_LOG_SEC",
++        # drafter-1a experiment knobs: host-side scheduling and graph-capture list only.
++        "VLLM_DFLASH2_CONF_TRIM",
++        "VLLM_DFLASH2_VERIFY_MS_PER_TOKEN",
++        "VLLM_DFLASH2_CONF_TRIM_THR",
++        "VLLM_DFLASH2_CONF_TRIM_MIN_CTX",
++        "VLLM_DFLASH2_CONF_TRIM_MIN_K",
++        "VLLM_DFLASH2_CONF_TRIM_LENS",
++        "VLLM_DFLASH2_CONF_TRIM_LOG_SEC",
+         "VLLM_MARLIN_TUNE_DIR",
+         # The deprecated env spelling of --prefix-cache-retention-interval, which
+         # CacheConfig.compute_hash already leaves out of the hash for the same reason.
+diff -r a/v1/worker/gpu/cudagraph_utils.py b/v1/worker/gpu/cudagraph_utils.py
+--- a/v1/worker/gpu/cudagraph_utils.py
++++ b/v1/worker/gpu/cudagraph_utils.py
+@@ -316,6 +316,36 @@
+                         "and the full verify block).",
+                         decode_query_lens,
+                     )
++            # drafter-1a: the confidence trim (VLLM_DFLASH2_CONF_TRIM, dflash2/speculator.py)
++            # schedules fewer drafts than the drafter's block; without a decode graph per
++            # trimmed length those steps would run on the mixed (piecewise) path.
++            if speculative_config is not None and envs.VLLM_DFLASH2_CONF_TRIM:
++                _cfg = getattr(
++                    getattr(speculative_config, "draft_model_config", None),
++                    "hf_config",
++                    None,
++                )
++                _ns = self.vllm_config.num_speculative_tokens
++                _bonus = self.decode_query_len - _ns
++                _trained = int(
++                    (getattr(_cfg, "dflash_config", None) or {}).get("block_size", 0)
++                ) - 1
++                _draft_block = (
++                    _trained if envs.VLLM_DFLASH2_LOOKUP and 0 < _trained < _ns else _ns
++                )
++                _min_k = max(1, envs.VLLM_DFLASH2_CONF_TRIM_MIN_K)
++                _lens = [
++                    k for k in envs.VLLM_DFLASH2_CONF_TRIM_LENS
++                    if _min_k <= k < _draft_block
++                ] or list(range(_min_k, _draft_block))
++                for _k in _lens:
++                    if _k + _bonus not in decode_query_lens:
++                        decode_query_lens.append(_k + _bonus)
++                decode_query_lens.sort()
++                logger.info(
++                    "drafter-1a confidence trim: capturing decode graphs for query lengths %s.",
++                    decode_query_lens,
++                )
+ 
+         capture_varlen_decode = (
+             separate_decode_routine and bool(decode_mode) and self.varlen_decode
+diff -r a/v1/worker/gpu/spec_decode/dflash2/speculator.py b/v1/worker/gpu/spec_decode/dflash2/speculator.py
+--- a/v1/worker/gpu/spec_decode/dflash2/speculator.py
++++ b/v1/worker/gpu/spec_decode/dflash2/speculator.py
+@@ -353,6 +353,68 @@
+         self._lookup_sticky = envs.VLLM_DFLASH2_LOOKUP_STICKY
+         self._sticky = 0
+ 
++        # drafter-1a, stage 0 (docs/research/deepinfer/drafter.md): trim the next step's
++        # verify length below the drafter's block when the walk's own confidences say the
++        # tail will not survive. Keep draft k while prod_{j<=k} conf_j >= thr, with
++        # thr = VLLM_DFLASH2_VERIFY_MS_PER_TOKEN x (tokens per ms, measured online) or a
++        # fixed VLLM_DFLASH2_CONF_TRIM_THR. conf_j = max softmax of the realised selector
++        # scores at step j (the probability of the greedy walk's pick; the scores vLLM's
++        # estimator reads), 1 where the lookup supplied the token. Lossless: only the
++        # number of verified drafts changes. Like the lookup's long block it is fed back
++        # only on the synchronous scheduling path (--no-async-scheduling).
++        self._conf_trim = envs.VLLM_DFLASH2_CONF_TRIM
++        if self._conf_trim and self.enable_adaptive_verification:
++            logger.warning(
++                "VLLM_DFLASH2_CONF_TRIM ignored: vLLM's adaptive verification owns the "
++                "verify length"
++            )
++            self._conf_trim = 0
++        if self._conf_trim not in (0, 1, 2):
++            raise ValueError(
++                f"VLLM_DFLASH2_CONF_TRIM={self._conf_trim}: 0 off, 1 fresh, 2 stale"
++            )
++        if self._conf_trim:
++            self._trim_ms_per_tok = envs.VLLM_DFLASH2_VERIFY_MS_PER_TOKEN
++            self._trim_thr_fixed = envs.VLLM_DFLASH2_CONF_TRIM_THR
++            if self._trim_thr_fixed <= 0 and self._trim_ms_per_tok <= 0:
++                raise ValueError(
++                    "VLLM_DFLASH2_CONF_TRIM needs VLLM_DFLASH2_VERIFY_MS_PER_TOKEN > 0 "
++                    "(cost-aware threshold) or VLLM_DFLASH2_CONF_TRIM_THR > 0 (fixed)"
++                )
++            self._trim_min_ctx = envs.VLLM_DFLASH2_CONF_TRIM_MIN_CTX
++            min_k = max(1, envs.VLLM_DFLASH2_CONF_TRIM_MIN_K)
++            lens = [
++                k for k in envs.VLLM_DFLASH2_CONF_TRIM_LENS
++                if min_k <= k < self.draft_block
++            ] or list(range(min_k, self.draft_block))
++            # Allowed draft counts, ascending, always ending at the full block; a wanted
++            # k rounds UP to the next allowed one (must match cudagraph_utils.py).
++            self._trim_lens = sorted(set(lens)) + [self.draft_block]
++            self._trim_log_sec = envs.VLLM_DFLASH2_CONF_TRIM_LOG_SEC
++            self._trim_surv_cpu = torch.ones(
++                self.draft_block, dtype=torch.float32, device="cpu"
++            ).pin_memory()
++            self._trim_surv_ready = False
++            self._trim_emit_cpu = torch.zeros(
++                self.max_num_reqs, dtype=torch.int32, device="cpu"
++            ).pin_memory()
++            self._trim_emit_n = 0
++            self._trim_t_prev = None
++            self._trim_dt_prev = None
++            self._trim_ema_tok = 0.0
++            self._trim_ema_ms = 0.0
++            self._trim_ema_n = 0
++            self._trim_hist = [0] * (self.draft_block + 1)
++            self._trim_last_log = time.monotonic()
++            logger.info(
++                "drafter-1a confidence trim on (mode=%s, %s, min_ctx=%d, draft counts %s)",
++                "fresh" if self._conf_trim == 1 else "stale",
++                f"thr={self._trim_thr_fixed}" if self._trim_thr_fixed > 0
++                else f"ms_per_token={self._trim_ms_per_tok}",
++                self._trim_min_ctx,
++                self._trim_lens,
++            )
++
+         # --- drafter-free chains (VLLM_DFLASH2_CHAIN=1), ported from
+         # Dmtrii-tesla/dflash2-ngram-vllm (#38) -------------------------------
+         # While a request keeps reproducing its own context, whole verify
+@@ -405,6 +467,92 @@
+             )
+ 
+     def next_num_draft_tokens(self) -> int | None:
++        """The lookup's decision (below), then drafter-1a's confidence trim when it is on
++        and that decision is the drafter's own block."""
++        num_draft = self._next_num_draft_tokens_lookup()
++        if self._conf_trim and not (self._chain and self._chain_active):
++            base = self.num_speculative_steps if num_draft is None else num_draft
++            if base == self.draft_block:
++                trimmed = self._conf_trim_num_draft()
++                if trimmed is not None:
++                    return trimmed
++        return num_draft
++
++    def _conf_trim_num_draft(self) -> int | None:
++        """drafter-1a stage 0: the draft count for the next verify, or None to leave it.
++        Host-side, once per step; reads the realised walk scores of the block that was
++        just proposed (static buffer the replayed draft graph writes)."""
++        emitted = getattr(self, "last_num_emitted", None)
++        if emitted is None:
++            return None
++        num_reqs = emitted.shape[0]
++        # Throughput, for the cost-aware threshold: tokens emitted per wall-clock ms of
++        # step, both read without a sync. The step period is the host time between two
++        # calls (the scheduler is synchronous here); the emitted count arrives through a
++        # pinned copy one call later and is paired with the period it belongs to. Gaps
++        # between requests (> 1 s) are not steps.
++        now = time.perf_counter()
++        if self._trim_emit_n and self._trim_dt_prev is not None:
++            tok = float(self._trim_emit_cpu[: self._trim_emit_n].sum())
++            ms = self._trim_dt_prev * 1000.0
++            if 0.0 < ms < 1000.0 and tok > 0:
++                a = 0.1 if self._trim_ema_n >= 8 else 1.0 / (self._trim_ema_n + 1)
++                self._trim_ema_tok += a * (tok - self._trim_ema_tok)
++                self._trim_ema_ms += a * (ms - self._trim_ema_ms)
++                self._trim_ema_n += 1
++        self._trim_dt_prev = None if self._trim_t_prev is None else now - self._trim_t_prev
++        self._trim_t_prev = now
++        self._trim_emit_cpu[:num_reqs].copy_(emitted.to(torch.int32), non_blocking=True)
++        self._trim_emit_n = num_reqs
++
++        # Short context: an extra verify position is nearly free and a noisy predictor
++        # measured -8% at <=25k (drafter.md c3-c5), so leave the block alone.
++        if self.draft_max_seq_len < self._trim_min_ctx:
++            self._trim_surv_ready = False
++            return None
++        if self._trim_thr_fixed > 0:
++            thr = self._trim_thr_fixed
++        else:
++            if self._trim_ema_n < 4 or self._trim_ema_ms <= 0:
++                return None
++            thr = self._trim_ms_per_tok * self._trim_ema_tok / self._trim_ema_ms
++
++        block = self.draft_block
++        scores = self.candidate_sampler.scores[:num_reqs, :block]
++        conf = torch.softmax(scores, dim=-1).amax(dim=-1)
++        conf = torch.nan_to_num(conf, nan=1.0)
++        if self._lookup:
++            conf = torch.where(self._lookup_use[:num_reqs, :block] > 0, 1.0, conf)
++        # Survival is non-increasing in k, so per request the kept prefix is the count of
++        # positions at or above thr; one length serves the batch, the longest anyone wants.
++        surv = conf.cumprod(dim=1).amax(dim=0)
++        if self._conf_trim == 1:
++            surv_host = surv.cpu()
++        else:
++            if not self._trim_surv_ready:
++                self._trim_surv_cpu.copy_(surv, non_blocking=True)
++                self._trim_surv_ready = True
++                return None
++            surv_host = self._trim_surv_cpu.clone()
++            self._trim_surv_cpu.copy_(surv, non_blocking=True)
++        want = int((surv_host >= thr).sum())
++        num_draft = next(k for k in self._trim_lens if k >= want)
++        self._trim_hist[num_draft] += 1
++        if self._trim_log_sec > 0:
++            t = time.monotonic()
++            if t - self._trim_last_log >= self._trim_log_sec:
++                logger.info(
++                    "drafter-1a trim: draft-count histogram %s, thr=%.3f, tok/ms=%.4f, "
++                    "ctx=%d",
++                    {k: n for k, n in enumerate(self._trim_hist) if n},
++                    thr,
++                    self._trim_ema_tok / self._trim_ema_ms if self._trim_ema_ms else 0.0,
++                    self.draft_max_seq_len,
++                )
++                self._trim_last_log = t
++        return num_draft
++
++    def _next_num_draft_tokens_lookup(self) -> int | None:
+         """How many of the proposed tokens the scheduler should put up for verification next
+         step (None = all of them).
+ 

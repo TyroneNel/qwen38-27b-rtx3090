@@ -96,6 +96,8 @@ DFlash2's 2:1 loss on QA-type work at 112k then splits into: about 4 extra verif
 
 ### drafter-1: confidence-gated verify length for single-stream DFlash2
 
+**Measured (2026-10-22):** drafter-1a LOSS, +1.8–2.4% TOTAL at 100k in D′ (bar +8%); copy −4–6% from synchronous scheduling. drafter-1b skipped on its gate. [gpu-results/drafter-1a.md](gpu-results/drafter-1a.md)
+
 - **DeepInfer and DeepSpec.** The confidence head (Q4; `DeepSpec/deepspec/modeling/dspark/common.py:43-49`, `loss.py:152-163`, `DeepInfer/.../mtp/dflash.py:46-79`). DeepInfer verifies the cost-optimal prefix (`DeepInfer/doc/inference_deployment_qa.md:241-264`; `schedule_mtp_varlen.py:11-80`). Its numbers: verified length 5 → 3.2–4.4, accepted length 3.29 → 3.20, **−1.5% at 16 seqs/rank, +5.4% at 60**.
 - **HyperQwen today.** The lookup patch already picks a per-step verify length on the host, `next_num_draft_tokens` (`patches/dflash2-lookup-drafting.patch:948-997`), from stale flags without a sync, with two choices: 8 (drafter block) or 16 (lookup tail). vLLM 0.31's adaptive verification and online estimator exist, and the DFlash2 speculator calls `_maybe_predict_acceptance` (`vllm@v0.31.0:vllm/v1/worker/gpu/spec_decode/dflash2/speculator.py:246-251`; patch :1053-1054), but that path is gated off for GDN ([runtime.md](runtime.md), runtime-1).
 - **The gap.** Nothing ever verifies fewer than the drafter's 8 tokens, and nothing uses a confidence signal.

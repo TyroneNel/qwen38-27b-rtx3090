@@ -46,7 +46,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | spec-0 | `DFLASH_TOKENS=3/5/7` ladder at 90k, 150k, 240k | runtime-2 | done | WIN | `DFLASH_TOKENS=3` vs 7 on E: +65% @90k, +56% @150k, +70% @235k (16.1 vs 9.5 tok/s); 2 boots/arm, spread ≤1% | [spec-0.md](spec-0.md) |
 | spec-1 | GDN opt-in to adaptive verification (= runtime-1) | runtime-2 | done | INVALID | greedy bit-identity fails at token 0–1 on all 6 tasks (0/23 clean chunks vs 18/23 off, off control identical); acceptance length 1.75 | [spec-1.md](spec-1.md) |
 | kvarn-varlen | Root-cause KVarN corruption on verify-length change (`start_qwen.sh:399-428`) | – | running | | ~1 h of the 4 h timebox used: not reproduced (0 wrong at 6 residues); a hit inherits the previous request's verify schedule, and under the same schedule KV and GDN fingerprints are bit-identical (no corruption). Full 0–127 sweeps queued (see STATE.md) | |
-| drafter-1a | Host-side confidence trim, stage 0 | runtime-2 | todo | | | |
+| drafter-1a | Host-side confidence trim, stage 0 | runtime-2 | done | LOSS | +1.8–2.4% at 100k (bar +8%); copy −4–6% | [drafter-1a.md](drafter-1a.md) |
 | spec-2 | Fresh-confidence device trim | spec-1 | skipped | | gate failed: spec-1 INVALID | [spec-1.md](spec-1.md) |
 | spec-4 | Lookup-aware confidences | spec-1 | skipped | | gate failed: spec-1 INVALID | [spec-1.md](spec-1.md) |
 | runtime-3 | Bound the tail of forced tool calls | – | done | WIN | runaways 6–10/40 → 0/40, valid calls 31–34/40 → 40/40, batch and single, required and named (`VLLM_TOOL_CALL_BOUND=1`) | [runtime-3.md](runtime-3.md) |
@@ -69,7 +69,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | drafter-2 | Offline DFlash2 gate (`drafter/eval_dflash2.py`) | – | todo | | | |
 | quant-3 | Better GPTQ for the int4 drafter and lm_head | drafter-2 | todo | | | |
 | drafter-3 | TV-loss repair of the W4A16 DFlash2 | drafter-2 | todo | | | |
-| drafter-1b | Learned confidence head, stage 1 | drafter-1a or spec-2 shows a win | todo | | | |
+| drafter-1b | Learned confidence head, stage 1 | drafter-1a or spec-2 shows a win | skipped | | gate failed: drafter-1a LOSS, spec-2 skipped (spec-1 INVALID) | [drafter-1a.md](drafter-1a.md) |
 
 ## Phase 6: gated stretch
 
