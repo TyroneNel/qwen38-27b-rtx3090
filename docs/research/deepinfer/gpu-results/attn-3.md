@@ -43,6 +43,12 @@ KL is within the ≤ 2× gate, and perplexity, GSM8K and needle are unchanged.
 
 **WIN** for D: −8.9% cold TTFT at 148k and −7.5% at 112k (bar ≥ 5%), with no quality cost. Mode E (`KVARN_PREFILL_INT8=1`, which swaps the FA2 call on the rebuilt fp16 context for a SageAttention kernel) failed its first unit test on shared memory (131,592 B against sm86's 101,376). The fix (2 pipeline stages, 82,436 B) is queued for its test, KL, quality and TTFT runs.
 
-## Not valid
+## Microbenchmark (`bench/pthfa_prefill_bench.py`, mode D shape, ms per layer-chunk of 2,048 query rows)
 
-The first `bench_prefill` microbenchmark (1.24× per layer-chunk at 50k) shared one layer's scale views across four layer caches, a bug in the bench. Its forced re-run is queued.
+| Context | Stock | int8-QK | Speed-up | rel-L2 vs stock |
+|---|---|---|---|---|
+| 51k | 57.1 | 46.0 | 1.24× | 3.9e-3 |
+| 100k | 114.6 | 92.5 | 1.24× | 3.9e-3 |
+| 150k | 174.8 | 140.9 | 1.24× | 3.9e-3 |
+
+This is the forced re-run, after the bench was fixed to build one attention impl per layer cache (the first run shared layer 0's scale views across the other three; it read the same 1.24×). For mode E's kernel (`bench/test_kvarn_int8qk.py`), int8 runs 1.32–1.37× FA2 per 2,048-row chunk at 16–150k. That test's accuracy section fails one case on its minimum-cosine cut (q=2048, kv=2048: min cosine 0.998955 against 0.999, rel-L2 4.7e-3, lower than the four passing cases' 5.9–9.3e-3). The mode E KL, quality and TTFT boots run anyway, and they are the gate.
