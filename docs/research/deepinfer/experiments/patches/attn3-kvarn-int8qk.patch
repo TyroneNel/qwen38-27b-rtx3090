@@ -1,0 +1,210 @@
+attn-3 (docs/research/deepinfer/attention-kv.md, attn-3), mode E: int8-QK attention for KVarN's
+chunked-prefill continuations, behind KVARN_PREFILL_INT8=1 (default unset = off, no code path changes).
+
+KVarN's _cached_multiquery_path materialises the request's whole rotated fp16 K/V contiguously and runs FA2
+varlen on it for every chunk after the first of a cold prefill (the fused verify kernel takes the short
+verify steps first, so this branch only sees chunked-prefill continuations and shallow verifies). With the
+knob, a one-request call with more than 16 query tokens at head_dim 256 runs the new
+kvarn_prefill_int8.prefill_attn_int8_contig on the same q_rot / K_packed / V_packed instead: the
+SageAttention-style kernel of patches/prefill-attn-int8.patch (K mean-smoothed, int8 per 64 keys and head;
+Q int8 per row; P.V in V's dtype, fp32 accumulate), with contiguous K/V addressing and P cast to fp16.
+Anything else (several requests, verify-sized calls, non-causal) keeps FA2. The knob is read once at import
+(os.environ); the branch is inside the opaque attention op, so the torch.compile cache is unaffected.
+
+Test: bench/test_kvarn_int8qk.py (GPU; against an fp64 reference and FA2). Applies on the stock image.
+
+Apply: patch -p1 --forward --fuzz 0 -d /app/venv/lib/python3.12/site-packages/vllm < attn3-kvarn-int8qk.patch
+
+--- a/v1/attention/backends/kvarn_attn.py
++++ b/v1/attention/backends/kvarn_attn.py
+@@ -38,6 +38,7 @@ from __future__ import annotations
+ 
+ import functools
+ import math
++import os
+ from dataclasses import dataclass, field
+ from typing import Any, ClassVar
+ 
+@@ -80,6 +81,10 @@ from vllm.v1.attention.ops.triton_kvarn_sinkhorn import kvarn_sinkhorn_triton
+ _HAS_FLASH_ATTN = is_flash_attn_varlen_func_available()
+ if _HAS_FLASH_ATTN:
+     from vllm.v1.attention.backends.fa_utils import flash_attn_varlen_func
++# attn-3 (research/deepinfer, docs/research/deepinfer/attention-kv.md attn-3):
++# KVARN_PREFILL_INT8=1 runs one-request chunked-prefill continuations on the
++# int8-QK kernel of kvarn_prefill_int8.py instead of FA2. Default off.
++_KVARN_PREFILL_INT8 = os.environ.get("KVARN_PREFILL_INT8", "0") == "1"
+ 
+ 
+ # ──────────────────────────────────────────────────────────────────────────────
+@@ -2779,14 +2784,26 @@ class KVarNAttentionImpl(AttentionImpl["KVarNMetadata"]):
+                else self._hadamard(q.device).to(torch.float16))
+         n_tok = q.shape[0]
+         q_rot = torch.mm(q.reshape(-1, D), H16).view(n_tok, self.num_heads, D)
+-        out_rot = self._flash_varlen(
+-            q_rot, K_packed[:total_k], V_packed[:total_k],
+-            cu_q=md.query_start_loc[:B + 1],
+-            cu_k=cu_k,
+-            max_q=md.max_query_len,
+-            max_k=max_k,
+-            causal=_causal_bool(getattr(md, "causal", True)),  # port(0.27.1)
+-        )
++        if (_KVARN_PREFILL_INT8 and B == 1 and md.max_query_len > 16
++                and D == 256 and n_tok == int(md.max_query_len)
++                and _causal_bool(getattr(md, "causal", True))):
++            # attn-3 (research/deepinfer, KVARN_PREFILL_INT8=1): a one-request
++            # chunked-prefill continuation on int8 QK (SageAttention-style)
++            # instead of FA2; the same rotated packed K/V, bottom-right causal.
++            from vllm.v1.attention.backends.kvarn_prefill_int8 import (
++                prefill_attn_int8_contig,
++            )
++            out_rot = prefill_attn_int8_contig(
++                q_rot, K_packed[:total_k], V_packed[:total_k], self.scale)
++        else:
++            out_rot = self._flash_varlen(
++                q_rot, K_packed[:total_k], V_packed[:total_k],
++                cu_q=md.query_start_loc[:B + 1],
++                cu_k=cu_k,
++                max_q=md.max_query_len,
++                max_k=max_k,
++                causal=_causal_bool(getattr(md, "causal", True)),  # port(0.27.1)
++            )
+         return torch.mm(out_rot.reshape(-1, D), H16).view(
+             n_tok, self.num_heads, D)
+ 
+--- /dev/null
++++ b/v1/attention/backends/kvarn_prefill_int8.py
+@@ -0,0 +1,134 @@
++# SPDX-License-Identifier: Apache-2.0
++"""attn-3 (research/deepinfer, docs/research/deepinfer/attention-kv.md attn-3): int8-QK prefill attention for
++KVarN's chunked-prefill continuations (mode E), opt-in with KVARN_PREFILL_INT8=1.
++
++KVarN's continuation chunks materialise the request's whole rotated fp16 K/V contiguously
++(_kvarn_build_packed_kv_kernel) and run FA2 varlen on them. This is the same computation with QK^T on int8 tensor
++cores, SageAttention-style, as patches/prefill-attn-int8.patch does for the bf16 arm: K is smoothed by its
++per-(kv head, d) mean over the context (softmax-invariant: q . mean_k is the same for every key of a row), then
++quantised per (64 keys, kv head) by absmax into contiguous int8 scratch, once per layer-chunk; Q rows are quantised
++per row in-kernel; P.V stays in the V dtype with fp32 accumulate. The kernels are prefill_attn_hd256.py's with
++contiguous K/V addressing (no page gather) and P cast to V's dtype (KVarN's K/V are fp16).
++
++One request, causal, bottom-right aligned (q token t sees keys <= kv_len - q_len + t), head_dim 256.
++"""
++
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def _k_mean_kernel(k_ptr, mean_ptr, kv_len, stride_kn, stride_kh, D: tl.constexpr, CHUNK: tl.constexpr):
++    kvh = tl.program_id(0)
++    d = tl.arange(0, D)
++    acc = tl.zeros([D], dtype=tl.float32)
++    for start in range(0, kv_len, CHUNK):
++        pos = start + tl.arange(0, CHUNK)
++        ok = pos < kv_len
++        k = tl.load(k_ptr + pos.to(tl.int64)[:, None] * stride_kn + kvh * stride_kh + d[None, :],
++                    mask=ok[:, None], other=0.0).to(tl.float32)
++        acc += tl.sum(k, axis=0)
++    tl.store(mean_ptr + kvh * D + d, acc / kv_len)
++
++
++@triton.jit
++def _k_quant_kernel(k_ptr, kmean_ptr, k8_ptr, kscale_ptr, kv_len, stride_kn, stride_kh, stride_k8n, stride_k8h,
++                    HKV: tl.constexpr, D: tl.constexpr, TILE: tl.constexpr):
++    pid = tl.program_id(0)
++    kvh = tl.program_id(1)
++    pos = pid * TILE + tl.arange(0, TILE)
++    ok = pos < kv_len
++    d = tl.arange(0, D)
++    mean = tl.load(kmean_ptr + kvh * D + d)
++    k = tl.load(k_ptr + pos.to(tl.int64)[:, None] * stride_kn + kvh * stride_kh + d[None, :],
++                mask=ok[:, None], other=0.0).to(tl.float32) - mean[None, :]
++    k = tl.where(ok[:, None], k, 0.0)
++    amax = tl.maximum(tl.max(tl.abs(k)), 1e-8)
++    k8 = (k * (127.0 / amax) + 0.5 * tl.where(k >= 0, 1.0, -1.0)).to(tl.int8)
++    tl.store(k8_ptr + pos.to(tl.int64)[:, None] * stride_k8n + kvh * stride_k8h + d[None, :], k8, mask=ok[:, None])
++    tl.store(kscale_ptr + pid * HKV + kvh, amax / 127.0)
++
++
++@triton.jit
++def _attn_kernel(q_ptr, v_ptr, o_ptr, k8_ptr, kscale_ptr, kv_len, q_start_pos, sm_scale,
++                 stride_qt, stride_qh, stride_vn, stride_vh, stride_k8n, stride_k8h, stride_ot, stride_oh, q_len,
++                 HKV: tl.constexpr, KTILE: tl.constexpr, G: tl.constexpr, D: tl.constexpr,
++                 BLOCK_T: tl.constexpr, BLOCK_N: tl.constexpr):
++    pid_t = tl.program_id(0)
++    qh = tl.program_id(1)
++    kvh = qh // G
++    tok = pid_t * BLOCK_T + tl.arange(0, BLOCK_T)
++    row_ok = tok < q_len
++    d = tl.arange(0, D)
++    q_pos = q_start_pos + tok
++    q = tl.load(q_ptr + tok.to(tl.int64)[:, None] * stride_qt + qh * stride_qh + d[None, :],
++                mask=row_ok[:, None], other=0.0)
++    q_f = q.to(tl.float32)
++    q_amax = tl.maximum(tl.max(tl.abs(q_f), axis=1), 1e-8)
++    q_i8 = (q_f * (127.0 / q_amax)[:, None] + 0.5 * tl.where(q_f >= 0, 1.0, -1.0)).to(tl.int8)
++    q_scale = q_amax / 127.0
++    m_i = tl.full([BLOCK_T], float("-inf"), dtype=tl.float32)
++    l_i = tl.zeros([BLOCK_T], dtype=tl.float32)
++    DH: tl.constexpr = D // 2
++    acc0 = tl.zeros([BLOCK_T, DH], dtype=tl.float32)
++    acc1 = tl.zeros([BLOCK_T, DH], dtype=tl.float32)
++    hi = q_start_pos + tl.minimum(pid_t * BLOCK_T + BLOCK_T, q_len)
++    for start in range(0, hi, BLOCK_N):
++        pos = start + tl.arange(0, BLOCK_N)
++        k_ok = pos < kv_len
++        pos64 = pos.to(tl.int64)
++        k_i8 = tl.load(k8_ptr + pos64[:, None] * stride_k8n + kvh * stride_k8h + d[None, :],
++                       mask=k_ok[:, None], other=0)
++        k_sc = tl.load(kscale_ptr + (start // KTILE) * HKV + kvh)
++        s = tl.dot(q_i8, tl.trans(k_i8), out_dtype=tl.int32).to(tl.float32) * (q_scale[:, None] * (k_sc * sm_scale))
++        causal_ok = (pos[None, :] <= q_pos[:, None]) & k_ok[None, :] & row_ok[:, None]
++        s = tl.where(causal_ok, s, float("-inf"))
++        m_new = tl.maximum(m_i, tl.max(s, axis=1))
++        m_safe = tl.where(m_new == float("-inf"), 0.0, m_new)
++        alpha = tl.where(m_i == float("-inf"), 0.0, tl.exp(m_i - m_safe))
++        p = tl.where(causal_ok, tl.exp(s - m_safe[:, None]), 0.0)
++        l_i = l_i * alpha + tl.sum(p, axis=1)
++        acc0 = acc0 * alpha[:, None]
++        acc1 = acc1 * alpha[:, None]
++        v0 = tl.load(v_ptr + pos64[:, None] * stride_vn + kvh * stride_vh + tl.arange(0, DH)[None, :],
++                     mask=k_ok[:, None], other=0.0)
++        v1 = tl.load(v_ptr + pos64[:, None] * stride_vn + kvh * stride_vh + (DH + tl.arange(0, DH))[None, :],
++                     mask=k_ok[:, None], other=0.0)
++        p_v = p.to(v0.dtype)
++        acc0 += tl.dot(p_v, v0, out_dtype=tl.float32)
++        acc1 += tl.dot(p_v, v1, out_dtype=tl.float32)
++        m_i = m_new
++    l_safe = tl.where(l_i == 0.0, 1.0, l_i)
++    o_base = o_ptr + tok.to(tl.int64)[:, None] * stride_ot + qh * stride_oh
++    tl.store(o_base + tl.arange(0, DH)[None, :], (acc0 / l_safe[:, None]).to(o_ptr.dtype.element_ty),
++             mask=row_ok[:, None])
++    tl.store(o_base + (DH + tl.arange(0, DH))[None, :], (acc1 / l_safe[:, None]).to(o_ptr.dtype.element_ty),
++             mask=row_ok[:, None])
++
++
++def prefill_attn_int8_contig(q, k, v, sm_scale, block_t=128, block_n=64, num_warps=8, num_stages=2):
++    """q [q_len, Hq, D]; k, v [kv_len, Hkv, D] contiguous in the token dim (the request's whole context, this
++    chunk last); returns o [q_len, Hq, D] in q's dtype. Causal, bottom-right aligned.
++
++    num_stages=2: with contiguous (16-divisible) K/V Triton software-pipelines the int8 K and fp16 V tiles, and 3
++    stages need 131,592 B of shared memory at these block sizes, past sm86's 101,376 B; 2 stages need 82,436 B
++    (offline Triton 3.7.1 compile for sm86 with the serving divisibility; prefill_attn_hd256's paged gathers are
++    not pipelined, which is why 3 stages fit there)."""
++    q_len, hq, d = q.shape
++    kv_len, hkv, _ = k.shape
++    dev = q.device
++    n_tiles = triton.cdiv(kv_len, block_n)
++    kmean = torch.empty(hkv, d, dtype=torch.float32, device=dev)
++    _k_mean_kernel[(hkv,)](k, kmean, kv_len, k.stride(0), k.stride(1), D=d, CHUNK=256, num_warps=4)
++    k8 = torch.empty(n_tiles * block_n, hkv, d, dtype=torch.int8, device=dev)
++    kscale = torch.empty(n_tiles, hkv, dtype=torch.float32, device=dev)
++    _k_quant_kernel[(n_tiles, hkv)](k, kmean, k8, kscale, kv_len, k.stride(0), k.stride(1), k8.stride(0),
++                                    k8.stride(1), HKV=hkv, D=d, TILE=block_n, num_warps=4)
++    out = torch.empty_like(q)
++    _attn_kernel[(triton.cdiv(q_len, block_t), hq)](
++        q, v, out, k8, kscale, kv_len, kv_len - q_len, sm_scale,
++        q.stride(0), q.stride(1), v.stride(0), v.stride(1), k8.stride(0), k8.stride(1), out.stride(0),
++        out.stride(1), q_len, HKV=hkv, KTILE=block_n, G=hq // hkv, D=d, BLOCK_T=block_t, BLOCK_N=block_n,
++        num_warps=num_warps, num_stages=num_stages)
++    return out
