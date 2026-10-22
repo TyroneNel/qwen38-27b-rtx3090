@@ -57,7 +57,20 @@ Tokens per step barely move: at 20k 2.73 → 2.65, at 170k warm 2.53 → 2.14 (o
 | GSM8K pooled, n=600 | **95.2%** (571) | **93.7%** (562) |
 | needle at 100k, depths 0.1 / 0.5 / 0.9 | 3/3 | 3/3 |
 
-KL is within the ≤ 2× gate and no worse than stock. Stock lands exactly on the appendix's 95.2% reference. With attn-2, the pooled point estimate is 1.5 points lower, outside the appendix's ±1-point band. Most of that is seed 2 (b=7, c=1, p=0.07), and the repo's paired test (`bench/compare_quality.py`) passes: greedy p=0.63, sampled p=0.27, perplexity identical. Both arms lose 7–13 items per arm to `finish_reason=length`. Numerics-only boots, so spill does not apply (`attn-2\kl_*`, `attn-2\q_off`, `attn-2\q_on`). A second pass with greedy plus 4 sampled seeds per arm (1,000 problems each) is queued to settle the band.
+**Second pass** (fresh boots, greedy plus 4 sampled seeds per arm, `attn-2\q2_on`, `attn-2\q2_off`):
+
+| GSM8K, n=200 each | greedy | seed 1 | seed 2 | seed 3 | seed 4 | pooled n=1,000 |
+|---|---|---|---|---|---|---|
+| stock | 0.970 | 0.930 | 0.955 | 0.935 | 0.935 | **94.5%** |
+| attn-2 | 0.960 | 0.935 | 0.925 | 0.950 | 0.930 | **94.0%** |
+
+Paired test PASS: greedy b=3, c=1, p=0.63; 4 sampled seeds b=10, c=6, p=0.45; perplexity 8.4015 vs 8.4016. Seed 2 loses in both passes (b=7, c=1, then b=6, c=0) while seeds 1, 3 and 4 are even or ahead, so the first pass's −1.5 points was mostly that one seed.
+
+**Over both passes (n=1,600 per arm): stock 94.75%, attn-2 93.9% (−0.9 points).** That is within ±1 point of stock measured the same way on this box. Against the appendix's fixed 95.2% it is 1.3 points under, because stock itself reads 94.75% here. KL is no worse than stock, needle 3/3 at 100k, perplexity identical. Numerics-only boots, so spill does not apply (`attn-2\kl_*`, `attn-2\q_*`, `attn-2\q2_*`).
+
+## Verdict
+
+**WIN.** 4.7× per layer at 240k T=8 (bar 2×). +125% decode at 170k warm and +38% at 20k, end to end and spill-free (bar +15% at depth). Quality within ±1 point of stock on GSM8K n=1,600, needle 3/3, KL and perplexity unchanged. The knob is `KVARN_VERIFY_SHARED=1`; pv16 adds nothing measurable end to end.
 
 ## Against the appendix
 
