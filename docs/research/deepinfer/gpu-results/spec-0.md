@@ -38,4 +38,24 @@ Steps per 512 output tokens hardly move with k (e.g. at 150k: k=7 135 + 129 step
 
 **WIN.** The appendix's criterion is ≥ +5% at 240k with no loss beyond 2% at 90k. Measured: +70% at ~235k, +56% at ~150k and +65% at ~90k for `DFLASH_TOKENS=3` against the default 7. Two interleaved boots per arm, spread ≤ 1%.
 
-Not yet measured: the 20k headline depth, where long drafts pay on copy-heavy text (E's `copy` task runs at 7.6 tok/step). A k=3/5/7 run at 20k is queued, so the user can choose between a flat default of 3 and a context-aware default (3 above some depth, 7 below). The knob already exists, so the change is a launcher default, not code.
+## Addendum 2026-10-22: spill-free re-check and the 20k depth
+
+The runs above used the stock E pool (`KV_MEM` 4.9 GiB), which pages GPU memory over PCIe during long cold prefills on this box ([ENVIRONMENT.md](ENVIRONMENT.md)). Both checks below ran on `ghcr.io/syv-ai/hyperqwen:latest` `sha256:0cf71b42d301…` (main `ce9615c`) with `KV_MEM=4000000000 DFLASH_MAX_LEN=180224`. Every boot was spill-free by PCIe: job-window median 20–34 MB/s, no second above 500 MB/s. Raw data: `spec-0\s20k_k{3,5,7}_{1,2}`, `spec-0\s150k_k{3,7}_{1,2}`.
+
+**~150k (qa + summary, 256 tokens each), two boots per arm:** k=7 12.9 / 13.0, k=3 19.9 / 19.8 tok/s, **+54%**. The original +56% stands; spill had not inflated it.
+
+**20k (six tasks, 512 tokens), two boots per arm:**
+
+| Task | k=7 | k=5 | k=3 | k=3 vs k=7 |
+|---|---|---|---|---|
+| copy | 155.2 | 133.5 | 99.5 | −36% |
+| code | 92.8 | 93.5 | 82.5 | −11% |
+| edit | 52.5 | 51.3 | 56.2 | +7% |
+| quote | 48.6 | 42.2 | 47.9 | −2% |
+| summary | 40.0 | 50.3 | 52.5 | +31% |
+| qa | 38.5 | 43.6 | 49.6 | +29% |
+| **TOTAL** | **55.9** (55.7 / 56.1) | **58.2** (58.3 / 58.2) | **60.2** (60.0 / 60.5) | **+7.8%** |
+
+At 20k a flat k=3 still wins the six-task total, but it is a workload trade, not a free default: copy-heavy and code generation lose 11–36%, while QA and summarising gain ~30%.
+
+**With attn-2 in** ([attn-2.md](attn-2.md)), the cheaper verify takes most of this lever away: k=7 beats k=3 at 20k (81.5 vs 71.9), and k=3 keeps only +9% at 170k (39.2 vs 36.0). Whether to pick k=3 at depth (with or without attn-2), or keep k=7 everywhere, is the user's call.
