@@ -51,8 +51,13 @@ Tokens per step barely move: at 20k 2.73 → 2.65, at 170k warm 2.53 → 2.14 (o
 |---|---|---|
 | decode KL k3, 4k (8 prompts, two repeats, identical) | 1.122e-3 | 8.77e-4 |
 | decode KL k3, 16k (4 prompts) | 7.49e-4 | 6.86e-4 |
+| perplexity, all (32,645 tokens) | 8.4016 | 8.4015 (−0.00%) |
+| GSM8K greedy, n=200 | 0.965 | 0.955 (b=3, c=1, p=0.63) |
+| GSM8K seed 1 / seed 2, n=200 each | 0.930 / 0.960 | 0.925 / 0.930 (sampled b=9, c=4, p=0.27) |
+| GSM8K pooled, n=600 | **95.2%** (571) | **93.7%** (562) |
+| needle at 100k, depths 0.1 / 0.5 / 0.9 | 3/3 | 3/3 |
 
-Within the ≤ 2× gate; no worse than stock. GSM8K n=600 (bar: within ±1 point of 95.2%) and needle at 100k run in their own numerics-only boots; see the ledger row for their status.
+KL is within the ≤ 2× gate and no worse than stock. Stock lands exactly on the appendix's 95.2% reference. With attn-2, the pooled point estimate is 1.5 points lower, outside the appendix's ±1-point band. Most of that is seed 2 (b=7, c=1, p=0.07), and the repo's paired test (`bench/compare_quality.py`) passes: greedy p=0.63, sampled p=0.27, perplexity identical. Both arms lose 7–13 items per arm to `finish_reason=length`. Numerics-only boots, so spill does not apply (`attn-2\kl_*`, `attn-2\q_off`, `attn-2\q_on`). A second pass with greedy plus 4 sampled seeds per arm (1,000 problems each) is queued to settle the band.
 
 ## Against the appendix
 

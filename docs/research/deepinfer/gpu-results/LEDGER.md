@@ -75,7 +75,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
-| attn-2 | KVarN verify on a pthfa-family CUDA kernel | e-profile: attention ≥ 25% of E's step at 200k; attn-1.1 done | running | WIN on speed and KL (GSM8K n=600 and needle pending) | Triton shared-dequant verify: 4.7× per layer at 240k T=8; E +38% at 20k, +125% at 170k warm (16.0 → 36.0 tok/s), spill-free; KL no worse than stock | [attn-2.md](attn-2.md) |
+| attn-2 | KVarN verify on a pthfa-family CUDA kernel | e-profile: attention ≥ 25% of E's step at 200k; attn-1.1 done | running | WIN on speed, KL, needle; GSM8K pending a second pass | Triton shared-dequant verify: 4.7× per layer at 240k T=8; E +38% at 20k, +125% at 170k warm (16.0 → 36.0 tok/s), spill-free; KL no worse; needle 3/3; GSM8K n=600 93.7% vs 95.2% (paired test PASS, p=0.27; outside the ±1-pt band), 1,000-problem re-check queued | [attn-2.md](attn-2.md) |
 | spec-3 | RecoverSSM for GDN | spec-1 WIN | skipped | | gate failed: spec-1 INVALID, not WIN | [spec-1.md](spec-1.md) |
 | quant-4 | Block-Hadamard-128 rotation of linear inputs | quant-1 route A blocked or slower than Marlin by > 5% | todo | | | |
 | attn-4 | Training-free top-k sparse attention | attn-2 done; needle and GSM8K gates ready | todo | | | |
