@@ -21,8 +21,11 @@ read 10.76. If it comes back, compare against caching off, which is PREFIX_CACHE
 again.
 SPEC=off, SPEC=dflash2 and CTX=fast were never affected, so the published quality
 tables are not implicated.
-Usage: python bench/quality_battery.py <tag> [--ppl-only] [--gsm-only] [--gsm-n 200]
+Usage: venv/bin/python bench/quality_battery.py <tag> [--ppl-only] [--gsm-only] [--gsm-n 200]
                                        [--jsonl PATH] [--seeds N] [--temperature T]
+Set CODE_CORPUS_DIR to one fixed vllm package directory for all compared arms.
+PPL requires a source tree (explicit, checkout venv, or active install fallback).
+--gsm-only does not read the code corpus or require a local vLLM install.
 --jsonl PATH writes one row per GSM8K item per arm ({kind:"gsm8k", arm, idx, correct, finish_reason,
 extracted_via, completion_tokens, text}; extracted_via is "final_answer", "last_number" for the fallback, or
 "none") and one row per perplexity corpus ({kind:"ppl", corpus, ppl, tokens, nll}), for
@@ -31,10 +34,12 @@ server's default sampling (generation_config) unless --temperature T. The greedy
 unchanged by either flag.
 """
 import json, os, sys, glob, re, math, time, random
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 import pyarrow.parquet as pq
 
 import harness
+from code_corpus import source_files
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # data dir: wikitext-2 test parquet, fineweb-2 dan_Latn test parquet, gsm8k test parquet (see README)
@@ -48,6 +53,8 @@ temperature = float(sys.argv[sys.argv.index("--temperature")+1]) if "--temperatu
 jrows = []  # --jsonl rows
 
 def docs():
+    # Resolve before reading parquet: never silently omit the code cohort.
+    src, files = source_files("v1/core")
     out = []
     t = pq.read_table(f"{Q}/wikitext/wikitext-2-raw-v1/test-00000-of-00001.parquet").column("text").to_pylist()
     txt = "".join(t); 
@@ -59,12 +66,17 @@ def docs():
         if len(d) > 1500:
             out.append(("da", d[:1200])); n+=1
         if n>=40: break
-    files = sorted(glob.glob(os.path.join(HERE, "..", "venv/lib/python3.12/site-packages/vllm/v1/core/*.py")))
+    selected = 0
     for f in files:
-        s = open(f).read()
+        s = Path(f).read_text(encoding="utf-8")
+        selected += 1
         for i in range(0, min(len(s), 4*1200), 1200):
             if len(s[i:i+1200]) > 800: out.append(("code", s[i:i+1200]))
         if sum(1 for l,_ in out if l=="code") >= 40: break
+    windows = sum(1 for lang, _ in out if lang == "code")
+    if not windows:
+        raise RuntimeError(f"No eligible code windows under {src}; set CODE_CORPUS_DIR to a fixed vllm package directory")
+    print(f"code corpus: {src}; {selected} selected / {len(files)} source files, {windows} windows", flush=True)
     return out
 
 def ppl_one(item):

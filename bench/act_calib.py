@@ -23,6 +23,7 @@ Exit 0, or 2 if no layer was measured. Without --modes the run is the original o
 """
 import json, os, sys, glob, re, torch, argparse
 import pyarrow.parquet as pq
+from code_corpus import source_files
 
 _ap = argparse.ArgumentParser(description="Per-layer error that int8 activations add (see module docstring).")
 _ap.add_argument("model_path")
@@ -43,6 +44,7 @@ os.environ.setdefault("VLLM_ENABLE_V1_MULTIPROCESSING", "0")
 os.environ.pop("VLLM_MARLIN_INPUT_DTYPE", None)
 os.environ["VLLM_USE_FLASHINFER_SAMPLER"] = "0"
 from vllm import LLM, SamplingParams
+code_root, code = source_files("v1/core")
 
 llm = LLM(model=model_path, served_model_name="q", gpu_memory_utilization=0.85, max_model_len=2048,
           max_num_seqs=4, enforce_eager=True, language_model_only=True, kv_cache_dtype="fp8",
@@ -137,8 +139,8 @@ t = "".join(pq.read_table(f"{Q}/wikitext/wikitext-2-raw-v1/test-00000-of-00001.p
 texts += [t[i:i+3000] for i in range(0, 8*3000, 3000)]
 tb = pq.read_table(f"{Q}/fineweb2/data/dan_Latn/test/000_00000.parquet", columns=["text"]).column("text").to_pylist()
 texts += [d[:3000] for d in tb if len(d) > 3000][:8]
-code = sorted(glob.glob(os.path.join(HERE, "..", "venv/lib/python3.12/site-packages/vllm/v1/core/*.py")))
-texts += [open(f).read()[:3000] for f in code[:6]]
+texts += [f.read_text(encoding="utf-8")[:3000] for f in code[:6]]
+print(f"code corpus: {code_root}; {len(code[:6])} selected / {len(code)} source files", flush=True)
 # chat-formatted prompts too
 for p in [json.loads(l)["prompt"] for l in open(os.path.join(HERE, "prompts_real.jsonl"))]:
     texts.append(p)

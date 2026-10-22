@@ -67,7 +67,7 @@ venv/bin/pip install vllm==0.31.0 huggingface_hub hf_transfer ninja \
 # The fp8-KV attention kernel is the JIT the shipped launchers do reach. No cubin
 # release carries FlashInfer's fp8-KV batch_prefill either, so the profiles that run
 # FlashInfer attention on an fp8 KV cache (batch, whose KV=fp8 is the default, and
-# single-user CTX=long) build it once per cold cache, ~31-36 s inside the first
+# single-user CTX=long unless PTH_FA=1 takes it, its default on an 8.6 GPU with pthfa/ installed) build it once per cold cache, ~31-36 s inside the first
 # CUDA-graph capture, on 0.30.0 and 0.31.0 alike. The launchers point CUDA_HOME at
 # the venv's nvcc 13.0.88 (the pins above) when the system nvcc is older, and that
 # is the nvcc that builds it.
@@ -134,6 +134,11 @@ bash kvarn/install.sh
 # libraries with nvcc 13 (the pip nvcc above is found automatically), needs git and a host C++
 # compiler, and takes ~3-5 minutes. Nothing uses it unless FA2_FP8KV=1.
 bash fa2/install.sh
+# optional: the pth-flash-attn int8-KV attention backend (pthfa/README.md). Once installed it is the default
+# for SPEC=mtp CTX=long and SPEC=dflash2 CTX=long on a compute capability 8.6 GPU (PTH_FA=0 opts out; without
+# the install those arms keep their own default and the launcher says so once). It compiles one CUDA library
+# for sm80/86/89 with nvcc 13 and a host C++ compiler; no GPU and no network. Nothing else uses it.
+bash pthfa/install.sh
 
 # api key — optional on one machine: with no key the launchers bind 127.0.0.1 only. To serve other
 # machines, set a key (they then bind 0.0.0.0) or set HOST explicitly.
