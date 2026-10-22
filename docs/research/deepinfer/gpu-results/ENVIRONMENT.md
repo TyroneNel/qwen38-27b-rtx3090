@@ -28,6 +28,14 @@ Recorded 2026-10-20 at the start of the run (step 0 of [../gpu-agent-prompt.md](
 | VRAM spill check | WDDM counter `\GPU Process Memory(pid_0_luid_…_0x1144f…)\Non Local Usage` (the WSL VM's GPU memory demoted to system RAM), sampled every 2 s per boot with `G:\dev\hq-bench\gpumem_sample.ps1 -Match 1144f`. A boot whose non-local usage grows during the measurement window is re-run with a smaller `KV_MEM`. |
 | Raw output | `G:\dev\hq-results\deepinfer-20261020\<item-id>\` |
 
+**Image change on 2026-10-22.** On resuming after the pause, `ghcr.io/syv-ai/hyperqwen:latest` had moved to `sha256:0cf71b42d301…` (main `ce9615c`). Between `2cf50a0` and `ce9615c`:
+- no vLLM patches changed;
+- pthfa gained upstream refactors;
+- the launchers moved Vision handling into `launcher_common.sh`;
+- the bench corpus loading changed (`bench/labd_corpus.py`, `bench/code_corpus.py`).
+
+Following the user's instruction to use the latest image, `main` was merged into the branch (`27fbf65`), every variant image was rebuilt on the new base, and every result from here on pairs its arms on the new base. Results recorded before the pause name `c696d22e80b4…` in their headers and stay valid as recorded. `baseline.md` adds a re-check of modes B and E on the new image.
+
 ## Models (`G:\models`, mounted at `/app/models`)
 
 | Directory | Size | Role in the plan | Status |
