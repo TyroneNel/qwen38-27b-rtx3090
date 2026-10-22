@@ -59,7 +59,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | attn-1.2 | PV fp16 accumulate | attn-1.1 | todo | | | |
 | attn-1.3 | int8 QK | attn-1.2, evals-1 | todo | | | |
 | attn-3 | int8-QK prefill on quantized-KV arms | evals-1 | todo | | | |
-| quant-6 | Fuse int8 activation quant into its producer | quant-1 | todo | | | |
+| quant-6 | Fuse int8 activation quant into its producer | quant-1 | skipped | | gate failed: quant-1 is a LOSS (route A slower than Marlin); the appendix values fusion at ~0.5% of a 4k prefill | [quant-1.md](quant-1.md) |
 | attn-5 | Hadamard-rotated int8/int4 per-token-head KV | evals-1 | todo | | | |
 
 ## Phase 5: drafter tools
@@ -79,5 +79,5 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | spec-3 | RecoverSSM for GDN | spec-1 WIN | skipped | | gate failed: spec-1 INVALID, not WIN | [spec-1.md](spec-1.md) |
 | quant-4 | Block-Hadamard-128 rotation of linear inputs | quant-1 route A blocked or slower than Marlin by > 5% | todo | | | |
 | attn-4 | Training-free top-k sparse attention | attn-2 done; needle and GSM8K gates ready | todo | | | |
-| attn-6 | Device-side balanced split scheduler | appendix expects ~0; probe only if attn-ncu shows split imbalance | todo | | | |
+| attn-6 | Device-side balanced split scheduler | appendix expects ~0; probe only if attn-ncu shows split imbalance | skipped | | gate not met: attn-ncu is blocked (no counters under WSL2), and the microbench shows uniform splits at batch 1 (21 splits/layer); imbalance needs mixed-length multi-stream pthfa traffic, which no mode runs | [attn-ncu.md](attn-ncu.md) |
 | drafter-4 | Own-distribution fine-tune | needs an 80 GB GPU: out of scope here | skipped | | | |
