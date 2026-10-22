@@ -128,6 +128,8 @@ E's 67 tok/s was measured at `--ctx 20000`: 3.15 tokens per step, so about 47 ms
 
 ### attn-3: int8-QK prefill on the quantized-KV arms
 
+**Measured (2026-10-22):** WIN in mode D (`PTHFA_PREFILL_QK=s8`): cold TTFT −8.9% at 148k and −7.5% at 112k, with KL, perplexity, GSM8K and needle unchanged; mode E runs pending. [gpu-results/attn-3.md](gpu-results/attn-3.md)
+
 Not a DeepInfer idea; it applies attn-1's reasoning to prefill.
 - **HyperQwen.** `PREFILL_ATTN=int8` is bf16-arm-only and "falls through to FA2 otherwise" (`docs/optimizations.md:171`). The int8 Triton arm takes "251 s to load a 112k document against FLASH_ATTN's ~112 s" (`start_qwen.sh:232`).
 - **Arithmetic (inferred), cold 150k prompt.** Causal attention is 16 layers × 24 heads × 4 × 256 × L²/2 = 4.4e15 FLOP; the GEMMs are 2 × 27e9 × 1.5e5 = 8.1e15. Attention is about 35% of cold prefill compute. The measured kernel gain is 1.27–1.35× on attention (`docs/optimizations.md:157`), giving **about −8 to −9% cold TTFT** at 150k. On the int8 cache arms K is already int8 per token, so K mean-smoothing must happen before the cache write, or as a per-head mean subtracted at store time and added back as q·mean.
