@@ -6,7 +6,7 @@ Recorded 2026-10-20 at the start of the run (step 0 of [../gpu-agent-prompt.md](
 
 | What | Value |
 |---|---|
-| GPU 0 (all runs) | NVIDIA GeForce RTX 3090 24 GB, sm86, PCI 01:00.0, UUID `GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84`, VBIOS 94.02.42.00.a7, WDDM LUID `0x1144f` |
+| GPU 0 (all runs) | NVIDIA GeForce RTX 3090 24 GB, sm86, PCI 01:00.0, UUID `GPU-2e8e4d29-ecb0-5fbf-7a84-d2370311be84`, VBIOS 94.02.42.00.a7, WDDM LUID `0x1144f` until the 2026-10-22 restart, `0x11914` after it |
 | GPU 1 (not used) | NVIDIA GeForce RTX 3080 Ti 12 GB, PCI 03:00.0, drives the display (~435 MiB used at idle). Every container is pinned to GPU 0 by UUID (`CUDA_VISIBLE_DEVICES` / `NVIDIA_VISIBLE_DEVICES` in `.env`; compose `count: 1` exposes GPU 0). |
 | Power limit, GPU 0 | 250 W enforced (default 350 W, max 365 W), already set when the run started |
 | Clocks, GPU 0 | max SM 2100 MHz; idle 210 MHz, 46 °C |
@@ -25,7 +25,7 @@ Recorded 2026-10-20 at the start of the run (step 0 of [../gpu-agent-prompt.md](
 | Branch vs image | `research/deepinfer` was based on `95ac251`. `main` (`63f7581`, docs-only past `2cf50a0`) was merged into it (`88549e7`) so a stock build of the branch serves what the image serves. |
 | Launch convention | `docker compose --profile single up -d` (or `batch`) from WSL, knobs in `.env`, `docker-compose.override.local.yml` bind-mounts `bench/` over `/app/bench`. From WSL `MODELS_DIR` must be `/mnt/g/models` (the `.env` value `G:/models` is the Windows-side spelling and Docker rejects it from WSL). |
 | `.env` (box defaults) | `MODELS_DIR`, `VLLM_WSL2_ENABLE_PIN_MEMORY=1`, GPU pin by UUID, `PREPARE=0`, `VERIFY=0`, `PORT=18020`, `MODEL=/app/models/Qwen3.8-27B-W4A16-AutoRound-fast`, `CTX=fast`, `VISION=1`, `VISION_OFFLOAD=0` (plus the API key, not recorded). Every arm writes its own `.env` from this base and restores the original afterwards. |
-| VRAM spill check | WDDM counter `\GPU Process Memory(pid_0_luid_…_0x1144f…)\Non Local Usage` (the WSL VM's GPU memory demoted to system RAM), sampled every 2 s per boot with `G:\dev\hq-bench\gpumem_sample.ps1 -Match 1144f`. A boot whose non-local usage grows during the measurement window is re-run with a smaller `KV_MEM`. |
+| VRAM spill check | WDDM counter `\GPU Process Memory(pid_0_luid_…_<LUID>…)\Non Local Usage` (the WSL VM's GPU memory demoted to system RAM), sampled every 2 s per boot with `G:\dev\hq-bench\gpumem_sample.ps1 -Match <LUID>`. A boot whose non-local usage grows during the measurement window is re-run with a smaller `KV_MEM`. The LUID changed with the 2026-10-22 restart and the sampler kept matching the old one until `phase3x.sh`, so the baseline re-check (`B_new1`, `E_new1`), drafter-1a, quant-7 and quant-5 boots have no WDDM record. For them, spill is judged from the `nvidia-smi` VRAM peak and headroom recorded per boot in `summary.txt`. |
 | Raw output | `G:\dev\hq-results\deepinfer-20261020\<item-id>\` |
 
 **Image change on 2026-10-22.** On resuming after the pause, `ghcr.io/syv-ai/hyperqwen:latest` had moved to `sha256:0cf71b42d301…` (main `ce9615c`). Between `2cf50a0` and `ce9615c`:
