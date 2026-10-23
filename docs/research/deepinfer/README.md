@@ -71,6 +71,7 @@ The two E items stack differently than they look: attn-2 removes most of the ver
 10. **Multi-seat (2–8 streams) favours MTP mode D over DFlash2 B** (423 vs 236 tok/s at N=8, evals-10).
 11. **Mode E on WSL2: use the spill-free pool** (`KV_MEM=4000000000 DFLASH_MAX_LEN=180224`), or accept +5% TTFT from paging on long cold prefills.
 12. **quant-5 is harmless but not worth shipping** (+0.8%).
+13. **Stop chasing the int4 drafter's "sampling gap".** Measured paired it is 0.6%; better GPTQ (+0.12%) and TV repair (+0.17%) are real but not worth shipping. Correct the 3.2 vs 3.4 claim in `drafter/README.md` if you want the docs to match. A drafter gain now needs a different teacher (the target itself: drafter-4, 80 GB GPU).
 
 ## Executive summary
 
