@@ -142,6 +142,8 @@ DeepInfer fuses it into RMSNorm (`decoder_layer.py:43-44`, `norm.py:65-130`). Hy
 
 ### quant-7: int4 embedding where `EMBED_UVA` can't be used
 
+**Measured (2026-10-23):** WIN (capacity): KV pool +8.0% in D and +16% in E, perplexity +0.14%, GSM8K within noise; decode 0.5–2% slower from ~1% lower drafter acceptance. [gpu-results/quant-7.md](gpu-results/quant-7.md)
+
 Community numbers: pool 201,275 → 218,112 tokens (+8.4%) with no perplexity or GSM8K change (`docs/third-party-checkpoints.md:150-163`); the change is BITS 8 → 4 in `prepare/quant_embed.py` / `quant_heads_stream.py:43, 207`. `EMBED_UVA=1` gives +15.7% (`single-user/README.md:443`) and dominates, so this matters only on D/E boxes that can't spare 2.1 GiB of pinned host RAM.
 
 ## Already in HyperQwen
