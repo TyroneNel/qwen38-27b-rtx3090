@@ -54,6 +54,22 @@ The stages remove the stock kernel's cost step between 5 and 6 query rows (runti
 
 `bench/compare_quality.py` PASS. The appendix's stage 3 gates (needles at 50% and 90% of 128k, GSM8K within noise) are met (`attn-1\q_base`, `attn-1\q_s3`).
 
-## End to end
+## End to end: mode D′ (`SPEC=dflash2 CTX=long`), labd at ~120k tokens (`--ctx 110000`, qa + summary, 256 tokens each), two boots per arm
 
-The first end-to-end attempt at 128k failed: D′ serves `max_model_len` 131,072, and labd's 128k prompt overshoots it (HTTP 400). Stock vs stage 2 vs stage 3 at labd 110k (qa + summary) is queued.
+| Arm | summary | qa | TOTAL tok/s | vs stock |
+|---|---|---|---|---|
+| stock | 42.4 / 42.8 | 49.4 / 49.1 | 45.8 / 45.9 | – |
+| stage 2 (`PTHFA_TILE48=1 PTHFA_MMA=pv16`) | 46.7 / 46.8 | 53.2 / 53.7 | 49.9 / 50.2 | **+9.2%** |
+| stage 3 (`PTHFA_TILE48=1 PTHFA_MMA=s8pv16`) | 48.3 / 48.4 | 52.6 / 53.1 | 50.6 / 50.8 | **+10.6%** |
+
+Spill-free (PCIe job-window median 18–23 MB/s, no second above 500 MB/s); spread between boots ≤ 0.6%. Tokens per step are unchanged (2.05–2.09), so the gain is the verify kernel. The first attempt at `--ctx 128000` failed: D′ serves `max_model_len` 131,072 and labd's prompt overshoots `--ctx` (HTTP 400). Raw data: `attn-1\e120_*`.
+
+The appendix's step-4 target was "attention −35% per step at 128k" from a torch profile. The profile was not re-run; the microbenchmark gives the per-layer attention change directly (−26% stage 2, −41% stage 3 at 150k), and end-to-end tok/s shows what that buys.
+
+## Verdict
+
+- **attn-1.1 (48-row tiles):** below the bar alone. 1.23× per layer (bar 1.3×), lossless; it is the base the other two stages build on.
+- **attn-1.2 (+ PV fp16 accumulate): WIN.** 1.35× per layer at 150k, +9.2% D′ decode at ~120k, near-lossless (err/tol 0.255).
+- **attn-1.3 (+ int8 QK): WIN.** 1.69× per layer at 150k, +10.6% D′ decode at ~120k. GSM8K n=600 94.8% vs 94.7%, needle 2/2 at 128k, perplexity identical.
+
+Mode D (MTP, verify width 4) gets nothing from any stage (T=4: 1.00–1.03×), and plain decode steps (T=1) lose 1–3% in the microbenchmark.

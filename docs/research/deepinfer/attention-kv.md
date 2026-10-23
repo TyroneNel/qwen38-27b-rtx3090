@@ -68,6 +68,8 @@ E's 67 tok/s was measured at `--ctx 20000`: 3.15 tokens per step, so about 47 ms
 
 ### attn-1: cheaper MMAs in pthfa verify
 
+**Measured (2026-10-23):** WIN for stages 2 and 3: 1.35× and 1.69× per layer at 150k, T=8 (bar 1.3×), and +9.2% / +10.6% D′ decode at ~120k; stage 3 passes GSM8K, needle and perplexity. Stage 1 alone is 1.23×. No gain in D (T=4). [gpu-results/attn-1.md](gpu-results/attn-1.md)
+
 - **DeepInfer.** The cycle-budget method transfers. The instruction choice doesn't: FlashMLA uses bf16 MMA with fp32 output (deep-dive:11).
 - **HyperQwen.**
   - Both GEMMs use `mma.sync.m16n8k16.f32.f16.f16.f32` (`pthfa/csrc/pth_attn/ptx.cuh:334-341`).
