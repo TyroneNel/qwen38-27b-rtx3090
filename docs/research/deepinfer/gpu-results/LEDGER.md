@@ -81,3 +81,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | attn-4 | Training-free top-k sparse attention | attn-2 done; needle and GSM8K gates ready | done | NO-GO (closed) | offline study at 128k, 16 layers: bounds-selected top 10% of P16 pages captures 0.34–0.85 of the attention mass (gate 0.99 in all layers); even oracle selection reaches only 0.61–0.94 | [attn-4.md](attn-4.md) |
 | attn-6 | Device-side balanced split scheduler | appendix expects ~0; probe only if attn-ncu shows split imbalance | skipped | | gate not met: attn-ncu is blocked (no counters under WSL2), and the microbench shows uniform splits at batch 1 (21 splits/layer); imbalance needs mixed-length multi-stream pthfa traffic, which no mode runs | [attn-ncu.md](attn-ncu.md) |
 | drafter-4 | Own-distribution fine-tune | needs an 80 GB GPU: out of scope here | skipped | | | |
+
+## Close
+
+All rows terminal (2026-10-23). Final check: the branch at `5030570` built from its own Dockerfile with no experiment knobs (`hq:branch-stock`, `sha256:e4f6e106…`; the build runs `pthfa/tests/gate_test.py`), then `make verify` with the `single` service on that image: OK, 0 failures. The phase 3, 4 and 6 closes ran `make verify` on the pulled stock image (OK, 0 failures each). Logs: `G:\dev\hq-results\deepinfer-20261020\health\{build-branch-stock,make-verify-final,make-verify-phase*}.log`.
