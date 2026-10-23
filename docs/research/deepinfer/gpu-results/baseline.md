@@ -67,3 +67,19 @@ Running D's documented arm explicitly (`PTH_FA=0`, fp8 KV on FlashInfer) gives *
 ## Verdict
 
 INFO. Baselines for this box are recorded with a ±1–2% round-to-round spread. A, B, C and E sit 6–14% under the native-Linux docs, explained by WSL2 (not power, clocks, clock drift or spill). Mode A's later arms use `GPU_UTIL=0.91`.
+
+## Addendum 2026-10-22/23: new image and spill-free re-baseline
+
+The stock image moved to `sha256:0cf71b42d301…` (main `ce9615c`) on 2026-10-22. A first single-boot re-check read 4–5% lower than the table above in B, D and E (B C1 greedy 105.3, E labd 20k 55.2). Two things explain it, and neither is the image:
+
+- **Spill and probe placement.** The low D numbers (C1 92.7–94.0) came from boots that ran the KL probe and quality battery before the speed bench; those spill 300–650 MiB. Spill-free D boots (`attn-5\D_base_s{1,2}`, PCIe median 45 MB/s) read **C1 greedy 98.3 / 95.4, C4 270.1 / 261.6**, in line with the table.
+- **The box, not the image.** A paired A/B of the two images in mode B, same `bench/` and same session, all boots spill-free (PCIe median 41–42 MB/s), `G:\dev\hq-results\deepinfer-20261020\img-regress\`:
+
+| Image | C1 greedy tok/s | C4 greedy tok/s | tok/step |
+|---|---|---|---|
+| old `sha-2cf50a0` (`c696d22e80b4…`) | 106.7 / 107.6 | 220.7 / 222.8 | 3.36 |
+| new `latest` (`0cf71b42d301…`) | 107.3 | 220.8 | 3.36 |
+
+The images are equal within 0.5%; a diff of their installed files finds vLLM, torch, flashinfer, Marlin, GDN and KVarN byte-identical, with only pthfa rebuilt (comments only). Both read ~3% under the table's B row (110.4), which the 2026-10-22 host restart (new WDDM adapter LUIDs) and day-to-day drift account for. Every paired verdict compares arms within one session, so none depends on this offset.
+
+Spill policy from this point: [ENVIRONMENT.md](ENVIRONMENT.md) (PCIe-based detection, stock E pool spills on long cold prefills).
