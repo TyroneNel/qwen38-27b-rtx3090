@@ -41,3 +41,14 @@ The appendix's win needs ≥ +8% on the all-six TOTAL at 100k. The best arm reac
 ## Consequence
 
 drafter-1b (learned confidence head) is gated on a drafter-1a or spec-2 win. Neither happened, so drafter-1b is skipped.
+
+## Addendum 2026-10-23: spill-checked re-check
+
+The boots above had no PCIe record, and the trim arms carry extra CUDA graphs (less VRAM headroom), so spill could have hidden a gain. Re-run with the PCIe spill check (`drafter-1a\pc_*`, PCIe job-window median 24 MB/s in all four boots, no second above 500 MB/s), labd at 100k on the long corpus, all six tasks:
+
+| Arm | Round 1 | Round 2 | tok/step |
+|---|---|---|---|
+| A0 stock | 63.1 | 63.0 | 2.71 |
+| T1s (`CONF_TRIM=1`, lengths 4/7) | 62.9 | 64.4 | 2.65 / 2.68 |
+
++1.0% median (spread 2.4% inside T1s), against the +8% bar. The LOSS stands. Both arms read ~4% above the first run (60.65), consistent with the first run's boots having shared a boot with the KL probe.
