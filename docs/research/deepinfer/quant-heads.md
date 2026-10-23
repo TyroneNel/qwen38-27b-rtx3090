@@ -132,6 +132,8 @@ Rotate the bf16 weights along K offline (W′ = blockdiag(H₁₂₈) · W), req
 
 ### quant-5: batch-mode lm_head as W4A8
 
+**Measured (2026-10-23):** NEUTRAL: `INT8_LAYERS=mlp|lm_head` gives +0.8% median in mode A over 3 spill-free rounds, inside noise (bar +2–3%); quality unchanged (perplexity −0.19%, GSM8K paired PASS). [gpu-results/quant-5.md](gpu-results/quant-5.md)
+
 At 64 concurrency the int8-weight lm_head is compute-bound: 2 × 64 × 5120 × 248,320 = 162.7 GFLOP ≈ 2.7 ms at ~60 TFLOPS against ~1.4 ms of weight reads. W4A8 (the fast variant's int4 GPTQ head plus `lm_head` in `VLLM_MARLIN_INT8_INCLUDE_RE`) could save ~1.3–2 ms of a ~68 ms step: **+2–3% in mode A (inferred)**. It stacks two lossy steps (int4 head +0.6% perplexity, int8 final hidden state). Gate on KL with `drafter/data/hidden.npy`; check the logits path accepts the include regex.
 
 ### quant-6: fuse the int8 activation quant into its producer
