@@ -1,0 +1,157 @@
+kvarn-varlen: trace, replay or reset the DFlash2 adaptive verify length (V2 runner).
+
+Research experiment for the kvarn-varlen item (docs/research/deepinfer/README.md, "Blocker
+for E"; single-user/start_qwen.sh, the VLLM_DFLASH2_LOOKUP_ADAPTIVE comment). NOT in
+patches/series. Written against the image's installed (already patched) vLLM 0.31.0.
+
+Adds v1/kvv_sched.py and two calls around DFlash2Speculator.next_num_draft_tokens() in
+GPUModelRunner.sample_tokens. All knobs default off; with them unset both calls return at
+once and the speculator's decision passes through untouched.
+
+  VLLM_KVV_TRACE=<file>        JSON line per step: request ids, tokens scheduled the step
+                               that just ran (its verify length), tokens emitted, the
+                               controller state and the next length asked/used (syncs).
+  VLLM_KVV_REPLAY=<file>       per new request, force the k-th post-first-token verify
+                               decision to the k-th entry of the file (draft counts as the
+                               controller returns them, "7,7,15,..."; verify = count + 1),
+                               single-request batches only (syncs).
+  VLLM_KVV_RESET_ON_NEW_REQ=1  candidate fix for hypothesis H1: a request joining the batch
+                               does not inherit the previous request's adaptive state
+                               (_prev_want, _sticky, pending flag copy). Host-only.
+
+--- a/v1/worker/gpu/model_runner.py
++++ b/v1/worker/gpu/model_runner.py
+@@ -2261,7 +2261,12 @@
+                 # Lookup-augmented drafting proposes a long block only while the request
+                 # is reproducing its context; the rest of the time it asks the scheduler
+                 # to verify the drafter's own (much cheaper) block.
++                # kvarn-varlen experiment (v1/kvv_sched.py): inert unless a VLLM_KVV_* knob is set.
++                from vllm.v1 import kvv_sched
++
++                kvv_sched.before(self.speculator, input_batch)
+                 num_draft = self.speculator.next_num_draft_tokens()
++                num_draft = kvv_sched.after(self.speculator, input_batch, num_draft)
+             self.draft_tokens_handler.set_draft_tokens(
+                 input_batch,
+                 self.req_states.draft_tokens[input_batch.idx_mapping],
+--- a/v1/kvv_sched.py
++++ b/v1/kvv_sched.py
+@@ -0,0 +1,118 @@
++"""kvarn-varlen experiment: trace, replay or reset the DFlash2 adaptive verify length.
++
++Research hook for docs/research/deepinfer (kvarn-varlen), NOT in patches/series. The
++V2 model runner calls before()/after() around DFlash2Speculator.next_num_draft_tokens().
++Every knob defaults off; with all three unset both calls return at once and after()
++hands back the speculator's own decision, so a default boot serves the stock image.
++
++  VLLM_KVV_TRACE=<file>         append one JSON line per call: the batch's request ids, the
++                                tokens each was scheduled the step that just ran, what it
++                                emitted, the controller state (want / prev_want / sticky)
++                                and the length asked for the next step. Syncs on the emitted
++                                count, so it is a debugging arm, not a speed arm.
++  VLLM_KVV_REPLAY=<file>        when a request first appears, read this file (one line of
++                                comma-separated draft counts as the controller returns them,
++                                e.g. "7,7,15,15": verify length = count + 1); the k-th call
++                                after which the request had emitted >= 1 token returns the
++                                k-th count instead of the controller's. Beyond the list
++                                the controller decides, as it does for entries <= 0.
++                                Missing or empty file: no replay.
++                                Single-request batches only.
++  VLLM_KVV_RESET_ON_NEW_REQ=1   candidate fix: when a request joins the batch, forget the
++                                controller state the previous request left (_prev_want,
++                                _sticky, the pending flag copy), so a request that skips its
++                                prefill through a prefix-cache hit starts on the same
++                                short block a cold request does. Host-only, no sync.
++"""
++
++import json
++import os
++import time
++
++_TRACE = os.environ.get("VLLM_KVV_TRACE", "")
++_REPLAY = os.environ.get("VLLM_KVV_REPLAY", "")
++_RESET = os.environ.get("VLLM_KVV_RESET_ON_NEW_REQ", "0") == "1"
++ACTIVE = bool(_TRACE or _REPLAY or _RESET)
++
++for _p in (_TRACE, _REPLAY):
++    if _p:
++        os.makedirs(os.path.dirname(_p) or ".", exist_ok=True)
++
++_k: dict[str, int] = {}
++_sched: dict[str, list[int]] = {}
++_resets = 0
++
++
++def _load_replay() -> list[int]:
++    if not _REPLAY:
++        return []
++    try:
++        with open(_REPLAY) as f:
++            txt = f.read().strip()
++    except OSError:
++        return []
++    return [int(x) for x in txt.replace("\n", ",").split(",") if x.strip()]
++
++
++def before(spec, input_batch) -> None:
++    """Register new requests; under RESET, clear the controller state they would inherit."""
++    global _resets
++    if not ACTIVE:
++        return
++    ids = input_batch.req_ids[: input_batch.num_reqs]
++    new = [r for r in ids if r not in _k]
++    if not new:
++        return
++    for r in new:
++        _k[r] = 0
++        _sched[r] = _load_replay()
++    if len(_k) > 512:
++        live = set(ids)
++        for r in [r for r in _k if r not in live]:
++            _k.pop(r, None)
++            _sched.pop(r, None)
++    if _RESET:
++        spec._prev_want = False
++        spec._sticky = 0
++        spec._flags_n = 0
++        _resets += 1
++
++
++def after(spec, input_batch, num_draft):
++    """Trace the decision and, under REPLAY, override it. Returns the length to use."""
++    if not ACTIVE:
++        return num_draft
++    ids = list(input_batch.req_ids[: input_batch.num_reqs])
++    emitted = getattr(spec, "last_num_emitted", None)
++    em = None
++    if (_TRACE or _REPLAY) and emitted is not None:
++        em = [int(x) for x in emitted.tolist()]
++    out = num_draft
++    ks = []
++    for i, r in enumerate(ids):
++        k = _k.get(r, 0)
++        ks.append(k)
++        if em is not None and i < len(em) and em[i] >= 1:
++            if _REPLAY and len(ids) == 1:
++                s = _sched.get(r) or []
++                if k < len(s) and s[k] > 0:
++                    out = s[k]
++            _k[r] = k + 1
++    if _TRACE:
++        rec = {
++            "t": "ask",
++            "ns": time.monotonic_ns(),
++            "ids": ids,
++            "q": [int(x) for x in input_batch.num_scheduled_tokens[: len(ids)]],
++            "seq_ub": [int(x) for x in input_batch.seq_lens_cpu_upper_bound[: len(ids)]],
++            "emitted": em,
++            "k": ks,
++            "want": bool(getattr(spec, "_prev_want", False)),
++            "sticky": int(getattr(spec, "_sticky", 0)),
++            "ask": num_draft,
++            "out": out,
++            "resets": _resets,
++        }
++        with open(_TRACE, "a") as f:
++            f.write(json.dumps(rec) + "\n")
++    return out

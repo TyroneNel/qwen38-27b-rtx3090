@@ -1,0 +1,400 @@
+kvarn-varlen: fingerprint the KVarN KV and GDN state each step reads; flag the invariants.
+
+Research experiment for the kvarn-varlen item (docs/research/deepinfer/README.md, "Blocker
+for E"). NOT in patches/series. Written against the image's installed (already patched)
+vLLM 0.31.0, whose v1/attention/backends/kvarn_attn.py is kvarn/files' copy.
+
+Adds v1/kvv_fp.py and four hook sites, all behind VLLM_KVV_FP=<file> (unset = inert):
+  - kvarn_attn.note_scheduled_blocks: a t=sched record per real step (scheduler view).
+  - KVarNMetadataBuilder.build (target model's builder only, real steps only, never
+    during capture): after each flush, layer 0's tile bit-sums are recorded; after the
+    allocate pass, a t=kv record per request with the committed length, per-layer exact
+    bit-sums of everything attention reads below it, and the flags
+      H3  committed (seq_len - query_len) != scheduler num_computed_tokens
+      H4  a pool tile is read over rows its current slot lifetime never wrote
+      H5  an int4 tile below committed changed since KVarN flushed it
+  - MambaHybridModelState.preprocess_state (align mode, after the pre-copy): a t=gdn
+    record per request with the window base, num_accepted, pre-copy source, per GDN layer
+    bit-sums of the SSM / conv state the step starts from, and the flags
+      H2_back   window base column moved down (seq_len = committed + q_len fell)
+      H2_reloc  pre-copy source column now names a different physical block than the
+                previous step's table did (scheduler relocated it in between)
+      H2_null   the step starts from the null block
+Syncs every step: debugging arm only. VLLM_KVV_FP_TILES=0 drops the per-tile list.
+
+--- a/v1/attention/backends/kvarn_attn.py
++++ b/v1/attention/backends/kvarn_attn.py
+@@ -763,6 +763,12 @@
+         for i in group_impls:
+             i._group_key = gk
+         if group_impls:
++            # kvarn-varlen experiment (v1/kvv_fp.py): inert unless VLLM_KVV_FP is set.
++            from vllm.v1 import kvv_fp
++
++            _kvv_on = (kvv_fp.ACTIVE and _allow_flush and kvv_fp.STEP > 0
++                       and not torch.cuda.is_current_stream_capturing()
++                       and kvv_fp.is_target(self))
+             impl0 = group_impls[0]
+             # Ensure pool + lookup tensors exist for this device.
+             impl0._ensure_pool(device,
+@@ -884,6 +890,8 @@
+                     flush_block_ids.append(bid)
+                     k -= 1
+ 
++            _kvv_n_walk = len(flush_block_ids)
++
+             # (2b) Reclaim slot-holding blocks neither written this step nor
+             # queued above: they belong to finished (or preempted) requests.
+             # A COMPLETE sink is RETIRED — kept fp16-resident so a prefix-
+@@ -928,6 +936,9 @@
+                     for bid in flush_block_ids:
+                         flush_pairs.append((impl, bid, kvc))
+                 KVarNAttentionImpl._batched_flush(flush_pairs)
++                if _kvv_on:
++                    kvv_fp.on_flush(self, flush_block_ids, _kvv_n_walk, group_impls,
++                                    seq_lens_cpu, query_lens_cpu, block_table_np)
+                 # Free the flushed blocks' slots so the allocation below can
+                 # reuse them (they now live in int4; pool_slot → -1).
+                 for bid in flush_block_ids:
+@@ -961,6 +972,9 @@
+                             if getattr(impl, "_kv_cache_ref", None) is not None
+                         ]
+                         KVarNAttentionImpl._batched_flush(evict_pairs)
++                        if _kvv_on:
++                            kvv_fp.on_flush(self, [old], 0, group_impls, seq_lens_cpu,
++                                            query_lens_cpu, block_table_np)
+                         old_slot = dict_map.pop(old, None)
+                         self._block_fill.pop(old, None)
+                         sinks.discard(old)
+@@ -982,6 +996,9 @@
+                     KVarNAttentionImpl._max_known_block_id[gk] = max(
+                         KVarNAttentionImpl._max_known_block_id.get(gk, 0), bid
+                     )
++            if _kvv_on:
++                kvv_fp.kv_check(self, seq_lens_cpu, query_lens_cpu, block_table_np,
++                                dict_map, group_impls)
+ 
+         # ── Persistent cu_seqlens buffers (in-place updated) ─────────────
+         # A captured graph bakes in tensor addresses, so cu_seqlens MUST live
+@@ -1110,6 +1127,11 @@
+     out: its tables carry prefix-cache hits on this group's own blocks, and a
+     hit on a finished request's last block needs that block's flush.
+     """
++    # kvarn-varlen experiment (v1/kvv_fp.py): one t=sched record per real step.
++    from vllm.v1 import kvv_fp
++
++    if kvv_fp.ACTIVE:
++        kvv_fp.on_sched(scheduler_output, kv_cache_config)
+     builders = {b for b in KVarNMetadataBuilder._owner.values()}
+     if not builders:
+         return
+--- a/v1/worker/gpu/model_states/mamba_hybrid.py
++++ b/v1/worker/gpu/model_states/mamba_hybrid.py
+@@ -229,6 +229,13 @@
+             self._mamba_src_off_gpu,
+             input_batch.idx_mapping,
+         )
++        # kvarn-varlen experiment (v1/kvv_fp.py): inert unless VLLM_KVV_FP is set.
++        from vllm.v1 import kvv_fp
++
++        if kvv_fp.ACTIVE:
++            kvv_fp.gdn_check(
++                self, input_batch, block_tables, mamba_group_ids, kv_cache_config
++            )
+ 
+     def prepare_attn(
+         self,
+--- a/v1/kvv_fp.py
++++ b/v1/kvv_fp.py
+@@ -0,0 +1,291 @@
++"""kvarn-varlen experiment: fingerprint what a step READS, and check the invariants behind
++each corruption hypothesis. NOT in patches/series; inert unless VLLM_KVV_FP is set.
++
++  VLLM_KVV_FP=<file>        append JSON lines:
++     t=sched  once per real step (KVarN's note_scheduled_blocks): per request its id,
++              scheduler num_computed_tokens, tokens scheduled, spec tokens, and the block
++              ids each KV-cache group received this step.
++     t=kv     once per request per step, from the target model's KVarN builder after its
++              flush/allocate pass (so before this step's writes): the committed length
++              (seq_len - query_len), per attention layer an exact int64 position-weighted
++              sum of the raw bits of everything attention reads below it (int4 tiles of
++              complete blocks, fp16 pool rows of the sink and of the open tile), and for
++              layer 0 the per-tile sums (VLLM_KVV_FP_TILES=1, the default).
++              Flags: H3 (committed != scheduler num_computed), H4 (a pool tile is read
++              over rows this slot lifetime never wrote), H5 (an int4 tile below the
++              committed boundary changed since KVarN flushed it; or a reclaim/evict flush
++              landed in a tile some request reads as history).
++     t=gdn    once per request per step, from the mamba-align preprocess (after the
++              pre-copy, before the forward): window base column, num_accepted, the pre-copy
++              source column/offset, and per GDN layer the bit-sum of the SSM state the step
++              starts from (block_table[base + num_accepted - 1]) and of the conv state
++              (block_table[base]). Flags: H2_back (window base moved to a lower column),
++              H2_reloc (the pre-copy source column holds a different physical block than
++              the previous step wrote), H2_null (the step starts from the null block).
++  VLLM_KVV_FP_TILES=0       drop the per-tile list (smaller log).
++
++Syncs (tolist) every step: a debugging arm, never a speed arm. Exact integer sums, so two
++runs that compute the same positions with the same verify-length schedule must log the
++same numbers; the first difference names the structure that diverged.
++"""
++
++import json
++import os
++import time
++
++import torch
++
++_PATH = os.environ.get("VLLM_KVV_FP", "")
++ACTIVE = bool(_PATH)
++TILES = os.environ.get("VLLM_KVV_FP_TILES", "1") == "1"
++if _PATH:
++    os.makedirs(os.path.dirname(_PATH) or ".", exist_ok=True)
++
++STEP = 0
++SCHED: dict[str, dict] = {}
++_GDN_PREV: dict[str, tuple[int, dict[int, list[int]]]] = {}
++
++
++def emit(rec: dict) -> None:
++    rec["step"] = STEP
++    rec["ns"] = time.monotonic_ns()
++    with open(_PATH, "a") as f:
++        f.write(json.dumps(rec) + "\n")
++
++
++def _bits(t: torch.Tensor) -> torch.Tensor:
++    """Raw bits of a tensor as an integer tensor (a view when possible)."""
++    t = t.contiguous()
++    es = t.element_size()
++    if t.dtype in (torch.int32, torch.int16, torch.int64, torch.uint8, torch.int8):
++        u = t
++    elif es == 4:
++        u = t.view(torch.int32)
++    elif es == 2:
++        u = t.view(torch.int16)
++    else:
++        u = t.view(torch.uint8)
++    if u.dtype == torch.uint8 and u.shape[-1] % 4 == 0:
++        u = u.view(torch.int32)
++    return u
++
++
++def bitsum(t: torch.Tensor, keep_first: bool = False) -> torch.Tensor:
++    """Exact int64 sum of the raw bits (per leading index when keep_first)."""
++    u = _bits(t)
++    if keep_first:
++        return u.reshape(u.shape[0], -1).sum(dim=1, dtype=torch.int64)
++    return u.sum(dtype=torch.int64)
++
++
++def on_sched(scheduler_output, kv_cache_config) -> None:
++    global STEP, SCHED
++    STEP += 1
++    reqs = []
++    for r in scheduler_output.scheduled_new_reqs:
++        reqs.append({"id": r.req_id, "new": True, "nc": int(r.num_computed_tokens),
++                     "blocks": [list(b) for b in r.block_ids]})
++    c = scheduler_output.scheduled_cached_reqs
++    for i, rid in enumerate(c.req_ids):
++        nb = c.new_block_ids[i]
++        reqs.append({"id": rid, "new": False, "nc": int(c.num_computed_tokens[i]),
++                     "blocks": None if nb is None else [list(b) for b in nb]})
++    for r in reqs:
++        r["q"] = int(scheduler_output.num_scheduled_tokens.get(r["id"], 0))
++        r["nspec"] = len(scheduler_output.scheduled_spec_decode_tokens.get(r["id"], ()))
++    SCHED = {r["id"]: r for r in reqs}
++    rec = {"t": "sched", "reqs": reqs}
++    if STEP == 1:
++        rec["groups"] = [
++            (type(g.kv_cache_spec).__name__, getattr(g.kv_cache_spec, "block_size", None),
++             len(g.layer_names))
++            for g in kv_cache_config.kv_cache_groups
++        ]
++    emit(rec)
++
++
++def is_target(builder) -> bool:
++    owners = set(type(builder)._owner.values())
++    return bool(owners) and max(owners, key=lambda b: len(b._layer_names)) is builder
++
++
++def _live_history(seq_lens, qlens, bt, G) -> set[int]:
++    live: set[int] = set()
++    for row, sl in enumerate(seq_lens):
++        if sl <= 0 or row >= bt.shape[0]:
++            continue
++        c = max(sl - (qlens[row] if row < len(qlens) else 1), 0)
++        for k in range(min(c // G, bt.shape[1])):
++            bid = int(bt[row, k])
++            if bid >= 0:
++                live.add(bid)
++    return live
++
++
++def on_flush(builder, bids, n_walk, impls, seq_lens, qlens, bt) -> None:
++    """After a batched flush: remember layer 0's tile sums; flag reclaim/evict flushes
++    into a tile some request reads as history."""
++    if not bids or not impls:
++        return
++    impl = impls[0]
++    kvc = getattr(impl, "_kv_cache_ref", None)
++    if kvc is None:
++        return
++    rec = getattr(builder, "_kvv_flush_sum", None)
++    if rec is None:
++        rec = builder._kvv_flush_sum = {}
++    tv = impl._as_tile_view(kvc)
++    idx = torch.tensor(bids, dtype=torch.long, device=tv.device)
++    sums = bitsum(tv.index_select(0, idx), keep_first=True).tolist()
++    for bid, s in zip(bids, sums):
++        rec[bid] = s
++    late = bids[n_walk:]
++    if late:
++        live = _live_history(seq_lens, qlens, bt, builder._group)
++        bad = [b for b in late if b in live]
++        if bad:
++            emit({"t": "flag", "H5": "reclaim/evict flush into a tile read as history",
++                  "bids": bad})
++
++
++def kv_check(builder, seq_lens, qlens, bt, dict_map, impls) -> None:
++    G = builder._group
++    cov = getattr(builder, "_kvv_cov", None)
++    if cov is None:
++        cov = builder._kvv_cov = {}
++    for bid in [b for b in cov if b not in dict_map]:
++        del cov[bid]
++    flushed = getattr(builder, "_kvv_flush_sum", {})
++    single = next(iter(SCHED.values())) if len(SCHED) == 1 else None
++    for row, sl in enumerate(seq_lens):
++        if sl <= 0 or row >= bt.shape[0]:
++            continue
++        q = qlens[row] if row < len(qlens) else 1
++        c = max(sl - q, 0)
++        nfull, r0 = divmod(c, G)
++        ncols = bt.shape[1]
++        bids = [int(bt[row, k]) for k in range(min(nfull + (1 if r0 else 0), ncols))]
++        rec = {"t": "kv", "row": row, "committed": c, "q": q, "sl": sl}
++        if single is not None:
++            rec["id"] = single["id"]
++            if single["nc"] != c:
++                rec["H3"] = [c, single["nc"]]
++        int4_k = [k for k in range(min(nfull, len(bids))) if bids[k] not in dict_map]
++        pool_k = [k for k in range(min(nfull, len(bids))) if bids[k] in dict_map]
++        holes = []
++        reads = [(k, G) for k in pool_k] + ([(nfull, r0)] if r0 and nfull < len(bids) else [])
++        for k, need in reads:
++            bid = bids[k]
++            if bid not in dict_map:
++                holes.append([k, bid, "no-slot", need])
++                continue
++            cv = cov.get(bid)
++            if cv is None or cv[0] > 0 or cv[1] < need:
++                holes.append([k, bid, cv, need])
++        if holes:
++            rec["H4"] = holes
++        rec["n_int4"], rec["n_pool"] = len(int4_k), len(pool_k)
++        fps = []
++        tiles0 = None
++        dev = None
++        for li, impl in enumerate(impls):
++            kvc = getattr(impl, "_kv_cache_ref", None)
++            if kvc is None or impl._tail_K_pool is None:
++                fps.append(None)
++                continue
++            tv = impl._as_tile_view(kvc)
++            dev = tv.device
++            s = torch.zeros((), dtype=torch.int64, device=dev)
++            per_tile = {}
++            if int4_k:
++                idx = torch.tensor([bids[k] for k in int4_k], dtype=torch.long, device=dev)
++                ts = bitsum(tv.index_select(0, idx), keep_first=True)
++                w = torch.tensor([k + 1 for k in int4_k], dtype=torch.int64, device=dev)
++                s = s + (ts * w).sum()
++                if li == 0:
++                    per_tile.update(zip(int4_k, ts.tolist()))
++            for k, need in reads:
++                slot = dict_map.get(bids[k])
++                if slot is None:
++                    continue
++                t = bitsum(impl._tail_K_pool[slot, :need]) + 3 * bitsum(impl._tail_V_pool[slot, :need])
++                s = s + (k + 1) * t
++                if li == 0:
++                    per_tile[k] = int(t)
++            fps.append(s)
++            if li == 0:
++                tiles0 = per_tile
++        rec["fp"] = [None if x is None else int(x) for x in fps]
++        if tiles0 is not None:
++            changed = [[k, bids[k]] for k in int4_k
++                       if bids[k] in flushed and flushed[bids[k]] != tiles0.get(k)]
++            if changed:
++                rec["H5"] = changed
++            rec["n_unrecorded"] = sum(1 for k in int4_k if bids[k] not in flushed)
++            if TILES:
++                rec["tiles0"] = [tiles0.get(k) for k in range(len(bids))]
++        emit(rec)
++        # This step's forward writes rows [c, sl) of the tiles it touches.
++        for k in range(c // G, min((sl - 1) // G, ncols - 1) + 1):
++            bid = int(bt[row, k])
++            if bid < 0 or bid not in dict_map:
++                continue
++            lo, hi = max(c - k * G, 0), min(sl - k * G, G)
++            cv = cov.get(bid)
++            if cv is None:
++                cov[bid] = [lo, hi]
++            elif lo <= cv[1]:
++                cov[bid] = [min(cv[0], lo), max(cv[1], hi)]
++
++
++def gdn_check(ms, input_batch, block_tables, gids, kv_cache_config) -> None:
++    n = input_batch.num_reqs
++    if n == 0:
++        return
++    idx = input_batch.idx_mapping[:n].tolist()
++    st = ms._mamba_state_idx_gpu.tolist()
++    acc = ms.num_accepted_tokens_gpu.tolist()
++    sc = ms._mamba_src_col_gpu.tolist()
++    so = ms._mamba_src_off_gpu.tolist()
++    fc = ms.vllm_config.compilation_config.static_forward_context
++    for b in range(n):
++        r = idx[b]
++        if r < 0:
++            continue
++        rid = input_batch.req_ids[b]
++        base, a = int(st[r]), max(int(acc[r]), 1)
++        col = base + a - 1
++        rec = {"t": "gdn", "id": rid, "base": base, "acc": a, "src_col": int(sc[r]),
++               "src_off": int(so[r]), "q": int(input_batch.num_scheduled_tokens[b])}
++        rows: dict[int, list[int]] = {}
++        ssm, conv = [], []
++        for g in gids:
++            row = block_tables[g][b].tolist()
++            rows[g] = row
++            sbid = row[col] if 0 <= col < len(row) else -1
++            cbid = row[base] if 0 <= base < len(row) else -1
++            if sbid <= 0 or cbid <= 0:
++                rec.setdefault("H2_null", []).append([g, cbid, sbid])
++            for name in kv_cache_config.kv_cache_groups[g].layer_names:
++                states = fc[name].kv_cache
++                conv.append(bitsum(states[0][max(cbid, 0)]))
++                ssm.append(bitsum(states[-1][max(sbid, 0)]))
++        prev = _GDN_PREV.get(rid)
++        if prev is not None:
++            pbase, prows = prev
++            if base < pbase:
++                rec["H2_back"] = [pbase, base]
++            if rec["src_col"] >= 0:
++                for g in gids:
++                    for c in {rec["src_col"], rec["src_col"] + rec["src_off"]}:
++                        old = prows[g][c] if c < len(prows[g]) else None
++                        new = rows[g][c] if c < len(rows[g]) else None
++                        if old != new:
++                            rec.setdefault("H2_reloc", []).append([g, c, old, new])
++        _GDN_PREV[rid] = (base, rows)
++        if len(_GDN_PREV) > 64:
++            _GDN_PREV.pop(next(iter(_GDN_PREV)))
++        rec["blocks"] = {str(g): rows[g][max(base - 1, 0): base + a + 1] for g in gids}
++        rec["ssm"] = torch.stack(ssm).tolist() if ssm else []
++        rec["conv"] = torch.stack(conv).tolist() if conv else []
++        emit(rec)
