@@ -1,0 +1,154 @@
+attn-5 (docs/research/deepinfer/attention-kv.md, attn-5): Hadamard-rotated per-token-head KV, behind
+VLLM_KV_HADAMARD=<head sizes> ("1" = 256; default unset = off, no code path changes).
+
+Selected layers: decoder attention with an int8_per_token_head cache on TRITON_ATTN or CUSTOM (pthfa) and a
+head size in the list (K and V the same size). int4_per_token_head is deliberately not selected: vLLM's int4
+mode (v1/attention/ops/int4_per_token_head.py, reshape_and_cache_int4 / unified_attention_int4) already
+rotates K, V and q by a randomized Hadamard (single_rht) and un-rotates the output. On Qwen3.8 with "1" that is the 16
+full-attention layers of the target and the MTP layer (head size 256); the DFlash2 drafter's head-128 layers are
+not selected. Such a layer builds the orthonormal Sylvester Hadamard H (D x D, entries +-1/16 at D = 256,
+exact in bf16) at init on the model-init device, and then:
+  - unified_kv_cache_update writes K H and V H (per token and head, before the per-token-head quantiser);
+  - unified_attention_with_output runs the backend on q H into a scratch output and writes out_rot H to the
+    caller's output (H H = I, so the result is P V).
+q.k and P.V are unchanged in exact arithmetic; the per-token-head grid quantises flattened channels instead of
+outlier channels (docs/research/deepinfer/cpu-checks/attn5_hadamard_kv.py measures the gain and the bf16 cost
+of the three extra roundings). Both backends read K/V only from the cache, so the unrotated key/value passed
+through to impl.forward are unused. The rotations live inside the two opaque custom ops, so the
+torch.compile graph and cache key do not change; they are captured into CUDA graphs with the ops. Cost: four
+[tokens x heads, D] x [D, D] matmuls per selected layer and step.
+
+Test: bench/test_kv_hadamard.py (GPU: the layer's ops against the same calls without the knob; the cache really
+holds rotated values). Applies on the stock image.
+
+Apply: patch -p1 --forward --fuzz 0 -d /app/venv/lib/python3.12/site-packages/vllm < attn5-kv-hadamard.patch
+
+--- a/model_executor/layers/attention/attention.py
++++ b/model_executor/layers/attention/attention.py
+@@ -57,6 +57,57 @@ if TYPE_CHECKING:
+ 
+ logger = init_logger(__name__)
+ 
++# attn-5 (research/deepinfer, docs/research/deepinfer/attention-kv.md attn-5):
++# VLLM_KV_HADAMARD=<head sizes> ("1" = 256; unset/"0" = off) rotates K and V of
++# every decoder layer with an int8_per_token_head cache on the TRITON_ATTN or
++# CUSTOM (pthfa) backend and one of those head sizes, per head, by the
++# orthonormal Sylvester Hadamard H (H = H^T, H H = I) before the cache write,
++# and the query by the same H before attention; the attention output (in the
++# rotated V frame) is rotated back. q.k and P.V are unchanged in exact
++# arithmetic; the per-token-head int8 grid sees flattened channels.
++# int4_per_token_head is not selected: vLLM's int4 mode already rotates by its
++# own randomized Hadamard (int4_per_token_head.py single_rht). Read once at
++# import; the rotations run inside the opaque
++# unified_kv_cache_update / unified_attention_with_output ops (eager or captured
++# with them), so the torch.compile graph and its cache key are unchanged.
++_KV_HADAMARD_DTYPES = ("int8_per_token_head",)
++_KV_HADAMARD_BACKENDS = ("TRITON_ATTN", "CUSTOM")
++
++
++def _kv_hadamard_head_sizes() -> frozenset[int]:
++    import os
++
++    raw = os.environ.get("VLLM_KV_HADAMARD", "").strip()
++    if raw in ("", "0"):
++        return frozenset()
++    if raw == "1":
++        return frozenset({256})
++    sizes = frozenset(int(x) for x in raw.split(",") if x.strip())
++    bad = [s for s in sizes if s < 2 or s & (s - 1)]
++    if bad:
++        raise ValueError(f"VLLM_KV_HADAMARD: head sizes must be powers of two, got {bad}")
++    return sizes
++
++
++_KV_HADAMARD_SIZES = _kv_hadamard_head_sizes()
++
++
++def _kv_hadamard_matrix(n: int, dtype: torch.dtype, device) -> torch.Tensor:
++    """The orthonormal n-point Sylvester Hadamard matrix (entries +-n^-1/2,
++    exact in bf16/fp16 for n a power of two up to 2^14)."""
++    h = torch.ones(1, 1, dtype=torch.float32, device=device)
++    while h.shape[0] < n:
++        h = torch.cat([torch.cat([h, h], 1), torch.cat([h, -h], 1)], 0)
++    return (h / n**0.5).to(dtype)
++
++
++def _kv_rotate(x: torch.Tensor, h: torch.Tensor) -> torch.Tensor:
++    """x [..., D] @ H in x's dtype (fp32 accumulate)."""
++    if h.dtype != x.dtype or h.device != x.device:
++        h = h.to(device=x.device, dtype=x.dtype)
++    return torch.matmul(x, h)
++
++
+ 
+ def validate_kv_sharing_target(
+     current_layer_name, target_layer_name, static_forward_context
+@@ -453,6 +504,27 @@ class Attention(nn.Module, AttentionLayerBase):
+         )
+         self.backend = AttentionBackendEnum[self.attn_backend.get_name()]
+         self.dtype = dtype
++        # attn-5: the layer's Hadamard (None = off); see _KV_HADAMARD_SIZES.
++        self._kv_hadamard: torch.Tensor | None = None
++        if (
++            head_size in _KV_HADAMARD_SIZES
++            and self.head_size_v == head_size
++            and kv_cache_dtype in _KV_HADAMARD_DTYPES
++            and attn_type == AttentionType.DECODER
++            and self.attn_backend.get_name() in _KV_HADAMARD_BACKENDS
++        ):
++            # Built on the model-init default device (the GPU), so no host
++            # copy ever happens inside a CUDA-graph capture.
++            self._kv_hadamard = _kv_hadamard_matrix(
++                head_size, dtype, torch.get_default_device()
++            )
++            logger.info_once(
++                "attn-5 VLLM_KV_HADAMARD: rotating K/V/Q of the %s layers with "
++                "head size %d (backend %s)",
++                kv_cache_dtype,
++                head_size,
++                self.attn_backend.get_name(),
++            )
+ 
+         # For cuda-alike (CUDA and ROCM) and cpu platforms, we control how
+         # torch.compile works by registering the attention as one giant
+@@ -784,6 +856,10 @@ def unified_kv_cache_update(
+         assert hasattr(attn_layer.impl, "do_kv_cache_update"), (
+             f"{attn_layer.impl.__class__.__name__} does not support kv cache update"
+         )
++        h = getattr(attn_layer, "_kv_hadamard", None)
++        if h is not None:  # attn-5: the cache holds K H and V H
++            key = _kv_rotate(key, h)
++            value = _kv_rotate(value, h)
+         attn_layer.impl.do_kv_cache_update(  # type: ignore[attr-defined]
+             attn_layer,
+             key,
+@@ -830,6 +906,29 @@ def unified_attention_with_output(
+     layer_name = _resolve_layer_name(layer_name)
+     attn_metadata, self, kv_cache, _ = get_attention_context(layer_name)
+ 
++    h = getattr(self, "_kv_hadamard", None)
++    if h is not None:
++        # attn-5: q H . k H = q . k; the backend's output P (V H) is rotated
++        # back with H (= H^-1) into the caller's buffer.
++        out_rot = torch.empty_like(output)
++        self.impl.forward(
++            self,
++            _kv_rotate(query, h),
++            key,
++            value,
++            kv_cache,
++            attn_metadata,
++            output=out_rot,
++            output_scale=output_scale,
++            output_block_scale=output_block_scale,
++        )
++        d = out_rot.shape[-1]
++        torch.mm(
++            out_rot.view(-1, d),
++            h if h.dtype == out_rot.dtype else h.to(out_rot.dtype),
++            out=output.view(-1, d),
++        )
++        return
+     self.impl.forward(
+         self,
+         query,

@@ -147,6 +147,8 @@ Not a DeepInfer idea; it applies attn-1's reasoning to prefill.
 
 ### attn-5: Hadamard-rotated int8/int4 per-token-head KV
 
+**Measured (2026-10-23):** LOSS for int8 in D: no quality gain on the real model (k_norm already flattens K; top-k KL vs bf16 −7.5% but perplexity ratio worse), decode 3–7% slower with MTP acceptance −2.7%. vLLM's int4 per-token-head mode already rotates. [gpu-results/attn-5.md](gpu-results/attn-5.md)
+
 - **DeepInfer** applies Hadamard only to the compressor's index-K; the main KV is fp8 without rotation (`tilelang_ops/fused_transform.py:726-732`; `v4_modules/attn.py:956, 986`).
 - **The CPU check explains why** (`cpu-checks/attn_kvq_error.out`). Hadamard *hurts* float grids: e4m3 output error 0.047 → 0.078 and logit RMSE 0.09 → 0.32 in regime A. It *helps* uniform int grids: int8 per-token-head output 0.069 → 0.027, int4 per-token-head 0.84 → 0.47. The quant lane reached the same split for weights and activations ([quant-heads.md](quant-heads.md)).
 - **HyperQwen.** int8 and int4 per-token-head are unrotated (no `hadamard` in `patches/` or `pthfa/`); KVarN already rotates.

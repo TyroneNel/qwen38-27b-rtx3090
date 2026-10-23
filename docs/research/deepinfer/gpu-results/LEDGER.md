@@ -60,7 +60,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | attn-1.3 | int8 QK | attn-1.2, evals-1 | running | microbench WIN, quality gates PASS | 1.69× per layer at 150k T=8; GSM8K n=600 94.8% vs 94.7%, needle 2/2 at 128k, PPL identical; e2e at 110k queued | [attn-1.md](attn-1.md) |
 | attn-3 | int8-QK prefill on quantized-KV arms | evals-1 | todo | | | |
 | quant-6 | Fuse int8 activation quant into its producer | quant-1 | skipped | | gate failed: quant-1 is a LOSS (route A slower than Marlin); the appendix values fusion at ~0.5% of a 4k prefill | [quant-1.md](quant-1.md) |
-| attn-5 | Hadamard-rotated int8/int4 per-token-head KV | evals-1 | todo | | | |
+| attn-5 | Hadamard-rotated int8/int4 per-token-head KV | evals-1 | done | LOSS | int8 in D: top-k KL vs bf16 −7.5% but PPL ratio ×1.012 (stock ×0.994); GSM8K, needle unchanged; decode −3% C1, −7% C4 (MTP acceptance −2.7%); int4 already rotated in vLLM | [attn-5.md](attn-5.md) |
 
 ## Phase 5: drafter tools
 
