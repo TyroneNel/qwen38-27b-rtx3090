@@ -130,6 +130,8 @@ The synthetic Hessian has strong outlier channels, which flatters act-order. Exp
 
 ### quant-4: block-Hadamard-128 rotation of linear inputs
 
+**Measured (2026-10-23):** NO-GO: on real `down_proj` inputs the rotated, requantized arm has more total error than today's per-token int8 (median ratio 0.89 over 48 layers, gate 1.5); requantizing from the int4 checkpoint adds a second rounding that swamps the activation gain. A bf16-source requant is untried. [gpu-results/quant-4.md](gpu-results/quant-4.md)
+
 Rotate the bf16 weights along K offline (W′ = blockdiag(H₁₂₈) · W), requantize the body with AutoRound or GPTQ from the 54 GB bf16 source, and add an online FWHT-128 fused into `per_token_quant_int8` for the in_proj and gate_up inputs and into the SiLU-mul kernel for down_proj. Check (a): per-token error falls from 10–14% to 1.3–1.8% on heavy-tailed inputs, and to 0.46% combined with per-128. Same gain as quant-1, but on the unchanged per-token Marlin kernel. Effort L; lossy through the requant. **Do it only if quant-1's route A is slow on sm86.** The attention lane found the same split for KV: Hadamard helps integer grids and hurts float grids ([attention-kv.md](attention-kv.md), attn-5).
 
 ### quant-5: batch-mode lm_head as W4A8

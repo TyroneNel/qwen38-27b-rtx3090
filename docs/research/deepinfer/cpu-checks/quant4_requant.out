@@ -1,0 +1,63 @@
+# run_cpu.sh 8,31,55,63 (tokens 8192 = 4096 Hessian + 4096 held-out, 1024 random rows), proxies syn,mlp
+L08 syn a_pt 0.1424 a_h 0.0192 | GPU act_calib per-token 0.0774 hadamard 0.0121
+        rtn: w 0.1192 tot 0.1207 (wspace 0.117)  gptq: w 0.1075 tot 0.1092 (wspace 0.171)  gptq_best: w 0.0902 tot 0.0922 (wspace 0.143)  [61.2s]
+L08 mlp a_pt 0.0269 a_h 0.0090 | GPU act_calib per-token 0.0774 hadamard 0.0121
+        rtn: w 0.1052 tot 0.1056 (wspace 0.117)  gptq: w 0.0525 tot 0.0533 (wspace 0.165)  gptq_best: w 0.0454 tot 0.0463 (wspace 0.135)  [62.2s]
+L31 syn a_pt 0.1309 a_h 0.0185 | GPU act_calib per-token 0.0520 hadamard 0.0104
+        rtn: w 0.1167 tot 0.1182 (wspace 0.117)  gptq: w 0.1137 tot 0.1153 (wspace 0.176)  gptq_best: w 0.0955 tot 0.0973 (wspace 0.145)  [61.3s]
+L31 mlp a_pt 0.0301 a_h 0.0094 | GPU act_calib per-token 0.0520 hadamard 0.0104
+        rtn: w 0.1093 tot 0.1097 (wspace 0.117)  gptq: w 0.0550 tot 0.0558 (wspace 0.164)  gptq_best: w 0.0474 tot 0.0483 (wspace 0.134)  [61.8s]
+L55 syn a_pt 0.1428 a_h 0.0216 | GPU act_calib per-token 0.0978 hadamard 0.0141
+        rtn: w 0.1190 tot 0.1209 (wspace 0.117)  gptq: w 0.0849 tot 0.0876 (wspace 0.169)  gptq_best: w 0.0709 tot 0.0741 (wspace 0.140)  [61.1s]
+L55 mlp a_pt 0.0320 a_h 0.0099 | GPU act_calib per-token 0.0978 hadamard 0.0141
+        rtn: w 0.1144 tot 0.1148 (wspace 0.117)  gptq: w 0.0560 tot 0.0569 (wspace 0.166)  gptq_best: w 0.0478 tot 0.0488 (wspace 0.135)  [61.2s]
+L63 syn a_pt 0.1260 a_h 0.0184 | GPU act_calib per-token 0.0534 hadamard 0.0095
+        rtn: w 0.1168 tot 0.1181 (wspace 0.117)  gptq: w 0.1164 tot 0.1179 (wspace 0.178)  gptq_best: w 0.0971 tot 0.0988 (wspace 0.147)  [56.9s]
+L63 mlp a_pt 0.0356 a_h 0.0098 | GPU act_calib per-token 0.0534 hadamard 0.0095
+        rtn: w 0.1091 tot 0.1095 (wspace 0.117)  gptq: w 0.0506 tot 0.0516 (wspace 0.166)  gptq_best: w 0.0435 tot 0.0446 (wspace 0.135)  [56.3s]
+median over layers x proxies:
+  a_pt           0.1260  (min 0.0269, max 0.1428)
+  a_h            0.0184  (min 0.0090, max 0.0216)
+  w_rtn          0.1167  (min 0.1052, max 0.1192)
+  tot_rtn        0.1181  (min 0.1056, max 0.1209)
+  werr_rtn       0.1174  (min 0.1171, max 0.1174)
+  w_gptq         0.0849  (min 0.0506, max 0.1164)
+  tot_gptq       0.0876  (min 0.0516, max 0.1179)
+  werr_gptq      0.1694  (min 0.1644, max 0.1782)
+  w_gptq_best    0.0709  (min 0.0435, max 0.0971)
+  tot_gptq_best  0.0741  (min 0.0446, max 0.0988)
+  werr_gptq_best 0.1401  (min 0.1342, max 0.1473)
+# --proxies mlpo --mlpo 16,12 (matches GPU act_calib a_pt/a_h of L08), layers 8,55
+L08 mlpo a_pt 0.0727 a_h 0.0115 | GPU act_calib per-token 0.0774 hadamard 0.0121
+        rtn: w 0.1063 tot 0.1070 (wspace 0.117)  gptq: w 0.0491 tot 0.0505 (wspace 0.163)  gptq_best: w 0.0423 tot 0.0439 (wspace 0.133)  [63.2s]
+L55 mlpo a_pt 0.0597 a_h 0.0109 | GPU act_calib per-token 0.0978 hadamard 0.0141
+        rtn: w 0.1146 tot 0.1151 (wspace 0.117)  gptq: w 0.0537 tot 0.0549 (wspace 0.165)  gptq_best: w 0.0458 tot 0.0471 (wspace 0.134)  [61.2s]
+median over layers x proxies:
+  a_pt           0.0727  (min 0.0597, max 0.0727)
+  a_h            0.0115  (min 0.0109, max 0.0115)
+  w_rtn          0.1146  (min 0.1063, max 0.1146)
+  tot_rtn        0.1151  (min 0.1070, max 0.1151)
+  werr_rtn       0.1174  (min 0.1174, max 0.1174)
+  w_gptq         0.0537  (min 0.0491, max 0.0537)
+  tot_gptq       0.0549  (min 0.0505, max 0.0549)
+  werr_gptq      0.1652  (min 0.1629, max 0.1652)
+  w_gptq_best    0.0458  (min 0.0423, max 0.0458)
+  tot_gptq_best  0.0471  (min 0.0439, max 0.0471)
+  werr_gptq_best 0.1344  (min 0.1333, max 0.1344)
+# --proxies mlpo --mlpo 8,20 (closer to L55's GPU a_pt), layers 55,8
+L55 mlpo a_pt 0.0762 a_h 0.0118 | GPU act_calib per-token 0.0978 hadamard 0.0141
+        rtn: w 0.1152 tot 0.1158 (wspace 0.117)  gptq: w 0.0529 tot 0.0542 (wspace 0.165)  gptq_best: w 0.0451 tot 0.0466 (wspace 0.134)  [57.1s]
+L08 mlpo a_pt 0.1012 a_h 0.0145 | GPU act_calib per-token 0.0774 hadamard 0.0121
+        rtn: w 0.1104 tot 0.1113 (wspace 0.117)  gptq: w 0.0499 tot 0.0520 (wspace 0.162)  gptq_best: w 0.0430 tot 0.0453 (wspace 0.133)  [56.5s]
+median over layers x proxies:
+  a_pt           0.1012  (min 0.0762, max 0.1012)
+  a_h            0.0145  (min 0.0118, max 0.0145)
+  w_rtn          0.1152  (min 0.1104, max 0.1152)
+  tot_rtn        0.1158  (min 0.1113, max 0.1158)
+  werr_rtn       0.1174  (min 0.1173, max 0.1174)
+  w_gptq         0.0529  (min 0.0499, max 0.0529)
+  tot_gptq       0.0542  (min 0.0520, max 0.0542)
+  werr_gptq      0.1645  (min 0.1623, max 0.1645)
+  w_gptq_best    0.0451  (min 0.0430, max 0.0451)
+  tot_gptq_best  0.0466  (min 0.0453, max 0.0466)
+  werr_gptq_best 0.1340  (min 0.1327, max 0.1340)

@@ -20,6 +20,11 @@ with each mode's ratio to per-token, counts the layers whose error falls by at l
 --threshold (default 3, the quant-1 GPU validation bar), and ends with one ACT_CALIB line.
 The JSON is {"modes", "threshold", "layers": {layer: {mode: {...}}}, "summary"}.
 Exit 0, or 2 if no layer was measured. Without --modes the run is the original one.
+
+--dump-inputs (quant-4) measures nothing: it saves a reservoir sample of the bf16 inputs of
+the --dump-re layers (default every mlp.down_proj) over the --dump-corpus chat prompts into
+out_path/L<idx>.<suffix>.npy for docs/research/deepinfer/experiments/quant4_h128down.py, and
+ends with one ACT_DUMP line (exit 2 if a layer saw fewer than --dump-rows rows).
 """
 import json, os, sys, glob, re, torch, argparse
 import pyarrow.parquet as pq
@@ -32,7 +37,19 @@ _ap.add_argument("--modes", default=None,
                  help="comma list of act_quant.py modes, or 'all'; per-token is always added (default: the original per-token run)")
 _ap.add_argument("--threshold", type=float, default=3.0,
                  help="with --modes: a layer passes when per-token err / mode err >= this (default 3)")
+_ap.add_argument("--dump-inputs", action="store_true",
+                 help="quant-4 capture instead of a measurement: out_path is a directory that gets, per layer "
+                      "matching --dump-re, a reservoir sample of its bf16 inputs (L<idx>.<suffix>.npy, uint16 bits, "
+                      "[--dump-rows, K]) taken over the --dump-corpus prompts, plus meta.json")
+_ap.add_argument("--dump-re", default=r"layers\.\d+\.mlp\.down_proj$")
+_ap.add_argument("--dump-rows", type=int, default=8192)
+_ap.add_argument("--dump-corpus", default=None,
+                 help="jsonl with chat 'messages' (drafter/data/prompts.jsonl): disjoint from quality_battery's "
+                      "perplexity texts, which the default corpus overlaps")
+_ap.add_argument("--dump-prompts", type=int, default=16, help="prompts per 'src' value of --dump-corpus")
 _args = _ap.parse_args()
+if _args.dump_inputs and not _args.dump_corpus:
+    _ap.error("--dump-inputs needs --dump-corpus")
 model_path, out_path = _args.model_path, _args.out_path
 modes = None
 if _args.modes is not None:
@@ -79,6 +96,68 @@ if model is None:
         print("fallback failed:", e)
 assert model is not None, "could not find model"
 print("model:", type(model).__name__, flush=True)
+
+if _args.dump_inputs:
+    # quant-4 capture: a uniform reservoir sample (Algorithm R, per layer, fixed seed) of every
+    # row that reaches each matching layer -- prefill and decode -- so the sample is spread over
+    # the whole corpus. The keep/replace decisions are made on the host and only the chosen rows
+    # leave the GPU.
+    import random
+    import numpy as np
+    os.makedirs(out_path, exist_ok=True)
+    dre, cap = re.compile(_args.dump_re), _args.dump_rows
+    dumps = {}
+    def make_dump_hook(key):
+        rng = random.Random(key)
+        def hook(m, inputs):
+            x = inputs[0].reshape(-1, inputs[0].shape[-1])
+            d = dumps.get(key)
+            if d is None:
+                mm = np.lib.format.open_memmap(os.path.join(out_path, key + ".npy"), mode="w+",
+                                               dtype=np.uint16, shape=(cap, x.shape[-1]))
+                d = dumps[key] = {"mm": mm, "seen": 0}
+            rows, slots = [], []
+            for i in range(x.shape[0]):
+                t = d["seen"] + i
+                j = t if t < cap else rng.randrange(t + 1)
+                if j < cap:
+                    rows.append(i); slots.append(j)
+            d["seen"] += x.shape[0]
+            if rows:
+                v = x[torch.tensor(rows, device=x.device)].to(torch.bfloat16).view(torch.int16).cpu().numpy()
+                d["mm"][np.array(slots)] = v.view(np.uint16)
+        return hook
+    count = 0
+    for name, mod in model.named_modules():
+        if dre.search(name) and "mtp" not in name and "Linear" in type(mod).__name__:
+            mi = re.search(r"layers\.(\d+)\.(.*)$", name)
+            mod.register_forward_pre_hook(make_dump_hook(f"L{int(mi.group(1)):02d}.{mi.group(2)}")); count += 1
+    print("dump hooks:", count, flush=True)
+    assert count, f"no layer matches --dump-re {_args.dump_re}"
+    by_src = {}
+    for line in open(_args.dump_corpus):
+        r = json.loads(line)
+        by_src.setdefault(r.get("src", ""), []).append(r["messages"])
+    tok = llm.get_tokenizer()
+    texts = []
+    for src in sorted(by_src):
+        rows_ = by_src[src][:]
+        random.Random(0).shuffle(rows_)
+        for msgs in rows_[:_args.dump_prompts]:
+            msgs = [dict(mm_, content=mm_["content"][:3000]) for mm_ in msgs if mm_.get("role") != "assistant"]
+            texts.append(tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True))
+    print("dump corpus prompts:", len(texts), flush=True)
+    llm.generate(texts, SamplingParams(max_tokens=64, temperature=0))
+    meta = {}
+    for key, d in dumps.items():
+        d["mm"].flush()
+        meta[key] = {"seen": d["seen"], "rows": min(d["seen"], cap), "k": d["mm"].shape[1]}
+    short = [k for k, v in meta.items() if v["rows"] < cap]
+    json.dump({"rows": cap, "dump_re": _args.dump_re, "corpus": _args.dump_corpus, "layers": meta},
+              open(os.path.join(out_path, "meta.json"), "w"), indent=1)
+    print(f"ACT_DUMP layers={len(meta)} rows={cap} min_seen={min(v['seen'] for v in meta.values())} "
+          f"short={len(short)}", flush=True)
+    sys.exit(0 if meta and not short else 2)
 
 pat = re.compile(r"(gate_up_proj|down_proj|in_proj_qkvz|out_proj|qkv_proj|o_proj)$")
 stats = {}

@@ -1,0 +1,123 @@
+quant-4 (docs/research/deepinfer/quant-heads.md): online block-Hadamard-128 rotation of
+the inputs of linears whose checkpoint weights are stored K-rotated, behind
+VLLM_ACT_HADAMARD_RE=<regex of layer prefixes> (default unset = off, no code path
+changes).
+
+A matching CompressedTensorsWNA16 layer must run on MarlinLinearKernel with
+K % 128 == 0 (else ValueError at load). MarlinLinearKernel.apply_weights then computes
+x' = x . blockdiag(H_pm1 / 8) (one batched bf16 matmul, fp32 accumulate, exact
+factors) and feeds x' to the unchanged apply_gptq_marlin_linear, so both the W4A16
+path and the W4A8-int8 path (per_token_quant_int8 on x') see the rotated input.
+The checkpoint carries W' = W . blockdiag(H_pm1) / 16, so x' . W'^T == x . W^T;
+build it with docs/research/deepinfer/experiments/quant4_h128down.py. Pointing the
+knob at layers of an unrotated checkpoint gives wrong outputs.
+
+Adds VLLM_ACT_HADAMARD_RE to envs.py (hashed into the torch.compile cache key).
+Touches only hunks the image's own syv patches do not; applies on the stock image,
+with or without quant2-lossless-fold.patch. Test: bench/test_act_hadamard.py.
+
+Apply: patch -p1 --forward --fuzz 0 -d /app/venv/lib/python3.12/site-packages/vllm < quant4-act-hadamard.patch
+
+--- a/envs.py
++++ b/envs.py
+@@ -200,6 +200,7 @@
+     VLLM_MARLIN_INPUT_DTYPE: Literal["int8", "fp8"] | None = None
+     VLLM_MARLIN_INT8_INCLUDE_RE: str = ""
+     VLLM_MARLIN_INT8_EXCLUDE_RE: str = "lm_head|mtp"
++    VLLM_ACT_HADAMARD_RE: str = ""
+     VLLM_HUMMING_ONLINE_QUANT_CONFIG: dict[str, Any] | None = None
+     VLLM_HUMMING_INPUT_QUANT_CONFIG: dict[str, Any] | None = None
+     VLLM_HUMMING_USE_F16_ACCUM: bool = False
+@@ -1628,6 +1629,10 @@
+     "VLLM_MARLIN_INT8_EXCLUDE_RE": lambda: os.environ.get(
+         "VLLM_MARLIN_INT8_EXCLUDE_RE", "lm_head|mtp"
+     ),
++    # quant-4: regex of linear-layer prefixes whose checkpoint weights are stored
++    # block-Hadamard-128 rotated along K; their inputs are rotated online to match.
++    # Only for a checkpoint built that way; unset = off. (Part of the compile key.)
++    "VLLM_ACT_HADAMARD_RE": lambda: os.environ.get("VLLM_ACT_HADAMARD_RE", ""),
+     # The online quantization dtype for humming kernel
+     "VLLM_HUMMING_ONLINE_QUANT_CONFIG": lambda: maybe_convert_json_str_or_file(
+         os.environ.get("VLLM_HUMMING_ONLINE_QUANT_CONFIG", None)
+--- a/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_wNa16.py
++++ b/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_wNa16.py
+@@ -2,11 +2,13 @@
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+ 
+ import math
++import re
+ from collections.abc import Callable
+ from fractions import Fraction
+ 
+ import torch
+ 
++import vllm.envs as envs
+ from vllm.distributed.utils import verify_group_size_divides_partition
+ from vllm.logger import init_logger
+ from vllm.model_executor.kernels.linear import (
+@@ -56,6 +58,7 @@
+ 
+ class CompressedTensorsWNA16(CompressedTensorsScheme):
+     _kernel_backends_being_used: set[str] = set()
++    _act_hadamard_logged: bool = False
+ 
+     def __init__(
+         self,
+@@ -143,6 +146,27 @@
+             if input_dtype is not None:
+                 mp_linear_kernel_config.act_type = input_dtype
+ 
++        # quant-4 (docs/research/deepinfer/quant-heads.md): layers whose stored weights
++        # are K-rotated (W' = W . H128 / 16, docs/research/deepinfer/experiments/
++        # quant4_h128down.py) get their input rotated online (x' = x . H128 / 8) in
++        # MarlinLinearKernel.apply_weights, ahead of the W4A16 or the int8 path.
++        if envs.VLLM_ACT_HADAMARD_RE and re.search(
++            envs.VLLM_ACT_HADAMARD_RE, self.layer_name or ""
++        ):
++            if kernel_type is not MarlinLinearKernel or input_size_per_partition % 128:
++                raise ValueError(
++                    f"VLLM_ACT_HADAMARD_RE matches {self.layer_name}, but it runs on "
++                    f"{kernel_type.__name__} with K={input_size_per_partition}; the "
++                    "online rotation needs Marlin and K % 128 == 0"
++                )
++            layer.act_hadamard_block = 128
++            if not CompressedTensorsWNA16._act_hadamard_logged:
++                CompressedTensorsWNA16._act_hadamard_logged = True
++                logger.info(
++                    "quant-4: block-Hadamard-128 input rotation on layers matching %r (first: %s)",
++                    envs.VLLM_ACT_HADAMARD_RE, self.layer_name,
++                )
++
+         # If group_size is -1, we are in channelwise case.
+         group_size = self.group_size if self.group_size != -1 else input_size
+         row_parallel = input_size != input_size_per_partition
+--- a/model_executor/kernels/linear/mixed_precision/marlin.py
++++ b/model_executor/kernels/linear/mixed_precision/marlin.py
+@@ -274,6 +274,16 @@
+                 marlin_pad_dim(layer.bias, size_n, padded_n)
+             )
+ 
++        # quant-4: the +-1 Hadamard-128 scaled by 1/8 (exact in bf16/fp16); the
++        # weights carry the other 1/16, so x' . W'^T == x . W^T (H_pm1 . H_pm1 = 128 I).
++        if getattr(layer, "act_hadamard_block", 0):
++            b = layer.act_hadamard_block
++            assert b == 128, b
++            h = torch.ones(1, 1)
++            while h.shape[0] < b:
++                h = torch.cat([torch.cat([h, h], 1), torch.cat([h, -h], 1)], 0)
++            layer.act_hadamard = (h / 8).to(device=device, dtype=layer.params_dtype)
++
+     def apply_weights(
+         self,
+         layer: torch.nn.Module,
+@@ -282,6 +292,10 @@
+     ) -> torch.Tensor:
+         c = self.config
+         w_q, w_s, w_zp = self._get_weight_params(layer)
++        h = getattr(layer, "act_hadamard", None)
++        if h is not None:
++            # quant-4: block-diagonal rotation along K before the int8 (or bf16) input path
++            x = torch.matmul(x.unflatten(-1, (-1, h.shape[0])), h).flatten(-2)
+         return apply_gptq_marlin_linear(
+             input=x,
+             weight=w_q,
