@@ -37,6 +37,7 @@ The two E items stack differently than they look: attn-2 removes most of the ver
 | quant-5 | NEUTRAL | int8 lm_head in A: +0.8% median, inside noise (estimate was +2–3%) |
 | quant-2 | LOSS (vs bar) | lossless sign fold recovers 1.0% perplexity, but the zero-point path costs −1.4% throughput and ~3% clock at the power cap (bar: within 1%) |
 | quant-1 | LOSS | Humming per-128 kernels run 0.26–0.41× Marlin at decode sizes |
+| quant-3 | LOSS (vs bar) | signed scales + MSE clip + act-order cut the drafter's weight error 13% but move default-sampling acceptance only +0.12%; the whole int4 gap is 0.6% (drafter-2) |
 | drafter-1a | LOSS | host confidence trim: +1–2.4% at 100k against an 8% bar (verify slope is 1.9 ms, not the assumed 3.6) |
 | attn-5 | LOSS | Hadamard int8 KV: no quality gain on the real model (k_norm already flattens K), decode −3 to −7%; vLLM's int4 mode already rotates, and int4 KV costs ~16% perplexity |
 | attn-1 stage 1 alone | LOSS (vs bar) | 1.23× per layer, bar 1.3×; it is the base the other two stages need |
@@ -108,7 +109,7 @@ Modes: A batch; B DFlash2 64k; C quoting (T=16); D `SPEC=mtp CTX=long`; D′ `SP
 | 3 | attn-1 | pthfa verify: unpadded 48-row tiles at T=8, PV fp16 accumulate, then int8 QK | D′ (E via attn-2) | −4.6 ms/step at 150k; stages 1–2 alone reach the DRAM floor at boost clock | M | Medium | Stage 1 yes; 2 near; 3 no | WIN (stages 2–3): D′ +9.2% / +10.6% at ~120k; stage 1 alone 1.23× (bar 1.3×) |
 | 4 | quant-7 | int4 embedding where `EMBED_UVA` can't be used | D, E | KV pool +8.4% | S | High | No (small) | WIN (capacity): pool +8% D, +16% E; decode −0.5 to −2% |
 | 5 | spec-0 | Context-aware fixed `DFLASH_TOKENS` at 240k | E | −2.5 to +12.5% | S | Medium-low | Yes | WIN: k=3 +54% at 150k, +70% at 235k; +9% at 170k with attn-2 on |
-| 6 | quant-3 | Better GPTQ for HyperQwen's own int4 requants | B, C, E (drafter); D (MTP) | DFlash2 +2–3% at default sampling | S | Medium | Drafter yes | running |
+| 6 | quant-3 | Better GPTQ for HyperQwen's own int4 requants | B, C, E (drafter); D (MTP) | DFlash2 +2–3% at default sampling | S | Medium | Drafter yes | LOSS vs bar: drafter acceptance +0.12% (weight error −13%) |
 | 7 | attn-2 | KVarN verify on a pthfa-family CUDA kernel | E | ~+21% at 240k, ~+2% at 20k | L | Medium-low | Yes | WIN (Triton shared dequant): E +125% at 170k, +38% at 20k |
 | 8 | drafter-3 | TV-loss repair of the W4A16 DFlash2's bf16 params | B, C, E | ~+3% (ceiling +6%) at default sampling | M | Medium | Yes | running; drafter-2 puts the int4 gap at 0.6%, not ~5% |
 | 9 | spec-2 + drafter-1 | Per-step verify trim on fresh confidence | D′/`CTX=long`, E | E +4 to +10%; 112k +4 to +20% (linear-cost ceiling) | S (host stage 0) to M | Low-medium | Yes | drafter-1a LOSS (+1–2.4% at 100k); spec-2 skipped |

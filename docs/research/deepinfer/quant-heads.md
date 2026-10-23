@@ -121,6 +121,8 @@ The synthetic Hessian has strong outlier channels, which flatters act-order. Exp
 
 ### quant-3: better GPTQ for HyperQwen's own int4 requants
 
+**Measured (2026-10-23):** LOSS against the bar: on the DFlash2 drafter `--q3` cuts weight error 13% but moves default-sampling acceptance only +0.12% (paired, CI95 +0.01 to +0.24%); the whole W4A16-vs-bf16 gap is 0.6% (drafter-2), not ~5%. lm_head and MTP not requantized. [gpu-results/quant-3.md](gpu-results/quant-3.md)
+
 - **HyperQwen.** `drafter/gptq_utils.py:29, 51` uses scale = amax/7, so code −8 is wasted. No act-order. `mse_clip` exists but the shipped build doesn't pass it (`drafter/README.md:51`). It requants the fast variant's lm_head, the MTP head and the DFlash2 drafter.
 - **Change.** Signed ±amax/8 scales, MSE clip and act-order with static groups: −55% output error in check (d). Static-group act-order needs no `g_idx`, so it survives vLLM ≥ 0.30 dropping g_idx (`docs/vllm-0.30.md:53`). Negative scales already work on the W4A16 Marlin path, since the AutoRound body ships them.
 - **Gain (inferred).** The int4 DFlash2 drafter loses ~5% acceptance at default sampling (3.2 against 3.4 tokens/step), because "noise in q hurts the acceptance probability" (`drafter/README.md:89-92`). Recovering half of that is +2–3% tok/s in B, C and E at default sampling, 0 at greedy. MTP ≤ +1%. Fast-variant lm_head: KL below 0.0024, perplexity +0.6% → about +0.3%.
