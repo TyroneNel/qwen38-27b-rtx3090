@@ -74,7 +74,13 @@ constexpr int32_t kAttn1Tile48 = 1;
 constexpr int32_t kAttn1MmaShift = 1;
 constexpr int32_t kAttn1MmaMask = 3 << kAttn1MmaShift;
 constexpr int32_t kAttn1MmaModes = 3;  // DecMma values 0 .. kAttn1MmaModes - 1
-constexpr int32_t kAttn1KnownBits = kAttn1Tile48 | kAttn1MmaMask;
+//   kAttn3PrefillS8  bit 3 (attn-3, lossy): QK on int8 in the 64-row-tile
+//                 kernel at D = 256, causal, no window (the prefill launches
+//                 of the target's full-attention layers): each Q row
+//                 quantised by its absmax, the cache's int8 K fed straight
+//                 into m16n8k32.s8 (attn_prefill_s8.cuh). PV is unchanged.
+constexpr int32_t kAttn3PrefillS8 = 1 << 3;
+constexpr int32_t kAttn1KnownBits = kAttn1Tile48 | kAttn1MmaMask | kAttn3PrefillS8;
 // Returns the previous mode; a mode with unknown bits or an MMA mode the
 // library does not have is refused (-1, mode unchanged).
 int32_t set_attn1_mode(int32_t mode);

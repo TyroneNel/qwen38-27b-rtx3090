@@ -14,6 +14,9 @@
 // decode kernel (NT = 5, 6) instead of the padded 64-row tile. The attn-1
 // MMA modes (AttnLaunch::mma != 0) change the decode kernel only; their
 // instantiations are instantiate_d256_attn1.cu.
+//
+// attn-3 (opt-in, AttnLaunch::prefill_s8): the 16-row-tile launches take the
+// int8-QK kernel of instantiate_d256_attn3.cu instead.
 
 #include "attn_decode.cuh"
 
@@ -24,7 +27,10 @@ cudaError_t launch_attn_d256(const AttnLaunch& L, cudaStream_t stream) {
     if (L.mma != kDecMmaF32) return launch_attn_d256_attn1(L, stream);
     return launch_dec<256>(L, stream);
   }
-  if (L.wm == 4) return launch_attn_wm<256, 4>(L, stream);
+  if (L.wm == 4) {
+    if (L.prefill_s8) return launch_attn_d256_attn3(L, stream);
+    return launch_attn_wm<256, 4>(L, stream);
+  }
   return cudaErrorInvalidValue;
 }
 

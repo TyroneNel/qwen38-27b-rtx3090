@@ -396,12 +396,32 @@ __device__ __forceinline__ void run_producer_warp(
   }
 }
 
+// attn-3 (opt-in, AttnLaunch::prefill_s8): QK on int8. Both helpers are
+// defined in attn_decode.cuh (stage_q_s8, attn-1 stage 3's Q staging, reused
+// as is) and attn_prefill_s8.cuh (qk_subtile_s8); only the kernels of
+// instantiate_d256_attn3.cu instantiate attn_fwd_body with kQkS8 = true.
+template <int D, int kRows, typename QT>
+__device__ __forceinline__ void stage_q_s8(const KernelParams& p,
+                                           const RowTile& rt, int32_t kvh,
+                                           uint8_t* smem_q, float* row_factor,
+                                           int warp, int lane);
+template <int D, int SUB, class R>
+__device__ __forceinline__ void qk_subtile_s8(float (&s)[SUB / kMmaN][4],
+                                              uint32_t q_smem,
+                                              uint32_t stage_smem, int t0,
+                                              int row0, int lane);
+
 // kWindow: the sliding-window / non-causal variant. false
 // compiles to the causal kernel exactly (every window branch is
 // `if constexpr`); true exists only where it is instantiated
 // (attn_fwd_window_kernel: D = 128, separate streams).
-template <int D, int WM, int SUB, typename QT, bool kCell, bool kWindow = false>
+// kQkS8 (attn-3): Q staged as int8 (stage_q_s8) and S = Q8 K^T on
+// m16n8k32.s8 (qk_subtile_s8); false compiles to the shipped kernel exactly.
+template <int D, int WM, int SUB, typename QT, bool kCell, bool kWindow = false,
+          bool kQkS8 = false>
 __device__ __forceinline__ void attn_fwd_body(const AttnParams& ap) {
+  static_assert(!kQkS8 || (!kWindow && D == 256),
+                "attn-3 int8 QK: the causal D = 256 kernel only");
   static_assert(!kWindow || (!kCell && kAttnProducerWarps<D> == 0),
                 "windowed kernels: separate streams, no producer warps");
   using TT = AttnGeometry<D, WM, SUB>;
@@ -464,7 +484,13 @@ __device__ __forceinline__ void attn_fwd_body(const AttnParams& ap) {
   }
 
   float* row_factor = reinterpret_cast<float*>(smem + Sm::kRowFactor);
-  stage_q<D, WM * kMmaM, QT>(p, rt, kvh, smem + Sm::kQ, row_factor, warp, lane);
+  if constexpr (kQkS8) {
+    stage_q_s8<D, WM * kMmaM, QT>(p, rt, kvh, smem + Sm::kQ, row_factor, warp,
+                                  lane);
+  } else {
+    stage_q<D, WM * kMmaM, QT>(p, rt, kvh, smem + Sm::kQ, row_factor, warp,
+                               lane);
+  }
   consumer_sync<kProducers>();
 
   const int g = frag_g(lane), q = frag_q(lane);
@@ -516,8 +542,13 @@ __device__ __forceinline__ void attn_fwd_body(const AttnParams& ap) {
       const int t0 = warp_n * TT::kTokensPerWarp + sub * SUB;
       const int32_t abs0 = i * kLoadTileTokens + t0;
       float s[kNt][4];
-      qk_subtile<D, SUB, R>(s, smem_base + Sm::kQ, stage, t0, warp_m * kMmaM,
-                            lane);
+      if constexpr (kQkS8) {
+        qk_subtile_s8<D, SUB, R>(s, smem_base + Sm::kQ, stage, t0,
+                                 warp_m * kMmaM, lane);
+      } else {
+        qk_subtile<D, SUB, R>(s, smem_base + Sm::kQ, stage, t0,
+                              warp_m * kMmaM, lane);
+      }
   #pragma unroll
       for (int n = 0; n < kNt; ++n) {
         const float2 k2 =
@@ -700,6 +731,9 @@ struct AttnLaunch {
   // attn-1 experiment flags (attn_launch.h attn1_mode(); false = shipped).
   bool tile48;      // D = 256: 33..48 rows on the decode kernel (NT 5, 6)
   int32_t mma;      // decode kernel MMA mode (attn_decode.cuh DecMma), 0 = fp32
+  // attn-3 (attn_launch.h kAttn3PrefillS8; false = shipped): int8 QK in the
+  // D = 256 64-row-tile kernel (instantiate_d256_attn3.cu).
+  bool prefill_s8;
 };
 
 // The whole-cell loader exists where it fits next to the kernel's
@@ -774,6 +808,9 @@ cudaError_t launch_attn_wm(const AttnLaunch& L, cudaStream_t stream) {
 cudaError_t launch_attn_d64(const AttnLaunch& L, cudaStream_t stream);
 cudaError_t launch_attn_d128(const AttnLaunch& L, cudaStream_t stream);
 cudaError_t launch_attn_d256(const AttnLaunch& L, cudaStream_t stream);
+// attn-3 (instantiate_d256_attn3.cu): the int8-QK twin of the D = 256
+// 64-row-tile launch.
+cudaError_t launch_attn_d256_attn3(const AttnLaunch& L, cudaStream_t stream);
 
 #endif  // __CUDACC__
 

@@ -15,9 +15,10 @@ no vLLM file changes, and `patches/check_vllm_series.sh` is untouched by it.
 commit: the extension's translation units, every header they include, and the `pth_flash_attn` package,
 with the test-only handshake hooks stripped (upstream's `tools/prove_export_sass.sh` proves the stripped copy
 compiles to the same SASS). `setup.py`, `pyproject.toml`, `tools/build_flags.py`, `LICENSE` and `NOTICE` are
-the files at that commit, unchanged. `SHA256SUMS` lists all 36 files (32 vendored, plus attn-1's
-`csrc/pth_attn/instantiate_d256_attn1.cu` and attn-2's three KVarN sources; see the attn-1 and attn-2 sections
-below); the files are never edited here.
+the files at that commit, unchanged. `SHA256SUMS` lists all 38 files (32 vendored, plus attn-1's
+`csrc/pth_attn/instantiate_d256_attn1.cu`, attn-2's three KVarN sources and attn-3's
+`csrc/pth_attn/attn_prefill_s8.cuh` and `csrc/pth_attn/instantiate_d256_attn3.cu`; see the attn-1 and attn-2
+sections below); the files are never edited here.
 
 Source rather than a prebuilt `.so`: the same reasoning as #153, where a binary was declined in favour of a
 source port CI can check. `bash pthfa/check_vendor.sh` checks the files against `SHA256SUMS` and that nothing
@@ -64,6 +65,12 @@ kernels. `pth_flash_attn.ops` reads the environment once at import and sets the 
   Only launches on the decode kernel (D = 256 and at most 32 rows, or 48 with `PTHFA_TILE48=1`) change; the
   variants are `csrc/pth_attn/instantiate_d256_attn1.cu`. `bench/test_pthfa_attn.py` has the re-derived bound
   (stage 2) and the error statistics (stage 3).
+- `PTHFA_PREFILL_QK=f16|s8` (attn-3, default `f16`, lossy): `s8` runs QK on int8 in the D = 256 64-row-tile kernel
+  (the prefill launches of the target's full-attention layers, and any verify of more than 32 rows, 48 with
+  `PTHFA_TILE48=1`): Q rows quantised by their absmax as in stage 3, the cache's int8 K fed as is to
+  `m16n8k32.s32.s8.s8.s32`, PV unchanged. Mode bit `ops.ATTN3_PREFILL_S8`, kernel
+  `csrc/pth_attn/attn_prefill_s8.cuh`, instantiations `csrc/pth_attn/instantiate_d256_attn3.cu`; the test is
+  `bench/test_pthfa_attn.py` (section 5 and the int8-Q reference), the timing `bench/pthfa_prefill_bench.py`.
 
 ## attn-2 build flag (research/deepinfer): KVarN verify
 

@@ -360,14 +360,22 @@ def is_available() -> bool:
 #                   row quantised by its absmax (stage 3, lossy). Applies to
 #                   launches on the decode kernel: <= 32 rows, or <= 48 rows
 #                   with PTHFA_TILE48=1.
+#   PTHFA_PREFILL_QK=f16|s8
+#                   attn-3 (attention-kv.md, attn-3): s8 = QK on int8 in the
+#                   D = 256 64-row-tile kernel (the prefill launches, and any
+#                   verify of more than 32 rows, 48 with PTHFA_TILE48=1), each
+#                   Q row quantised by its absmax, the cache's int8 K read as
+#                   is (lossy). f16 (default) = the shipped kernel.
 ATTN1_TILE48 = 1
 ATTN1_MMA_SHIFT = 1
 ATTN1_MMA_MODES = {"f32": 0, "pv16": 1, "s8pv16": 2}
 ATTN1_PV16 = ATTN1_MMA_MODES["pv16"] << ATTN1_MMA_SHIFT
 ATTN1_S8PV16 = ATTN1_MMA_MODES["s8pv16"] << ATTN1_MMA_SHIFT
-_ATTN1_KNOWN_BITS = ATTN1_TILE48 | (3 << ATTN1_MMA_SHIFT)
-# Arm names for benchmarks and tests ("base", "tile48", "pv16", "s8pv16", joined with "+").
-ATTN1_ARMS = {"base": 0, "tile48": ATTN1_TILE48, "pv16": ATTN1_PV16, "s8pv16": ATTN1_S8PV16}
+ATTN3_PREFILL_S8 = 1 << 3
+_ATTN1_KNOWN_BITS = ATTN1_TILE48 | (3 << ATTN1_MMA_SHIFT) | ATTN3_PREFILL_S8
+# Arm names for benchmarks and tests ("base", "tile48", "pv16", "s8pv16", "prefill_s8", joined with "+").
+ATTN1_ARMS = {"base": 0, "tile48": ATTN1_TILE48, "pv16": ATTN1_PV16, "s8pv16": ATTN1_S8PV16,
+              "prefill_s8": ATTN3_PREFILL_S8}
 
 
 def attn1_mma(mode: int) -> str:
@@ -392,6 +400,11 @@ def attn1_mode_from_env(environ=os.environ) -> int:
     if mma not in ATTN1_MMA_MODES:
         raise ValueError(f"PTHFA_MMA must be one of {'|'.join(ATTN1_MMA_MODES)}, got {mma!r}")
     mode |= ATTN1_MMA_MODES[mma] << ATTN1_MMA_SHIFT
+    pqk = environ.get("PTHFA_PREFILL_QK", "").strip() or "f16"
+    if pqk not in ("f16", "s8"):
+        raise ValueError(f"PTHFA_PREFILL_QK must be f16 or s8, got {pqk!r}")
+    if pqk == "s8":
+        mode |= ATTN3_PREFILL_S8
     return mode
 
 

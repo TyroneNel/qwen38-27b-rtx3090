@@ -191,6 +191,7 @@ int32_t build(const PthAttnArgs& a, int32_t loader, AttnLaunch* L) {
   const int32_t attn1 = g_attn1_mode.load(std::memory_order_relaxed);
   L->tile48 = (attn1 & pth_attn::kAttn1Tile48) != 0;
   L->mma = (attn1 & pth_attn::kAttn1MmaMask) >> pth_attn::kAttn1MmaShift;
+  L->prefill_s8 = (attn1 & pth_attn::kAttn3PrefillS8) != 0;
   L->q_dtype = a.q_dtype;
   const int32_t tiles =
       a.num_q_tiles > 0 ? a.num_q_tiles : a.num_tokens / a.bq + a.num_reqs;

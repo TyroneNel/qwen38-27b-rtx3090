@@ -59,6 +59,8 @@ EXTENSION_SOURCES: tuple[str, ...] = (
     "csrc/pth_attn/instantiate_d256.cu",
     # attn-1 MMA modes of the D = 256 decode kernel (docs/research/deepinfer, opt-in at run time).
     "csrc/pth_attn/instantiate_d256_attn1.cu",
+    # attn-3 int8-QK 64-row-tile kernel at D = 256 (docs/research/deepinfer, opt-in at run time).
+    "csrc/pth_attn/instantiate_d256_attn3.cu",
 )
 
 # attn-2 (docs/research/deepinfer/attention-kv.md): KVarN's uniform verify kernel and its op
