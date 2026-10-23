@@ -130,7 +130,7 @@ E's 67 tok/s was measured at `--ctx 20000`: 3.15 tokens per step, so about 47 ms
 
 ### attn-3: int8-QK prefill on the quantized-KV arms
 
-**Measured (2026-10-22):** WIN in mode D (`PTHFA_PREFILL_QK=s8`): cold TTFT −8.9% at 148k and −7.5% at 112k, with KL, perplexity, GSM8K and needle unchanged; mode E runs pending. [gpu-results/attn-3.md](gpu-results/attn-3.md)
+**Measured (2026-10-23):** WIN in D (`PTHFA_PREFILL_QK=s8`: cold TTFT −8.9% at 148k, −7.5% at 112k) and E (`KVARN_PREFILL_INT8=1`: −7.1% at 148k, −5.5% at 112k), with KL, perplexity, GSM8K and needle unchanged in both. [gpu-results/attn-3.md](gpu-results/attn-3.md)
 
 Not a DeepInfer idea; it applies attn-1's reasoning to prefill.
 - **HyperQwen.** `PREFILL_ATTN=int8` is bf16-arm-only and "falls through to FA2 otherwise" (`docs/optimizations.md:171`). The int8 Triton arm takes "251 s to load a 112k document against FLASH_ATTN's ~112 s" (`start_qwen.sh:232`).

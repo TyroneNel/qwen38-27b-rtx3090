@@ -2,12 +2,12 @@
 
 | Field | Value |
 |---|---|
-| Date | 2026-10-22 21:17–23:35 SAST (mode D); mode E queued |
-| Commit | `906aedf` + working-tree pthfa (new `attn_prefill_s8.cuh`, `instantiate_d256_attn3.cu`, a mode bit in `attn_launch.*`, `ops.py` knob; patch copy `G:\dev\hq-results\deepinfer-20261020\attn-3\attn3-pthfa.patch`), `bench/ttft_cold.py`, `bench/pthfa_prefill_bench.py`; mode E: `experiments/patches/attn3-kvarn-int8qk.patch` |
+| Date | 2026-10-22 21:17–23:35 SAST (mode D); 2026-10-23 14:54–17:05 SAST (mode E) |
+| Commit | pthfa source `b6ee607` (was the working tree at run time) (new `attn_prefill_s8.cuh`, `instantiate_d256_attn3.cu`, a mode bit in `attn_launch.*`, `ops.py` knob; patch copy `G:\dev\hq-results\deepinfer-20261020\attn-3\attn3-pthfa.patch`), `bench/ttft_cold.py`, `bench/pthfa_prefill_bench.py`; mode E: `experiments/patches/attn3-kvarn-int8qk.patch` |
 | Image | `hq:exp-attn3` (`Dockerfile.patch` on `hq:exp-pthfa-attn3`, itself `Dockerfile.pthfa` from the working tree), on `ghcr.io/syv-ai/hyperqwen:latest` `sha256:0cf71b42d301…` (main `ce9615c`). Rebuilt mid-run (`0c7b24801c88…` → `9ce0fdcc6dd6…`) for the mode E fix only; the D path is unchanged. |
 | GPU | RTX 3090, 250 W enforced, driver 610.88; busy median SM clock 1365–1395 MHz |
 | Knobs (default off) | D: `PTHFA_PREFILL_QK=s8`. E: `KVARN_PREFILL_INT8=1`. |
-| Spill | All four TTFT boots: PCIe job-window median 20–23 MB/s, no second above 500 MB/s |
+| Spill | All eight TTFT boots (D and E): PCIe job-window median 20–24 MB/s, no second above 500 MB/s. Mode E runs on the spill-free pool (`KV_MEM=4000000000 DFLASH_MAX_LEN=180224`). |
 | Raw data | `G:\dev\hq-results\deepinfer-20261020\attn-3\` (`test_*`, `D_{base,s8}_{kl,q}`, `D_{base,s8}_ttft_{1,2}`) |
 
 ## What it is
@@ -39,9 +39,28 @@ The appendix bar is ≥ 5% TTFT on the D arm. 51k narrowly misses (−4.5%); 112
 
 KL is within the ≤ 2× gate, and perplexity, GSM8K and needle are unchanged.
 
-## Verdict (mode D)
+## Mode E (`SPEC=dflash2 CTX=huge`, `KVARN_PREFILL_INT8=1`): every chunk after the first runs a SageAttention-style int8-QK kernel on the rebuilt fp16 context instead of FA2
 
-**WIN** for D: −8.9% cold TTFT at 148k and −7.5% at 112k (bar ≥ 5%), with no quality cost. Mode E (`KVARN_PREFILL_INT8=1`, which swaps the FA2 call on the rebuilt fp16 context for a SageAttention kernel) failed its first unit test on shared memory (131,592 B against sm86's 101,376). The fix (2 pipeline stages, 82,436 B) is queued for its test, KL, quality and TTFT runs.
+Cold TTFT, two boots per arm (`bench/ttft_cold.py`, 2 reps each):
+
+| Prompt | Stock | int8-QK prefill | Change |
+|---|---|---|---|
+| 51,200 | 56.2 / 56.9 s | 55.0 / 55.0 s | −2.7% |
+| 112,000 | 151.3 / 152.4 s | 143.6 / 143.4 s | **−5.5%** |
+| 148,000 | 220.8 / 221.6 s | 205.6 / 205.2 s | **−7.1%** |
+
+| Check (numerics boots) | Stock | int8-QK prefill |
+|---|---|---|
+| decode KL k3, 4k / 16k | 1.12e-3 / 7.49e-4 | 8.15e-4 / 6.42e-4 |
+| perplexity, all | 8.4016 | 8.4025 (+0.01%) |
+| GSM8K greedy / seed 1, n=200 each | 0.970 / 0.930 | 0.965 / 0.935 |
+| needle at 100k, depths 0.1 / 0.5 / 0.9 | 3/3 | 3/3 |
+
+The int8 arm uses 1.2 GiB more VRAM at peak (23,786 vs 22,544 MiB, 790 MiB headroom on the spill-free pool), which stayed spill-free here. Its unit test (`bench/test_kvarn_int8qk.py`) fails one case on its minimum-cosine cut (see below); the end-to-end gates above are the ones that count.
+
+## Verdict
+
+**WIN** in both modes. D: −8.9% cold TTFT at 148k, −7.5% at 112k. E: −7.1% at 148k, −5.5% at 112k. Bar ≥ 5% (stated for D). KL, perplexity, GSM8K and needle are unchanged in both. Below ~50k the gain is under 5%.
 
 ## Microbenchmark (`bench/pthfa_prefill_bench.py`, mode D shape, ms per layer-chunk of 2,048 query rows)
 
