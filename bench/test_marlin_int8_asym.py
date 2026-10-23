@@ -5,7 +5,8 @@ path on the same packed weights, at the shapes this checkpoint uses.
 
 Exit 0 when the int8 path is within 5% of the float reference at every shape (measured:
 0.9-1.05% on an RTX 3090, the W4A16 path 0.26%). Needs patches/marlin-int8-asym-zp.patch;
-without it the int8 arm dies with "W8A8 is not supported by marlin kernel".
+without it the int8 arm dies with "W8A8 is not supported by marlin kernel". Exit 2 (skip)
+without a CUDA device.
 
 Builds a random asymmetric int4 g128 weight in the compressed-tensors pack-quantized
 layout (signed nibbles, +8 offset on packing, zero points packed along the output
@@ -21,6 +22,10 @@ from compressed_tensors.compressors.pack_quantized.base import pack_to_int32
 
 dev = "cuda"
 GROUP = 128
+
+if not torch.cuda.is_available():
+    print("SKIP: no CUDA device (GPU test)", flush=True)
+    sys.exit(2)
 
 # vLLM's parameter classes ask for the TP rank at construction: bring up a 1-process group
 # under a default VllmConfig, the way vLLM's own kernel tests do.
@@ -55,11 +60,11 @@ def make_layer(K, N, act_type, seed):
                                                   packed_dim=0, packed_factor=8, weight_loader=wl)
     cfg = MPLinearLayerConfig(full_weight_shape=(K, N), partition_weight_shape=(K, N),
                               weight_type=scalar_types.uint4, act_type=act_type,
-                              group_size=GROUP, zero_points=True, has_g_idx=False)
+                              group_size=GROUP, zero_points=True)
     ok, why = MarlinLinearKernel.can_implement(cfg)
     assert ok, why
     k = MarlinLinearKernel(cfg, w_q_param_name="weight_packed", w_s_param_name="weight_scale",
-                           w_zp_param_name="weight_zero_point", w_gidx_param_name="weight_g_idx")
+                           w_zp_param_name="weight_zero_point")
     k.process_weights_after_loading(layer)
     return layer, k, deq.to(dev)
 

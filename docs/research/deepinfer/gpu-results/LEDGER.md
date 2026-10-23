@@ -40,7 +40,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
 | quant-1 | Per-128 int8 activation scales, route A (Humming) | quant-1-calib, evals-1 | done | LOSS | Humming int8 g128 at 0.26–0.41× of Marlin W4A8 at decode M≤64; +19% only at prefill M≥256; flag falls back to W4A16 | [quant-1.md](quant-1.md) |
-| quant-2 | Lossless negative-scale fold, fix A | quant-2-check shows negative groups use −8 | running | | ppl −1.0% (8.583 → 8.498, mode A); tests bit-exact; throughput −1.2% measured after a spilling ppl pass, spill-free re-run queued (see STATE.md) | |
+| quant-2 | Lossless negative-scale fold, fix A | quant-2-check shows negative groups use −8 | done | LOSS (against the bar) | perplexity −1.0% (8.583 → 8.498, mode A), remap bit-exact; throughput −1.0 / −6.4 / −1.4% in 3 spill-free rounds (bar within 1%); remap runs ~3% lower clock at the 250 W cap | [quant-2.md](quant-2.md) |
 | quant-7 | int4 embedding where `EMBED_UVA` can't be used | evals-1 | done | WIN (capacity) | KV pool +8.0% in D (207k → 224k), +16% in E (183k → 212k); PPL +0.14%, GSM8K PASS; decode −0.5 to −2% (drafter acceptance −1%), spill-free | [quant-7.md](quant-7.md) |
 | quant-5 | Batch-mode lm_head as W4A8 | evals-1 | done | NEUTRAL | mode A 64-conc: +0.9 / +0.8 / −0.7% in 3 spill-free rounds (bar +2–3%); PPL −0.19%, GSM8K PASS | [quant-5.md](quant-5.md) |
 | spec-0 | `DFLASH_TOKENS=3/5/7` ladder at 90k, 150k, 240k | runtime-2 | done | WIN | `DFLASH_TOKENS=3` vs 7 on E: +65% @90k, +56% @150k, +70% @235k (16.1 vs 9.5 tok/s); spill-free re-check +54% @150k; at 20k +7.8% total but copy −36%, code −11%; with attn-2 only +9% @170k | [spec-0.md](spec-0.md) |

@@ -107,6 +107,8 @@ The synthetic Hessian has strong outlier channels, which flatters act-order. Exp
 
 **Measured (2026-10-20):** INFO, check (b) confirmed on the real checkpoint: 50.4% of groups have a negative scale and 100% of those use code −8; the fold adds 0.069% of weight energy as error. [gpu-results/quant-2-check.md](gpu-results/quant-2-check.md)
 
+**Measured (2026-10-23):** LOSS against the bar: fix A recovers 1.0% perplexity in mode A (8.583 → 8.498, remap bit-exact), but zero-point-path throughput is −1.4% median over 3 spill-free rounds (bar: within 1%), with ~3% lower clock at the power cap. Fix B (kernel rebuild) untried. [gpu-results/quant-2.md](gpu-results/quant-2.md)
+
 - **HyperQwen.** `patches/marlin-int8-negative-scales.patch:36-38`: negative scales are common ("symmetric exports have ~50%"), so the patch folds the sign into the codes, and says "q == -8 loses one LSB, extremely rare". The underlying cause is that the kernel reads int16 scales as `uint16_t` (`marlin_template.h:1132-1136`).
 - **Gap.** If check (b)'s reconstruction is right, the fold hits about half of all groups, always on the largest weight, adding +5–9% weight-error energy on every INT8_ACT layer. `bench/act_calib.py` can't see this: it measures activation error on W4A16 kernels. So some of the measured INT8_ACT perplexity cost may be this fold rather than int8 activations **(inferred, size unknown)**.
 - **Fix A (load-time Python, no rebuild).** Keep the codes and emit a uint4-plus-zero-point layer: positive groups get zp 8; negative groups get code′ = 15 − code, zp 7 and |s|. Bit-exact in the CPU check. It runs on the `kS8 × kU4` kernel that `patches/marlin-int8-asym-zp.patch` already compiles and admits.

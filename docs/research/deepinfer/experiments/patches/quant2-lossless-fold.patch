@@ -1,0 +1,164 @@
+quant-2 fix A (docs/research/deepinfer/quant-heads.md): make the negative-scale
+fold of patches/marlin-int8-negative-scales.patch lossless, behind
+VLLM_MARLIN_INT8_LOSSLESS_FOLD=1 (default off = the existing fold, unchanged).
+
+The W4A8-INT8 Marlin kernel reads group scales as unsigned, so the fold maps a
+negative group (s, code v) to (-s, 16 - v clamped to 15): code 0 (q = -8)
+becomes 15 and loses one LSB. On the AutoRound body 50.4% of groups are negative
+and all of them use code 0 (gpu-results/quant-2-check.md). With the knob on, a
+layer with any negative group instead loads as a uint4 zero-point layer on the
+kS8 x kU4 kernel that patches/marlin-int8-asym-zp.patch admits: positive groups
+keep their codes with zp 8, negative groups get code' = 15 - v, zp 7, |s|.
+(code' - zp) * |s| == (v - 8) * s for all 16 codes, so the dequant is
+bit-exact. Layers without negative scales stay on the uint4b8 kernel.
+
+Adds VLLM_MARLIN_INT8_LOSSLESS_FOLD to envs.py (hashed into the torch.compile
+cache key: it changes the traced weight-type id). Needs the image's
+marlin-int8-negative-scales and marlin-int8-asym-zp patches (applied in the
+published image). Test: bench/test_marlin_int8_fold.py.
+
+Apply: patch -p1 --forward --fuzz 0 -d /app/venv/lib/python3.12/site-packages/vllm < quant2-lossless-fold.patch
+
+--- a/envs.py
++++ b/envs.py
+@@ -231,6 +231,7 @@
+     VLLM_MAMBA_ALIGN_KEEP_CHECKPOINTS: bool = False
+     VLLM_DRAFT_TEMP_SCALE: float = 1.0
+     VLLM_MARLIN_REPACK_STAGED: str | None = None
++    VLLM_MARLIN_INT8_LOSSLESS_FOLD: bool = False
+     KVARN_POW2_SLOT: bool = False
+     KVARN_POOL_MEM_FRAC: str | None = None
+     KVARN_FA_SCRATCH_CAP: str | None = None
+@@ -1667,6 +1668,9 @@
+     "VLLM_DRAFT_TEMP_SCALE": lambda: float(os.environ.get("VLLM_DRAFT_TEMP_SCALE", "1.0")),
+     # Marlin repack staging buffer, opt-in: "1" turns it on (GA100 mining cards); unset or anything else = off
+     "VLLM_MARLIN_REPACK_STAGED": lambda: os.environ.get("VLLM_MARLIN_REPACK_STAGED"),
++    # Marlin W4A8-INT8, negative group scales: "1" remaps them losslessly onto the
++    # zero-point (kS8 x kU4) kernel instead of folding the sign into the codes (quant-2)
++    "VLLM_MARLIN_INT8_LOSSLESS_FOLD": lambda: os.environ.get("VLLM_MARLIN_INT8_LOSSLESS_FOLD", "0") == "1",
+     # KVarN KV cache (kvarn/, Huawei CSL naming kept): the knobs its modules read. None-typed ones keep
+     # "unset" distinct from a value because the readers branch on presence.
+     "KVARN_POW2_SLOT": lambda: os.environ.get("KVARN_POW2_SLOT", "0") == "1",
+--- a/model_executor/kernels/linear/mixed_precision/marlin.py
++++ b/model_executor/kernels/linear/mixed_precision/marlin.py
+@@ -3,8 +3,11 @@
+ 
+ 
+ 
++import dataclasses
++
+ import torch
+ 
++from vllm.logger import init_logger
+ import vllm.envs as envs
+ from vllm import _custom_ops as ops
+ from vllm.model_executor.layers.quantization.utils.marlin_utils import (
+@@ -70,6 +73,33 @@
+     return view
+ 
+ 
++def lossless_fold_remap(
++    q: torch.Tensor, s: torch.Tensor, group_size: int
++) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
++    """(quant-2) Lossless alternative to the negative-scale sign fold.
++
++    q: uint4b8 codes packed 8 per int32 along K, [K/8, N]; s: group scales
++    [K/G, N], some negative. Returns (q', |s|, zp) for the uint4 zero-point
++    kernel, zp unpacked int32 [K/G, N]: positive groups keep their codes with
++    zp 8, negative groups get code' = 15 - code with zp 7, so
++    (code' - zp) * |s| == (code - 8) * s for every code, -8 included.
++    """
++    neg = s < 0
++    neg_rows = neg.repeat_interleave(group_size // 8, dim=0)[: q.shape[0]]
++    shifts = torch.arange(0, 32, 4, device=q.device, dtype=torch.int32)
++    nib = (q.unsqueeze(-1) >> shifts) & 0xF
++    nib = torch.where(neg_rows.unsqueeze(-1), 15 - nib, nib)
++    out = torch.zeros_like(q)
++    for i in range(8):
++        out |= nib[..., i] << (4 * i)
++    del nib
++    zp = 8 - neg.to(torch.int32)
++    return out, s.abs(), zp
++
++
++_LOSSLESS_FOLD_LOGGED = False
++
++
+ from .MPLinearKernel import MPLinearKernel, MPLinearLayerConfig
+ 
+ 
+@@ -136,6 +166,7 @@
+         # symmetric exports have ~50%) produce garbage. Fold the sign into the
+         # int4 codes: s -> -s, q -> -q (uint4b8 code v -> 16 - v, clamped to 15;
+         # v == 0 i.e. q == -8 loses one LSB, extremely rare).
++        _lossless_zp = None
+         if (
+             c.act_type == torch.int8
+             and c.group_size != -1
+@@ -146,7 +177,30 @@
+             permute_param_layout_(_wq, input_dim=0, output_dim=1, packed_dim=0)
+             permute_param_layout_(_ws, input_dim=0, output_dim=1)
+             _neg = _ws.data < 0
+-            if bool(_neg.any()):
++            if (
++                envs.VLLM_MARLIN_INT8_LOSSLESS_FOLD
++                and c.weight_type == scalar_types.uint4b8
++                and bool(_neg.any())
++            ):
++                # (quant-2) the fold drops an LSB on every negative group that
++                # uses code -8 (all of them on AutoRound exports): remap instead
++                # onto the uint4 zero-point kernel (kS8 x kU4), bit-exact.
++                _wq.data, _ws.data, _lossless_zp = lossless_fold_remap(
++                    _wq.data, _ws.data, c.group_size
++                )
++                c = self.config = dataclasses.replace(
++                    c, weight_type=scalar_types.uint4, zero_points=True
++                )
++                if self.w_zp_name is None:
++                    self.w_zp_name = "w_zp"
++                global _LOSSLESS_FOLD_LOGGED
++                if not _LOSSLESS_FOLD_LOGGED:
++                    _LOSSLESS_FOLD_LOGGED = True
++                    init_logger(__name__).info(
++                        "VLLM_MARLIN_INT8_LOSSLESS_FOLD=1: negative-scale int4 "
++                        "layers load as uint4 + zero points (kS8 x kU4)"
++                    )
++            elif bool(_neg.any()):
+                 _q = _wq.data
+                 _rows_per_group = c.group_size // 8
+                 _neg_rows = _neg.repeat_interleave(_rows_per_group, dim=0)[: _q.shape[0]]
+@@ -238,7 +292,33 @@
+                 layer.input_global_scale = None
+             return x
+ 
+-        if c.zero_points:
++        if _lossless_zp is not None:
++            # zero points [K/G, N] (unpacked), as the branch below produces
++            # them from a checkpoint's packed weight_zero_point
++            if hasattr(layer, self.w_zp_name):
++                delattr(layer, self.w_zp_name)
++            layer.register_parameter(
++                self.w_zp_name,
++                torch.nn.Parameter(
++                    marlin_zero_points(
++                        marlin_pad_scales(
++                            _lossless_zp,
++                            size_n,
++                            size_k,
++                            padded_n,
++                            padded_k,
++                            c.group_size,
++                        ),
++                        size_k=padded_k // c.group_size,
++                        size_n=padded_n,
++                        num_bits=c.weight_type.size_bits,
++                        is_a_8bit=is_a_8bit,
++                    ),
++                    requires_grad=False,
++                ),
++            )
++            del _lossless_zp
++        elif c.zero_points:
+             grouped_k = size_k // c.group_size if c.group_size != -1 else 1
+             padded_grouped_k = padded_k // c.group_size if c.group_size != -1 else 1
+             self._transform_param(
