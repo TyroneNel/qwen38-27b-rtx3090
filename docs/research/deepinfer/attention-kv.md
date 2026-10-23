@@ -140,6 +140,8 @@ Not a DeepInfer idea; it applies attn-1's reasoning to prefill.
 
 ### attn-4: training-free top-k sparse attention (DSA-lite)
 
+**Measured (2026-10-23):** NO-GO (offline study at 128k): attention is diffuse; the top 10% of pages capture 0.34–0.85 of the mass with the bounds selector and 0.61–0.94 even with oracle selection, against the 0.99 gate in every layer. No kernel. [gpu-results/attn-4.md](gpu-results/attn-4.md)
+
 - **DeepInfer.** A lightning indexer `relu(q@k)·weights` on FP4 index keys (`DeepInfer/deepinfer/model_executor/v4_modules/index_attn.py:57`), top-k through DeepSelect (`index_attn.py:12`), candidate-block pre-selection (`index_attn.py:19-22, 97-102`), cross-layer sharing of KV, index-K and top-k (`v4_modules/cross_layer.py:22-38`), and sparse decode via `indices` (`layers/attention_backend.py:77-137`).
 - **HyperQwen.** Dense everywhere.
 - **Training-free only with a proxy selector**, e.g. per-page min/max bounds over 64-token pages: 16 B/token/head, against 210 for KVarN and 520 for int8 **(inferred)**. DSA's indexer is trained; the DeepSeek-V3.2 report (not in these repos, quoted from memory) uses a dense KL warm-up of about 2B tokens and then about 0.94T tokens of sparse training. The warm-up alone is about 1.1e20 forward FLOPs, about 21 days on one 3090 **(inferred)**.
