@@ -133,6 +133,8 @@ DFlash2's 2:1 loss on QA-type work at 112k then splits into: about 4 extra verif
 
 ### drafter-2: offline drafter gate (DeepSpec's eval metrics)
 
+**Measured (2026-10-23):** INFO: the gate works (W4A16 reproduces 3.145 sampling / 3.295 greedy, negative control 1.04, repeat spread 0.21%). The bf16 "3.4 vs 3.2" gap does not reproduce: paired on one capture, W4A16 costs 0.6% tau_chain at default sampling and 0.3% greedy; the published bf16 numbers were single unpaired live runs inside ±5% run noise. [gpu-results/drafter-2.md](gpu-results/drafter-2.md)
+
 - **DeepSpec.** Per-position `accept_rate = 1 − TV(p_draft, p_target)` and the analytic `tau_prob = 1 + Σ_k Π_{j≤k} accept_rate_j` (`DeepSpec/deepspec/modeling/dspark/loss.py:46-70`), plus acceptance length and accept-rate@position (`DeepSpec/deepspec/eval/base_evaluator.py`).
 - **HyperQwen today.** Drafter decisions are made on 8 prompts × 1k tokens. The spread is ±3% greedy, wider for DFlash2 (3.1–3.6 tok/step across configs), and ±5% per run at default sampling (`drafter/README.md:116-120`). The context-KV Hessian blend nearly shipped at 7% worse because one default-sampling run looked equal (`drafter/README.md:95-99`). `train_mtp.py --eval-only` has a greedy chain simulation, but for MTP only (`drafter/README.md:36-37`).
 - **The gap.** No expected-acceptance metric for DFlash2 at default sampling, which is where the int4 loss lives.

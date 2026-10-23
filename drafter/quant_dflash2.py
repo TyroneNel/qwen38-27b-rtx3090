@@ -3,8 +3,15 @@ to W4A16 compressed-tensors (Marlin) with GPTQ, calibrated on Hessians captured 
 capture_dflash2.py from the drafter's own inputs on real traffic.
 
   python drafter/quant_dflash2.py <src_dir> <dst_dir> <hessians.pt> [--bits 4] [--fc-bits 4|8|16] [--rtn]
+                                  [--signed-scale] [--mse-clip] [--act-order] [--q3] [--ignore-ctx-kv]
 
-What gets quantized (group 128, symmetric, no act-order so Marlin needs no g_idx):
+--q3 = --signed-scale --mse-clip --act-order (quant-3 in docs/research/deepinfer/quant-heads.md:
+signed +-amax/8 scales, MSE clip, act-order with static groups; see gptq_utils.gptq_quantize).
+Off by default, which reproduces the shipped drafter. The stored layout is unchanged either way.
+--ignore-ctx-kv drops a "ctx_kv" entry from the Hessian file (the shipped drafter was built
+without it; capture_dflash2.py writes it), instead of editing the file.
+
+What gets quantized (group 128, symmetric, no g_idx: act-order, if on, uses static groups):
   layers.N.self_attn.{q,k,v,o}_proj, layers.N.mlp.{gate,up,down}_proj   int4 GPTQ   (1.61B params)
   fc (5120 x 25600, the target-hidden-state projection)                   int4 GPTQ by default (--fc-bits)
 Left in bf16 (vLLM builds them with quant_config=None anyway): the two grouped-conv
@@ -28,6 +35,10 @@ S = sys.argv[1].rstrip("/") + "/"; D = sys.argv[2].rstrip("/") + "/"; HP = sys.a
 BITS = int(sys.argv[sys.argv.index("--bits") + 1]) if "--bits" in sys.argv else 4
 FC_BITS = int(sys.argv[sys.argv.index("--fc-bits") + 1]) if "--fc-bits" in sys.argv else 4
 RTN = "--rtn" in sys.argv
+Q3 = "--q3" in sys.argv
+GPTQ_KW = dict(signed_scale=Q3 or "--signed-scale" in sys.argv, mse_clip=Q3 or "--mse-clip" in sys.argv,
+               act_order=Q3 or "--act-order" in sys.argv)
+print("GPTQ options:", GPTQ_KW)
 GROUP = 128
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -46,6 +57,8 @@ if FC_BITS < 16:
     LIN["fc"] = "fc"
 
 HS = torch.load(HP, map_location="cpu") if not RTN else {}
+if "--ignore-ctx-kv" in sys.argv and HS.pop("ctx_kv", None) is not None:
+    print("ignoring the ctx_kv Hessian (k/v calibrated on the query rows only)")
 with safe_open(S + "model.safetensors", "pt") as f:
     meta = f.metadata()
     tensors = {k: f.get_tensor(k) for k in f.keys()}
@@ -72,7 +85,7 @@ for name, w in tensors.items():
                 nq, Hc, nc = HS[LIN[base]]["n"], HS["ctx_kv"]["H"].to(dev), HS["ctx_kv"]["n"]
                 H = (nq * H + nc * Hc) / (nq + nc)
                 del Hc
-            q, s = gptq_quantize(W, H, bits=bits, group=GROUP, blocksize=GROUP)
+            q, s = gptq_quantize(W, H, bits=bits, group=GROUP, blocksize=GROUP, **GPTQ_KW)
             del H
         rel = ((dequant(q, s) - W.float()).norm() / W.float().norm()).item()
         stats.append((base, bits, rel))

@@ -93,6 +93,17 @@ DRAFT=models/Qwen3.8-27B-DFlash2 $V drafter/capture_dflash2.py --prompts 400 --m
 $V drafter/quant_dflash2.py models/Qwen3.8-27B-DFlash2 models/Qwen3.8-27B-DFlash2-W4A16 drafter/runs/dflash2/hessians.pt
 ```
 
+Research options (off by default; the commands above rebuild the shipped drafter):
+
+- `quant_dflash2.py ... --q3` (= `--signed-scale --mse-clip --act-order`): signed ±amax/8
+  scales, MSE clip and act-order with static groups in `gptq_utils.gptq_quantize`
+  (quant-3 in `docs/research/deepinfer/quant-heads.md`; −50% synthetic output error,
+  `bench/test_gptq_q3.py`). Same stored layout, no `g_idx`; scales may be negative.
+- `train_dflash2_tv.py`: TV-loss repair of the W4A16 drafter's bf16 tensors (convs,
+  selector, norms; int4 linears frozen) against the bf16 drafter on a drafter-2 capture
+  (`capture_dflash2.py --dump-target`, forward in `dflash2_ref.py`); drafter-3 in
+  `docs/research/deepinfer/drafter.md`. `--smoke` runs a CPU self-test.
+
 What the measurements said (8 realistic prompts × 1,024 tokens, fast-variant target):
 
 - int4 GPTQ keeps greedy acceptance (3.34-3.65 vs 3.54 tokens per step for bf16) and loses
@@ -112,6 +123,34 @@ What the measurements said (8 realistic prompts × 1,024 tokens, fast-variant ta
   truncated, so the verify stays lossless — the DFlash2 analogue of the MTP draft
   truncation): +2%, inside the noise; on by default (`VLLM_DFLASH2_DRAFT_TOPK_TOPP=0` off).
 - Relative weight error of the int4 matrices: 0.147 mean (Frobenius), like the MTP module.
+
+## DFlash2 offline gate (`eval_dflash2.py`)
+
+Drafter A/Bs on 8 prompts × 1k tokens sit inside ±3% (greedy) and ±5% (default sampling)
+run noise. `eval_dflash2.py` scores a drafter offline instead, deterministically: one target
+capture, then any number of drafter checkpoints (bf16, the W4A16 requant, a re-requant, a
+repaired one) replayed through a pure-torch DFlash2 forward (`dflash2_ref.py`, a copy of
+vLLM 0.31's `qwen3_dflash{,2}.py` and the selector walk; the W4A16 tensors are dequantized).
+
+```bash
+# 1. capture (GPU, target only, ~10 GB of tap rows): reference responses, greedy and default
+#    sampling, then one prefill per sequence dumping the layer 5/19/33/47/61 hidden states
+#    and the target's top-64 logits for the response and the last 2,047 prompt rows
+MODEL=models/Qwen3.8-27B-W4A16-AutoRound-fast $V drafter/capture_dflash2.py --dump-target drafter/runs/d2cap
+# 2. score (GPU, after the target is gone; ~9 GB for the drafter plus the dequantized heads)
+$V drafter/eval_dflash2.py --capture drafter/runs/d2cap --drafter bf16=models/Qwen3.8-27B-DFlash2 \
+    --drafter w4a16=models/Qwen3.8-27B-DFlash2-W4A16 --out drafter/runs/d2cap-eval.json [--check-known]
+$V drafter/eval_dflash2.py --selftest      # CPU: tiny synthetic drafter, target and capture
+```
+
+Per anchor it computes the acceptance probability of each draft slot against the target
+(Σ min(p, q) at the request's sampling, argmax match at greedy; teacher-forced on the
+reference) and reports per domain × mode `tau_chain`, the expected tokens per verify step of
+the speculative-decoding renewal process (comparable to vLLM's tokens/step), DeepSpec's
+`tau_anchor`, accept@position and a bootstrap CI, plus the paired ratio of every drafter
+against the first. `--check-known` holds bf16 and W4A16 against the numbers above (3.4 /
+3.2 sampling, 3.54 / 3.34–3.65 greedy, ±2%) and runs a negative control. Exit codes follow
+`bench/README.md`.
 
 ## Notes that cost time
 

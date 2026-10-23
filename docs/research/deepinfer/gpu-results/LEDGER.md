@@ -66,7 +66,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 
 | ID | What | Gate | Status | Verdict | Key number | Evidence |
 |---|---|---|---|---|---|---|
-| drafter-2 | Offline DFlash2 gate (`drafter/eval_dflash2.py`) | – | todo | | | |
+| drafter-2 | Offline DFlash2 gate (`drafter/eval_dflash2.py`) | – | done | INFO | tool validated (W4A16 matches its known numbers, negative control collapses, repeat spread 0.21%); the published bf16 gap does not reproduce: paired W4A16/bf16 tau_chain 0.994 at default sampling (CI95 0.992–0.995), 0.997 greedy, against 0.941 from unpaired single live runs | [drafter-2.md](drafter-2.md) |
 | quant-3 | Better GPTQ for the int4 drafter and lm_head | drafter-2 | todo | | | |
 | drafter-3 | TV-loss repair of the W4A16 DFlash2 | drafter-2 | todo | | | |
 | drafter-1b | Learned confidence head, stage 1 | drafter-1a or spec-2 shows a win | skipped | | gate failed: drafter-1a LOSS, spec-2 skipped (spec-1 INVALID) | [drafter-1a.md](drafter-1a.md) |
