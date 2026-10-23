@@ -51,4 +51,4 @@ The MTP drafter reads the same rotated cache, and its acceptance drops 2.7% in b
 
 ## Verdict: LOSS
 
-There is no quality gain on the real model, because k_norm already flattens K, and decode is 3–7% slower. The int4 half of the item was already in vLLM. The int4 information arm (`single-user/alternative.sh` against the bf16 reference) is still queued, to show where vLLM's rotated int4 stands; it does not change this verdict.
+There is no quality gain on the real model, because k_norm already flattens K, and decode is 3–7% slower. The int4 half of the item was already in vLLM. For reference, vLLM's already-rotated int4 per-token-head KV (`single-user/alternative.sh`, `attn-5\int4_alt`) against the same bf16 reference: top-k KL 9.3e-2 (6× int8), perplexity ratio ×1.162, top-1 agreement 94.75%, needles 3/3. Moving D to int4 KV for a 2× pool would cost ~16% perplexity, so that half of the appendix's idea is closed too.
