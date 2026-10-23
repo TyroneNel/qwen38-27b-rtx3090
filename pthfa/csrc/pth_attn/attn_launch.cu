@@ -14,6 +14,7 @@
 
 #include <cuda_runtime.h>
 
+#include <atomic>
 #include <cmath>
 #include <string>
 
@@ -27,6 +28,8 @@ using pth_attn::KernelParams;
 using pth_attn::StreamGeometry;
 
 thread_local std::string g_last_error;
+// attn-1 experiment bits (attn_launch.h); 0 = the shipped kernels.
+std::atomic<int32_t> g_attn1_mode{0};
 
 // fp32(log2 e): scores in log2 units (as reference_kernel.cu kRefLog2e).
 constexpr float kLog2e = 1.44269504088896340736f;
@@ -185,6 +188,9 @@ int32_t build(const PthAttnArgs& a, int32_t loader, AttnLaunch* L) {
   L->windowed = windowed;
   L->wm = wm;
   L->rows = a.bq * group;
+  const int32_t attn1 = g_attn1_mode.load(std::memory_order_relaxed);
+  L->tile48 = (attn1 & pth_attn::kAttn1Tile48) != 0;
+  L->mma = (attn1 & pth_attn::kAttn1MmaMask) >> pth_attn::kAttn1MmaShift;
   L->q_dtype = a.q_dtype;
   const int32_t tiles =
       a.num_q_tiles > 0 ? a.num_q_tiles : a.num_tokens / a.bq + a.num_reqs;
@@ -206,6 +212,16 @@ int32_t launch_fail(int32_t code, const std::string& msg) {
 }
 
 void clear_launch_error() { g_last_error.clear(); }
+
+int32_t set_attn1_mode(int32_t mode) {
+  if ((mode & ~kAttn1KnownBits) != 0 ||
+      ((mode & kAttn1MmaMask) >> kAttn1MmaShift) >= kAttn1MmaModes) {
+    return -1;
+  }
+  return g_attn1_mode.exchange(mode, std::memory_order_relaxed);
+}
+
+int32_t attn1_mode() { return g_attn1_mode.load(std::memory_order_relaxed); }
 
 int32_t launch_attention(const PthAttnArgs& args, int32_t loader,
                          cudaStream_t stream) {

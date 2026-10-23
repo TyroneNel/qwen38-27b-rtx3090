@@ -60,6 +60,35 @@
 // 32-term tree at the end instead of a quad sum); the bound counts l's
 // roundings per token, which this does not change (EB sec. 3.4, bound.py
 // n_l).
+//
+// attn-1 stage 1 (docs/research/deepinfer/attention-kv.md, attn-1; opt-in,
+// default off): row tiles of 33..48 rows (q = 6..8 at G = 6, the DFlash2
+// verify) run here with NT = 5 or 6 instead of the 16-row-tile kernel's
+// padded 64-row tile, when the launch's tile48 flag is set
+// (attn_launch.h kAttn1Tile48; PTHFA_TILE48=1 in pth_flash_attn.ops). The
+// arithmetic per row is the same as at NT <= 4 (lossless against the bound
+// above); the price is registers (o is 16 NT floats per lane) and shared
+// memory (48 Q rows: 100800 B with the whole-cell stages, under 101376).
+//
+// attn-1 stage 2 (opt-in, kMma = kDecMmaPv16; AttnLaunch::mma, PTHFA_MMA=pv16):
+// step 6 accumulates each 64-token tile's O^T partial in fp16
+// (m16n8k16.f16.f16.f16.f16, four k16 steps from zero), then adds it to the
+// fp32 O^T. The partial cannot overflow: P'' <= 1 (vs <= 2^c), |V| <= 128,
+// 64 terms, |partial| <= 8192 < 65504. Not bit-identical to the fp32 path;
+// bench/test_pthfa_attn.py has the re-derived bound. The loop runs per m-tile
+// (P'' fragments and V words re-read per m-tile) so that one m-tile's fp16
+// partials are live (2 NT registers; both of a group's spilled at NT = 6),
+// and the variant re-reads the row factors and recomputes the causal limits
+// per tile instead of holding them (kLean in attn_dec_body).
+//
+// attn-1 stage 3 (opt-in, kMma = kDecMmaS8Pv16; PTHFA_MMA=s8pv16; lossy):
+// stage 2 plus QK on int8. Each Q row is quantised once per launch to int8
+// with its absmax (q8 = rn(q 127 / absmax), stage_q_s8) and staged in the
+// cache's d order; step 1 feeds the stage's int8 K bytes straight into
+// m16n8k32.s32.s8.s8.s32 (no K dequant, half the QK MMAs), and step 2's row
+// factor becomes fp32(softmax_scale log2 e) * fp32(absmax / 127). The int32
+// S is exact (|S| <= 127 * 128 * D < 2^24, so its fp32 conversion is too);
+// the only new error is Q's quantisation.
 
 #pragma once
 
@@ -71,6 +100,9 @@ namespace pth_attn {
 constexpr int kDecRowsPerNt = kMmaN;
 constexpr int kDecMaxNt = 4;
 constexpr int kDecMaxRows = kDecMaxNt * kDecRowsPerNt;  // 32
+// attn-1 stage 1: the opt-in limit (six n-tiles, 48 rows).
+constexpr int kDecTile48MaxNt = 6;
+constexpr int kDecTile48MaxRows = kDecTile48MaxNt * kDecRowsPerNt;  // 48
 // Tokens per warp in the QK step and per softmax step (a whole load tile).
 constexpr int kDecQkTokens = kLoadTileTokens / kWarps;  // 16
 // P'' buffer row: 64 fp16 tokens + 16 B so that the 8 rows of an ldmatrix
@@ -78,6 +110,25 @@ constexpr int kDecQkTokens = kLoadTileTokens / kWarps;  // 16
 constexpr int kDecPPitch = kLoadTileTokens * kF16Bytes + kSmemChunkBytes;
 // m-tiles (16 d each) per warp: D / 4 d per warp.
 PTH_HD constexpr int dec_mtiles(int d) { return d / kWarps / kMmaM; }
+
+// attn-1 MMA modes of the decode kernel (template parameter kMma; the
+// launcher's AttnLaunch::mma). The plan's compile-time flags are derived from
+// it: PV_F16ACC = mma_pv_f16acc(kMma).
+enum DecMma : int {
+  kDecMmaF32 = 0,     // shipped: QK and PV with fp32 accumulate
+  kDecMmaPv16 = 1,    // stage 2: PV with fp16 accumulate per 64-token tile
+  kDecMmaS8Pv16 = 2,  // stage 3: stage 2 plus QK on int8 (int32 accumulate)
+};
+PTH_HD constexpr bool mma_pv_f16acc(int mma) { return mma != kDecMmaF32; }
+// QK_S8 of the porting plan.
+PTH_HD constexpr bool mma_qk_s8(int mma) { return mma == kDecMmaS8Pv16; }
+
+// Q8[row][byte] (int8, pitch D bytes, d in the cache's order, which is the
+// order the s8 MMA reads K in) -> offset in the Q buffer. Key row & 7 like
+// q_swz: ldmatrix reads 8 rows of one 16-B chunk at a time.
+PTH_HD constexpr uint32_t q8_swz(uint32_t row, uint32_t byte, uint32_t D) {
+  return line_swizzle(row * D + byte, row & kKSwizzleMask);
+}
 
 // Shared memory: Q (8 NT rows), two stages in the loader's layout, the P''
 // buffer, the row-max and row-sum exchange ([row][warp] f32) and the per-row
@@ -160,6 +211,98 @@ __device__ __forceinline__ void dec_qk(float (&s)[NT][4], uint32_t q_smem,
   }
 }
 
+// Stage 3's prologue (stage_q's int8 twin): stages the CTA's kRows rows of Q
+// as int8 q8 = rn(x * fp32(127 / absmax)), clamped to [-127, 127], with
+// absmax over the row's D elements (rows past the tile's tokens are zero),
+// and writes c_row = fp32(score_scale_log2) * fp32(absmax / 127). An all-zero
+// row (or one so small that 127 / absmax is not finite) stages zeros.
+template <int D, int kRows, typename QT>
+__device__ __forceinline__ void stage_q_s8(const KernelParams& p,
+                                           const RowTile& rt, int32_t kvh,
+                                           uint8_t* smem_q, float* row_factor,
+                                           int warp, int lane) {
+  constexpr int kPairsPerLane = D / 2 / kWarpSize;
+  #pragma unroll 1
+  for (int r = warp; r < kRows; r += kWarps) {
+    int32_t tok = 0, h = 0;
+    const bool valid = row_to_token_head(static_cast<uint32_t>(r), p.group,
+                                         rt.num_tok, tok, h);
+    const char* src =
+        static_cast<const char*>(p.q) +
+        q_offset(p, static_cast<int64_t>(rt.q_start) + rt.tok_begin + tok,
+                 kvh * p.group_size + h);
+    float2 v[kPairsPerLane];
+    float amax = 0.f;
+  #pragma unroll
+    for (int i = 0; i < kPairsPerLane; ++i) {
+      const int d = 2 * (lane + i * kWarpSize);
+      v[i] = valid ? io_pair_to_float2<QT>(*reinterpret_cast<const uint32_t*>(
+                         src + kF16Bytes * d))
+                   : make_float2(0.f, 0.f);
+      amax = fmaxf(amax, fmaxf(fabsf(v[i].x), fabsf(v[i].y)));
+    }
+  #pragma unroll
+    for (int o = kWarpSize / 2; o > 0; o /= 2) {
+      amax = fmaxf(amax, __shfl_xor_sync(0xffffffffu, amax, o));
+    }
+    float inv = amax > 0.f ? 127.f / amax : 0.f;
+    if (!isfinite(inv)) inv = 0.f;
+  #pragma unroll
+    for (int i = 0; i < kPairsPerLane; ++i) {
+      const int d = 2 * (lane + i * kWarpSize);
+      const int lo = max(-127, min(127, __float2int_rn(v[i].x * inv)));
+      const int hi = max(-127, min(127, __float2int_rn(v[i].y * inv)));
+      // d and d + 1 are adjacent bytes: one 16-bit store.
+      *reinterpret_cast<uint16_t*>(smem_q + q8_swz(r, d, D)) =
+          static_cast<uint16_t>((lo & 0xff) | ((hi & 0xff) << 8));
+    }
+    if (lane == 0) {
+      row_factor[r] = inv > 0.f ? p.score_scale_log2 * (amax / 127.f) : 0.f;
+    }
+  }
+}
+
+// Step 1 on int8 (stage 3): S^T[n] = K[tokens tok0 .. tok0 + 15] . Q8^T[rows
+// 8n .. 8n + 7] with m16n8k32.s32.s8.s8.s32, returned as fp32 (exact) in the
+// layout of dec_qk. Per k32 step (16-B chunks 2 ks, 2 ks + 1): the K
+// ldmatrix.x4 of dec_qk, unconverted, is the s8 A fragment (matrix 0 tokens
+// 0..7 / chunk 0 = a0, 1 tokens 8..15 / chunk 0 = a1, 2 = a2, 3 = a3); one
+// ldmatrix.x4 of Q8 gives the B fragments of two n-tiles (matrices 0, 1 =
+// chunks 0, 1 of n-tile np, 2, 3 of np + 1).
+template <int D, int NT, class R>
+__device__ __forceinline__ void dec_qk_s8(float (&s)[NT][4], uint32_t q_smem,
+                                          uint32_t stage_smem, int tok0,
+                                          int lane) {
+  int32_t acc[NT][4];
+  #pragma unroll
+  for (int n = 0; n < NT; ++n) acc[n][0] = acc[n][1] = acc[n][2] = acc[n][3] = 0;
+  const int mi = lane >> 3, l8 = lane & 7;
+  #pragma unroll
+  for (int ks = 0; ks < D / (2 * kMmaK); ++ks) {
+    uint32_t a[4];
+    ldmatrix_x4(a, stage_smem + R::k(tok0 + 8 * (mi & 1) + l8,
+                                     (2 * ks + (mi >> 1)) * kSmemChunkBytes));
+  #pragma unroll
+    for (int np = 0; np < NT; np += 2) {
+      const int nm = np + (mi >> 1) < NT ? np + (mi >> 1) : NT - 1;
+      uint32_t qb[4];
+      ldmatrix_x4(qb, q_smem + q8_swz(8 * nm + l8,
+                                      (2 * ks + (mi & 1)) * kSmemChunkBytes, D));
+      const uint32_t b0[2] = {qb[0], qb[1]};
+      mma_m16n8k32_s8s32(acc[np], a, b0);
+      if (np + 1 < NT) {
+        const uint32_t b1[2] = {qb[2], qb[3]};
+        mma_m16n8k32_s8s32(acc[np + 1], a, b1);
+      }
+    }
+  }
+  #pragma unroll
+  for (int n = 0; n < NT; ++n) {
+  #pragma unroll
+    for (int i = 0; i < 4; ++i) s[n][i] = __int2float_rn(acc[n][i]);
+  }
+}
+
 // O^T[mt][n] += V^T[d of m-tile mt] . P''^T for the 64 tokens of a tile.
 // Warp `warp` owns the d groups D / 32 / 4 * warp ..: m-tile mt = 2 a + h of
 // its group a has rows g <-> d = 32 ga + 4 g + 2 h and g + 8 <-> + 1 (the V
@@ -219,6 +362,70 @@ __device__ __forceinline__ void dec_pv(float (&o)[dec_mtiles(D)][NT][4],
   }
 }
 
+// Step 6 with fp16 accumulate (attn-1 stage 2): the same fragments and MMA
+// shapes as dec_pv, per m-tile mt = 2 a + h of the warp: the tile's 64
+// tokens accumulate into fp16 partials (two registers per n-tile, from zero),
+// which are then added to the fp32 O^T (c0, c1 of the fp32 layout = the low
+// / high half of fp16 register 0, c2, c3 = register 1). One m-tile at a time
+// keeps 2 NT fp16 registers live (both m-tiles of a group spilled at NT = 6);
+// the price is that the P'' fragments and the group's V words are read once
+// per m-tile, and only the m-tile's half of the V conversion is used.
+template <int D, int NT, class R>
+__device__ __forceinline__ void dec_pv_f16acc(
+    float (&o)[dec_mtiles(D)][NT][4], uint32_t p_smem, const uint8_t* stage,
+    int warp, int lane) {
+  constexpr int kGroups = D / kVGroupD / kWarps;  // 32-d groups per warp
+  static_assert(2 * kGroups == dec_mtiles(D), "two m-tiles per 32-d group");
+  const int g = lane >> 2, q = lane & 3;
+  const int mi = lane >> 3, l8 = lane & 7;
+  #pragma unroll
+  for (int mt = 0; mt < dec_mtiles(D); ++mt) {
+    const int a = mt >> 1, h = mt & 1;
+    uint32_t oh[NT][2];
+  #pragma unroll
+    for (int n = 0; n < NT; ++n) oh[n][0] = oh[n][1] = 0u;
+  #pragma unroll
+    for (int j = 0; j < kLoadTileTokens / kMmaK; ++j) {
+      uint32_t bp[NT][2];
+  #pragma unroll
+      for (int np = 0; np < NT; np += 2) {
+        const int nm = np + (mi >> 1) < NT ? np + (mi >> 1) : NT - 1;
+        uint32_t r[4];
+        ldmatrix_x4(
+            r, p_smem + (8 * nm + l8) * kDecPPitch + 32 * j + 16 * (mi & 1));
+        bp[np][0] = r[0];
+        bp[np][1] = r[1];
+        if (np + 1 < NT) {
+          bp[np + 1][0] = r[2];
+          bp[np + 1][1] = r[3];
+        }
+      }
+      uint32_t w[4];
+  #pragma unroll
+      for (int i = 0; i < 4; ++i) {
+        const int tok = kMmaK * j + 2 * q + v_token_offset(i);
+        w[i] = *reinterpret_cast<const uint32_t*>(
+            stage + R::v(tok, kVGroupD * (kGroups * warp + a) + 4 * g));
+      }
+      uint32_t b[4][2];
+      v_b_fragments(w, b);
+      const uint32_t am[4] = {b[2 * h][0], b[2 * h + 1][0], b[2 * h][1],
+                              b[2 * h + 1][1]};
+  #pragma unroll
+      for (int n = 0; n < NT; ++n) mma_m16n8k16_f16f16(oh[n], am, bp[n]);
+    }
+  #pragma unroll
+    for (int n = 0; n < NT; ++n) {
+      const float2 lo = io_pair_to_float2<__half>(oh[n][0]);
+      const float2 hi = io_pair_to_float2<__half>(oh[n][1]);
+      o[mt][n][0] += lo.x;
+      o[mt][n][1] += lo.y;
+      o[mt][n][2] += hi.x;
+      o[mt][n][3] += hi.y;
+    }
+  }
+}
+
 // Stores 4 floats (4 contiguous d) at dst in `dtype`, round to nearest even
 // for the 16-bit types (as store8).
 __device__ __forceinline__ void store4(char* dst, int32_t dtype,
@@ -254,7 +461,7 @@ __device__ __forceinline__ float octet_sum(float v) {
   return v + __shfl_xor_sync(0xffffffffu, v, 16);
 }
 
-template <int D, int NT, typename QT, bool kCell>
+template <int D, int NT, typename QT, bool kCell, int kMma>
 __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
   using Sm = DecSmem<D, NT, kCell>;
   using R = typename Sm::R;
@@ -286,7 +493,12 @@ __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
   }
 
   float* row_factor = reinterpret_cast<float*>(smem + Sm::kRowFactor);
-  stage_q<D, kRows, QT>(p, rt, kvh, smem + Sm::kQ, row_factor, warp, lane);
+  if constexpr (mma_qk_s8(kMma)) {
+    stage_q_s8<D, kRows, QT>(p, rt, kvh, smem + Sm::kQ, row_factor, warp,
+                             lane);
+  } else {
+    stage_q<D, kRows, QT>(p, rt, kvh, smem + Sm::kQ, row_factor, warp, lane);
+  }
   consumer_sync<kAttnProducerWarps<D>>();
 
   const uint32_t smem_base = smem_u32(smem);
@@ -298,21 +510,45 @@ __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
 
   const int g = frag_g(lane), q = frag_q(lane);
   // A lane's S^T columns: rows 8 n + 2q + j of the row tile (n < NT, j < 2).
-  float row_scale[NT][2];
-  int32_t limit[NT][2];
+  // The attn-1 MMA modes (kLean) do not hold the row factors and causal
+  // limits in 4 NT registers: they re-read the factor from shared memory and
+  // recompute the limit on the masked tiles (the same values, so the same
+  // arithmetic); the fp16 partials need those registers at NT = 5, 6.
+  constexpr bool kLean = kMma != kDecMmaF32;
+  float row_scale[kLean ? 1 : NT][2];
+  int32_t limit[kLean ? 1 : NT][2];
+  auto row_limit_of = [&](int r) -> int32_t {
+    int32_t tok = 0, hh = 0;
+    return row_to_token_head(static_cast<uint32_t>(r), p.group, rt.num_tok,
+                             tok, hh)
+               ? kv_limit(rt.q_len, rt.seq_len, rt.tok_begin + tok)
+               : -1;
+  };
+  if constexpr (!kLean) {
   #pragma unroll
-  for (int n = 0; n < NT; ++n) {
+    for (int n = 0; n < NT; ++n) {
   #pragma unroll
-    for (int j = 0; j < 2; ++j) {
-      const int r = 8 * n + 2 * q + j;
-      row_scale[n][j] = row_factor[r];
-      int32_t tok = 0, hh = 0;
-      limit[n][j] = row_to_token_head(static_cast<uint32_t>(r), p.group,
-                                      rt.num_tok, tok, hh)
-                        ? kv_limit(rt.q_len, rt.seq_len, rt.tok_begin + tok)
-                        : -1;
+      for (int j = 0; j < 2; ++j) {
+        const int r = 8 * n + 2 * q + j;
+        row_scale[n][j] = row_factor[r];
+        limit[n][j] = row_limit_of(r);
+      }
     }
   }
+  auto row_sc = [&](int n, int j) -> float {
+    if constexpr (kLean) {
+      return row_factor[8 * n + 2 * q + j];
+    } else {
+      return row_scale[n][j];
+    }
+  };
+  auto row_limit = [&](int n, int j) -> int32_t {
+    if constexpr (kLean) {
+      return row_limit_of(8 * n + 2 * q + j);
+    } else {
+      return limit[n][j];
+    }
+  };
 
   float m[NT][2], l[NT][2];
   float o[kMt][NT][4];
@@ -356,14 +592,19 @@ __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
         *reinterpret_cast<const float*>(stage_ptr + R::vs(tok0 + g + 8));
 
     float s[NT][4];
-    dec_qk<D, NT, R>(s, q_smem, stage, tok0, lane);
+    if constexpr (mma_qk_s8(kMma)) {
+      dec_qk_s8<D, NT, R>(s, q_smem, stage, tok0, lane);
+    } else {
+      dec_qk<D, NT, R>(s, q_smem, stage, tok0, lane);
+    }
   #pragma unroll
     for (int n = 0; n < NT; ++n) {
       // s = fp32(fp32(S ks) c_row) as the shipped kernel (EB sec. 3.1).
-      s[n][0] = (s[n][0] * ks_lo) * row_scale[n][0];
-      s[n][1] = (s[n][1] * ks_lo) * row_scale[n][1];
-      s[n][2] = (s[n][2] * ks_hi) * row_scale[n][0];
-      s[n][3] = (s[n][3] * ks_hi) * row_scale[n][1];
+      const float rs0 = row_sc(n, 0), rs1 = row_sc(n, 1);
+      s[n][0] = (s[n][0] * ks_lo) * rs0;
+      s[n][1] = (s[n][1] * ks_lo) * rs1;
+      s[n][2] = (s[n][2] * ks_hi) * rs0;
+      s[n][3] = (s[n][3] * ks_hi) * rs1;
     }
     const int32_t abs0 = i * kLoadTileTokens;
     if (subtile_needs_mask(abs0, kLoadTileTokens, min_limit)) {
@@ -372,8 +613,9 @@ __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
       for (int n = 0; n < NT; ++n) {
   #pragma unroll
         for (int j = 0; j < 2; ++j) {
-          if (pos > limit[n][j]) s[n][j] = -INFINITY;
-          if (pos + 8 > limit[n][j]) s[n][2 + j] = -INFINITY;
+          const int32_t lim = row_limit(n, j);
+          if (pos > lim) s[n][j] = -INFINITY;
+          if (pos + 8 > lim) s[n][2 + j] = -INFINITY;
         }
       }
     }
@@ -448,7 +690,11 @@ __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
     }
     consumer_sync<kAttnProducerWarps<D>>();  // barrier B
 
-    dec_pv<D, NT, R>(o, p_smem, stage_ptr, warp, lane);
+    if constexpr (mma_pv_f16acc(kMma)) {
+      dec_pv_f16acc<D, NT, R>(o, p_smem, stage_ptr, warp, lane);
+    } else {
+      dec_pv<D, NT, R>(o, p_smem, stage_ptr, warp, lane);
+    }
     // Release the stage for tile i + 2 (the producers wait for exactly these
     // arrivals, so every arrival is matched).
     if (i + kStages < te) named_bar_arrive(kBarEmpty0 + buf, kAttnThreadsWs);
@@ -517,46 +763,55 @@ __device__ __forceinline__ void attn_dec_body(const AttnParams& ap) {
 
 // One CTA per SM: 4 compute warps + 4 producer warps, as attn_fwd_kernel at
 // D = 256.
-template <int D, int NT, typename QT, bool kCell>
+template <int D, int NT, typename QT, bool kCell, int kMma>
 __global__ void __launch_bounds__(kAttnThreads<D>, ctas_per_sm(D))
     attn_dec_kernel(const __grid_constant__ AttnParams ap) {
-  attn_dec_body<D, NT, QT, kCell>(ap);
+  attn_dec_body<D, NT, QT, kCell, kMma>(ap);
 }
 
-template <int D, int NT, typename QT, bool kCell>
+template <int D, int NT, typename QT, bool kCell, int kMma>
 cudaError_t launch_dec_one(const AttnLaunch& L, cudaStream_t stream) {
-  return launch_with_smem<attn_dec_kernel<D, NT, QT, kCell>,
+  return launch_with_smem<attn_dec_kernel<D, NT, QT, kCell, kMma>,
                           DecSmem<D, NT, kCell>::kBytes, kAttnThreads<D>>(
       L.grid, stream, L.ap);
 }
 
-template <int D, int NT>
+template <int D, int NT, int kMma>
 cudaError_t launch_dec_nt(const AttnLaunch& L, cudaStream_t stream) {
   const bool bf16 = L.q_dtype == PTH_ATTN_BF16;
   if (L.cell) {
-    return bf16 ? launch_dec_one<D, NT, __nv_bfloat16, true>(L, stream)
-                : launch_dec_one<D, NT, __half, true>(L, stream);
+    return bf16 ? launch_dec_one<D, NT, __nv_bfloat16, true, kMma>(L, stream)
+                : launch_dec_one<D, NT, __half, true, kMma>(L, stream);
   }
-  return bf16 ? launch_dec_one<D, NT, __nv_bfloat16, false>(L, stream)
-              : launch_dec_one<D, NT, __half, false>(L, stream);
+  return bf16 ? launch_dec_one<D, NT, __nv_bfloat16, false, kMma>(L, stream)
+              : launch_dec_one<D, NT, __half, false, kMma>(L, stream);
 }
 
-// Dispatch on the number of n-tiles of the row tile (rows = bq * G).
-template <int D>
+// Dispatch on the number of n-tiles of the row tile (rows = bq * G). NT = 5
+// and 6 are reached only with the attn-1 tile48 flag (instantiate_d256.cu).
+// kMma != kDecMmaF32 is instantiated in instantiate_d256_attn1.cu only.
+template <int D, int kMma = kDecMmaF32>
 cudaError_t launch_dec(const AttnLaunch& L, cudaStream_t stream) {
   switch ((L.rows + kDecRowsPerNt - 1) / kDecRowsPerNt) {
     case 1:
-      return launch_dec_nt<D, 1>(L, stream);
+      return launch_dec_nt<D, 1, kMma>(L, stream);
     case 2:
-      return launch_dec_nt<D, 2>(L, stream);
+      return launch_dec_nt<D, 2, kMma>(L, stream);
     case 3:
-      return launch_dec_nt<D, 3>(L, stream);
+      return launch_dec_nt<D, 3, kMma>(L, stream);
     case 4:
-      return launch_dec_nt<D, 4>(L, stream);
+      return launch_dec_nt<D, 4, kMma>(L, stream);
+    case 5:
+      return launch_dec_nt<D, 5, kMma>(L, stream);
+    case 6:
+      return launch_dec_nt<D, 6, kMma>(L, stream);
     default:
       return cudaErrorInvalidValue;
   }
 }
+
+// The attn-1 MMA modes at D = 256 (L.mma != 0; instantiate_d256_attn1.cu).
+cudaError_t launch_attn_d256_attn1(const AttnLaunch& L, cudaStream_t stream);
 
 #endif  // __CUDACC__
 

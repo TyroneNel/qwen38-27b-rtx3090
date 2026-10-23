@@ -28,7 +28,9 @@ answered by the C++ side or by vLLM's ``current_platform``.
 
 from __future__ import annotations
 
+import ctypes
 import math
+import os
 from pathlib import Path
 
 import torch
@@ -343,6 +345,124 @@ _LIBRARY_LOADED = _load_library()
 def is_available() -> bool:
     """Return True if the op library was built and loaded (fake registered)."""
     return _LIBRARY_LOADED
+
+
+# attn-1 experiments (docs/research/deepinfer/attention-kv.md, attn-1): bits of
+# the library's process-wide launch mode (csrc/pth_attn/attn_launch.h). 0, the
+# default, is the shipped kernels. Environment knobs, read once at import:
+#   PTHFA_TILE48=1  D = 256 row tiles of 33..48 rows (6..8 query tokens at
+#                   G = 6) on the swap-AB decode kernel instead of the padded
+#                   64-row tile (stage 1, lossless).
+#   PTHFA_MMA=f32|pv16|s8pv16
+#                   the decode kernel's MMA mode: f32 (default, shipped), pv16
+#                   = PV with fp16 accumulate per 64-token tile (stage 2,
+#                   near-lossless), s8pv16 = pv16 plus QK on int8 with each Q
+#                   row quantised by its absmax (stage 3, lossy). Applies to
+#                   launches on the decode kernel: <= 32 rows, or <= 48 rows
+#                   with PTHFA_TILE48=1.
+ATTN1_TILE48 = 1
+ATTN1_MMA_SHIFT = 1
+ATTN1_MMA_MODES = {"f32": 0, "pv16": 1, "s8pv16": 2}
+ATTN1_PV16 = ATTN1_MMA_MODES["pv16"] << ATTN1_MMA_SHIFT
+ATTN1_S8PV16 = ATTN1_MMA_MODES["s8pv16"] << ATTN1_MMA_SHIFT
+_ATTN1_KNOWN_BITS = ATTN1_TILE48 | (3 << ATTN1_MMA_SHIFT)
+# Arm names for benchmarks and tests ("base", "tile48", "pv16", "s8pv16", joined with "+").
+ATTN1_ARMS = {"base": 0, "tile48": ATTN1_TILE48, "pv16": ATTN1_PV16, "s8pv16": ATTN1_S8PV16}
+
+
+def attn1_mma(mode: int) -> str:
+    """Return the MMA-mode name (``ATTN1_MMA_MODES``) of mode bits."""
+    field = (mode >> ATTN1_MMA_SHIFT) & 3
+    return next((n for n, v in ATTN1_MMA_MODES.items() if v == field), f"unknown({field})")
+
+
+def attn1_mode_from_env(environ=os.environ) -> int:
+    """Return the attn-1 mode bits the environment asks for (0 if unset).
+
+    Raises:
+        ValueError: a knob has a value other than the documented ones.
+    """
+    mode = 0
+    tile48 = environ.get("PTHFA_TILE48", "0").strip()
+    if tile48 not in ("0", "1", ""):
+        raise ValueError(f"PTHFA_TILE48 must be 0 or 1, got {tile48!r}")
+    if tile48 == "1":
+        mode |= ATTN1_TILE48
+    mma = environ.get("PTHFA_MMA", "").strip() or "f32"
+    if mma not in ATTN1_MMA_MODES:
+        raise ValueError(f"PTHFA_MMA must be one of {'|'.join(ATTN1_MMA_MODES)}, got {mma!r}")
+    mode |= ATTN1_MMA_MODES[mma] << ATTN1_MMA_SHIFT
+    return mode
+
+
+def attn1_mode_from_arm(arm: str) -> int:
+    """Return the mode bits of an arm name such as ``"tile48"`` (``"base"`` = 0).
+
+    Raises:
+        ValueError: an unknown name.
+    """
+    mode = 0
+    for name in arm.strip().split("+"):
+        if name.strip() not in ATTN1_ARMS:
+            raise ValueError(f"unknown attn-1 arm {name!r} (known: {', '.join(ATTN1_ARMS)})")
+        mode |= ATTN1_ARMS[name.strip()]
+    return mode
+
+
+def attn1_arm_name(mode: int) -> str:
+    """Return the arm name of mode bits (the inverse of ``attn1_mode_from_arm``)."""
+    names = [n for n, b in ATTN1_ARMS.items() if b and mode & b == b]
+    return "+".join(names) or "base"
+
+
+_ATTN1_LIB = None
+
+
+def _attn1_lib() -> ctypes.CDLL:
+    # The same file torch.ops.load_library opened, so dlopen returns that
+    # handle: the setter changes the state the op's launches read.
+    global _ATTN1_LIB
+    if _ATTN1_LIB is None:
+        lib = ctypes.CDLL(str(LIBRARY_PATH))
+        lib.pth_flash_attn_set_attn1_mode.argtypes = [ctypes.c_int32]
+        lib.pth_flash_attn_set_attn1_mode.restype = ctypes.c_int32
+        lib.pth_flash_attn_attn1_mode.argtypes = []
+        lib.pth_flash_attn_attn1_mode.restype = ctypes.c_int32
+        _ATTN1_LIB = lib
+    return _ATTN1_LIB
+
+
+def set_attn1_mode(mode: int) -> int:
+    """Set the library's attn-1 mode bits for every later launch; return the previous bits.
+
+    A CUDA graph keeps the kernel of the mode it was captured with.
+
+    Raises:
+        RuntimeError: the library is not built.
+        ValueError: ``mode`` has a bit this library does not know.
+    """
+    if not _LIBRARY_LOADED:
+        raise RuntimeError(f"pth_flash_attn: op library {LIBRARY_PATH} is not built")
+    if mode & ~_ATTN1_KNOWN_BITS or attn1_mma(mode).startswith("unknown"):
+        raise ValueError(f"attn-1 mode {mode:#x} has unknown bits (known {_ATTN1_KNOWN_BITS:#x}, "
+                         f"MMA modes {ATTN1_MMA_MODES})")
+    prev = _attn1_lib().pth_flash_attn_set_attn1_mode(mode)
+    if prev < 0:
+        raise ValueError(f"the op library refused attn-1 mode {mode:#x} (an older build?)")
+    return prev
+
+
+def attn1_mode() -> int:
+    """Return the library's current attn-1 mode bits (0 = the shipped kernels)."""
+    if not _LIBRARY_LOADED:
+        return 0
+    return _attn1_lib().pth_flash_attn_attn1_mode()
+
+
+if _LIBRARY_LOADED:
+    _ENV_ATTN1 = attn1_mode_from_env()
+    if _ENV_ATTN1:
+        set_attn1_mode(_ENV_ATTN1)
 
 
 def pth_flash_attn_fwd(

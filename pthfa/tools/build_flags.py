@@ -56,6 +56,8 @@ EXTENSION_SOURCES: tuple[str, ...] = (
     "csrc/pth_attn/instantiate_d64.cu",
     "csrc/pth_attn/instantiate_d128.cu",
     "csrc/pth_attn/instantiate_d256.cu",
+    # attn-1 MMA modes of the D = 256 decode kernel (docs/research/deepinfer, opt-in at run time).
+    "csrc/pth_attn/instantiate_d256_attn1.cu",
 )
 
 

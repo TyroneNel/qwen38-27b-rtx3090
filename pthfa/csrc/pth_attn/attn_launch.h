@@ -58,6 +58,28 @@ void clear_launch_error();
 // Head sizes with a kernel instantiation (instantiate_d{64,128,256}.cu).
 inline bool is_head_size(int32_t d) { return d == 64 || d == 128 || d == 256; }
 
+// attn-1 experiments (docs/research/deepinfer/attention-kv.md, attn-1): a
+// process-wide bit set read by every launch_attention, 0 (the default) = the
+// shipped kernels. Set by the op library's C entry point
+// pth_flash_attn_set_attn1_mode (launch.cu), which pth_flash_attn.ops calls
+// from its environment knobs. Bits:
+//   kAttn1Tile48  D = 256: row tiles of 33..48 rows on the decode kernel
+//                 (NT = 5, 6) instead of the padded 64-row tile (stage 1).
+//   kAttn1Mma*    bits 1-2, the decode kernel's MMA mode (attn_decode.cuh
+//                 DecMma): 0 fp32 accumulate (shipped), 1 PV with fp16
+//                 accumulate (stage 2), 2 = 1 plus QK on int8 (stage 3).
+//                 Only launches on the decode kernel (D = 256, <= 32 rows,
+//                 or <= 48 with kAttn1Tile48) use it.
+constexpr int32_t kAttn1Tile48 = 1;
+constexpr int32_t kAttn1MmaShift = 1;
+constexpr int32_t kAttn1MmaMask = 3 << kAttn1MmaShift;
+constexpr int32_t kAttn1MmaModes = 3;  // DecMma values 0 .. kAttn1MmaModes - 1
+constexpr int32_t kAttn1KnownBits = kAttn1Tile48 | kAttn1MmaMask;
+// Returns the previous mode; a mode with unknown bits or an MMA mode the
+// library does not have is refused (-1, mode unchanged).
+int32_t set_attn1_mode(int32_t mode);
+int32_t attn1_mode();
+
 }  // namespace pth_attn
 
 // Returns PTH_ATTN_EINVAL with `msg` from the enclosing launcher unless

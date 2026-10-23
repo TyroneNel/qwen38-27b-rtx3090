@@ -15,7 +15,8 @@ no vLLM file changes, and `patches/check_vllm_series.sh` is untouched by it.
 commit: the extension's translation units, every header they include, and the `pth_flash_attn` package,
 with the test-only handshake hooks stripped (upstream's `tools/prove_export_sass.sh` proves the stripped copy
 compiles to the same SASS). `setup.py`, `pyproject.toml`, `tools/build_flags.py`, `LICENSE` and `NOTICE` are
-the files at that commit, unchanged. `SHA256SUMS` lists all 32 files; the files are never edited here.
+the files at that commit, unchanged. `SHA256SUMS` lists all 33 files (32 vendored, plus attn-1's
+`csrc/pth_attn/instantiate_d256_attn1.cu`; see the attn-1 section below); the files are never edited here.
 
 Source rather than a prebuilt `.so`: the same reasoning as #153, where a binary was declined in favour of a
 source port CI can check. `bash pthfa/check_vendor.sh` checks the files against `SHA256SUMS` and that nothing
@@ -45,6 +46,23 @@ decoder self-attention, causal at every head size, sliding-window and non-causal
 DFlash2 drafter's layers); no ALiBi, attention sinks, logits soft cap, bidirectional multimodal prefix or
 R-SWA; no DCP/PCP. An explicit selection outside these fails at backend selection or model load with the
 reason (`docs/gotchas.md`, item 63). The library reads no environment variables.
+
+## attn-1 experiment knobs (research/deepinfer)
+
+`docs/research/deepinfer/attention-kv.md` (attn-1) changes the vendored kernels in place on this branch, so
+`SHA256SUMS` lists the edited files and `check_vendor.sh --source` no longer matches `PIN`'s commit until the
+change is re-exported upstream as a pthfa revision. Every knob defaults off; unset, the launches are the shipped
+kernels. `pth_flash_attn.ops` reads the environment once at import and sets the library's process-wide mode
+(`ops.set_attn1_mode`, C entry point `pth_flash_attn_set_attn1_mode`); the op schema is unchanged.
+
+- `PTHFA_TILE48=1` (stage 1, lossless): D = 256 row tiles of 33..48 rows (6..8 query tokens at G = 6, the
+  DFlash2 verify) run on the swap-AB decode kernel with 5 or 6 n-tiles instead of the padded 64-row tile.
+- `PTHFA_MMA=f32|pv16|s8pv16` (default `f32`): `pv16` (stage 2, near-lossless) accumulates the decode kernel's
+  P·V of each 64-token tile in fp16 (`m16n8k16.f16.f16.f16.f16`) and adds it to the fp32 O; `s8pv16` (stage 3,
+  lossy) adds QK on int8 (`m16n8k32.s32.s8.s8.s32` on the cache's int8 K, each Q row quantised by its absmax).
+  Only launches on the decode kernel (D = 256 and at most 32 rows, or 48 with `PTHFA_TILE48=1`) change; the
+  variants are `csrc/pth_attn/instantiate_d256_attn1.cu`. `bench/test_pthfa_attn.py` has the re-derived bound
+  (stage 2) and the error statistics (stage 3).
 
 ## Tests
 

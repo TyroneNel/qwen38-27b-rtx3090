@@ -697,6 +697,9 @@ struct AttnLaunch {
   int32_t q_dtype;  // PTH_ATTN_F16 or PTH_ATTN_BF16
   bool cell;        // whole-cell loader (ap.cell_width set) or separate streams
   bool windowed;    // ap.window > 0 or !ap.causal: the windowed kernels
+  // attn-1 experiment flags (attn_launch.h attn1_mode(); false = shipped).
+  bool tile48;      // D = 256: 33..48 rows on the decode kernel (NT 5, 6)
+  int32_t mma;      // decode kernel MMA mode (attn_decode.cuh DecMma), 0 = fp32
 };
 
 // The whole-cell loader exists where it fits next to the kernel's

@@ -342,6 +342,37 @@ PTH_DEVICE void mma_m16n8k16_f16f32(float (&acc)[4], const uint32_t (&a)[4],
       : "+f"(acc[0]), "+f"(acc[1]), "+f"(acc[2]), "+f"(acc[3])
       : "r"(a[0]), "r"(a[1]), "r"(a[2]), "r"(a[3]), "r"(b[0]), "r"(b[1]));
 }
+
+// mma.sync.aligned.m16n8k16.row.col.f16.f16.f16.f16 (PTX ISA 9.7.16.5.8):
+// acc += A * B with A and B as mma_m16n8k16_f16f32 and an fp16 accumulator
+// of two registers: acc[0] = (c0, c1) = row g, columns 2q, 2q + 1; acc[1] =
+// (c2, c3) = row g + 8 (Figure 86 with .f16; low half = the even column).
+// attn-1 stage 2 (PV with fp16 accumulate). The PTX ISA leaves the internal
+// precision unspecified; the bound in bench/test_pthfa_attn.py assumes at
+// most two fp16 roundings per instruction (two k8 block FMAs, measured on
+// A100: arXiv 2512.07004).
+PTH_DEVICE void mma_m16n8k16_f16f16(uint32_t (&acc)[2], const uint32_t (&a)[4],
+                                    const uint32_t (&b)[2]) {
+  asm("mma.sync.aligned.m16n8k16.row.col.f16.f16.f16.f16 "
+      "{%0, %1}, {%2, %3, %4, %5}, {%6, %7}, {%0, %1};\n"
+      : "+r"(acc[0]), "+r"(acc[1])
+      : "r"(a[0]), "r"(a[1]), "r"(a[2]), "r"(a[3]), "r"(b[0]), "r"(b[1]));
+}
+
+// mma.sync.aligned.m16n8k32.row.col.s32.s8.s8.s32 (PTX ISA 9.7.16.5.8):
+// acc += A * B, exact in int32 (no .satfinite: the kernel's sums stay below
+// 2^24). A 16x32 s8: a[0] = row g, k 4q .. 4q + 3 (byte 0 = the lowest k);
+// a[1] = row g + 8, same k; a[2] = row g, k 16 + 4q ..; a[3] = row g + 8, k
+// 16 + 4q ... B 32x8 s8: b[0] = k 4q .. 4q + 3 of column g, b[1] = k 16 + 4q
+// ... C as m16n8k16.f32 (c0, c1 row g, c2, c3 row g + 8; columns 2q, 2q + 1).
+// attn-1 stage 3 (QK on int8).
+PTH_DEVICE void mma_m16n8k32_s8s32(int32_t (&acc)[4], const uint32_t (&a)[4],
+                                   const uint32_t (&b)[2]) {
+  asm("mma.sync.aligned.m16n8k32.row.col.s32.s8.s8.s32 "
+      "{%0, %1, %2, %3}, {%4, %5, %6, %7}, {%8, %9}, {%0, %1, %2, %3};\n"
+      : "+r"(acc[0]), "+r"(acc[1]), "+r"(acc[2]), "+r"(acc[3])
+      : "r"(a[0]), "r"(a[1]), "r"(a[2]), "r"(a[3]), "r"(b[0]), "r"(b[1]));
+}
 #endif  // __CUDACC__
 
 }  // namespace pth_attn

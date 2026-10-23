@@ -9,13 +9,21 @@
 // 16-row-tile instantiation here. No windowed kernel at D = 256 (the
 // launcher refuses window > 0 or non-causal there). One translation unit
 // per D (attn_kernel.cuh).
+//
+// attn-1 stage 1 (opt-in, AttnLaunch::tile48): 33..48 rows also take the
+// decode kernel (NT = 5, 6) instead of the padded 64-row tile. The attn-1
+// MMA modes (AttnLaunch::mma != 0) change the decode kernel only; their
+// instantiations are instantiate_d256_attn1.cu.
 
 #include "attn_decode.cuh"
 
 namespace pth_attn {
 
 cudaError_t launch_attn_d256(const AttnLaunch& L, cudaStream_t stream) {
-  if (L.rows <= kDecMaxRows) return launch_dec<256>(L, stream);
+  if (L.rows <= kDecMaxRows || (L.tile48 && L.rows <= kDecTile48MaxRows)) {
+    if (L.mma != kDecMmaF32) return launch_attn_d256_attn1(L, stream);
+    return launch_dec<256>(L, stream);
+  }
   if (L.wm == 4) return launch_attn_wm<256, 4>(L, stream);
   return cudaErrorInvalidValue;
 }

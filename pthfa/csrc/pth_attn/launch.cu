@@ -552,3 +552,18 @@ void pth_flash_attn_fwd(Tensor& out, const Tensor& q, const Tensor& k_cache,
 }
 
 }  // namespace pth_attn
+
+// attn-1 experiments (attn_launch.h set_attn1_mode): the process-wide mode
+// bits of every later launch, set from Python (pth_flash_attn.ops, through
+// ctypes on this library) before any launch is captured. Returns the previous
+// mode, or -1 (mode unchanged) if `mode` has a bit the library does not know.
+// Not part of the op schema: the CUSTOM backend's call is unchanged.
+extern "C" __attribute__((visibility("default"))) int32_t
+pth_flash_attn_set_attn1_mode(int32_t mode) {
+  return pth_attn::set_attn1_mode(mode);
+}
+
+extern "C" __attribute__((visibility("default"))) int32_t
+pth_flash_attn_attn1_mode() {
+  return pth_attn::attn1_mode();
+}
