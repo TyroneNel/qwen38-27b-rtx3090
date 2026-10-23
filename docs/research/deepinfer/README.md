@@ -38,6 +38,7 @@ The two E items stack differently than they look: attn-2 removes most of the ver
 | quant-2 | LOSS (vs bar) | lossless sign fold recovers 1.0% perplexity, but the zero-point path costs −1.4% throughput and ~3% clock at the power cap (bar: within 1%) |
 | quant-1 | LOSS | Humming per-128 kernels run 0.26–0.41× Marlin at decode sizes |
 | quant-3 | LOSS (vs bar) | signed scales + MSE clip + act-order cut the drafter's weight error 13% but move default-sampling acceptance only +0.12%; the whole int4 gap is 0.6% (drafter-2) |
+| drafter-3 | LOSS (vs bar) | TV repair against the bf16 drafter: acceptance +0.17% at default sampling, greedy unchanged; its ceiling is the 0.6% gap |
 | drafter-1a | LOSS | host confidence trim: +1–2.4% at 100k against an 8% bar (verify slope is 1.9 ms, not the assumed 3.6) |
 | attn-5 | LOSS | Hadamard int8 KV: no quality gain on the real model (k_norm already flattens K), decode −3 to −7%; vLLM's int4 mode already rotates, and int4 KV costs ~16% perplexity |
 | attn-1 stage 1 alone | LOSS (vs bar) | 1.23× per layer, bar 1.3×; it is the base the other two stages need |
@@ -111,7 +112,7 @@ Modes: A batch; B DFlash2 64k; C quoting (T=16); D `SPEC=mtp CTX=long`; D′ `SP
 | 5 | spec-0 | Context-aware fixed `DFLASH_TOKENS` at 240k | E | −2.5 to +12.5% | S | Medium-low | Yes | WIN: k=3 +54% at 150k, +70% at 235k; +9% at 170k with attn-2 on |
 | 6 | quant-3 | Better GPTQ for HyperQwen's own int4 requants | B, C, E (drafter); D (MTP) | DFlash2 +2–3% at default sampling | S | Medium | Drafter yes | LOSS vs bar: drafter acceptance +0.12% (weight error −13%) |
 | 7 | attn-2 | KVarN verify on a pthfa-family CUDA kernel | E | ~+21% at 240k, ~+2% at 20k | L | Medium-low | Yes | WIN (Triton shared dequant): E +125% at 170k, +38% at 20k |
-| 8 | drafter-3 | TV-loss repair of the W4A16 DFlash2's bf16 params | B, C, E | ~+3% (ceiling +6%) at default sampling | M | Medium | Yes | running; drafter-2 puts the int4 gap at 0.6%, not ~5% |
+| 8 | drafter-3 | TV-loss repair of the W4A16 DFlash2's bf16 params | B, C, E | ~+3% (ceiling +6%) at default sampling | M | Medium | Yes | LOSS vs bar: acceptance +0.17%; the bf16 ceiling is +0.6%, not +6% |
 | 9 | spec-2 + drafter-1 | Per-step verify trim on fresh confidence | D′/`CTX=long`, E | E +4 to +10%; 112k +4 to +20% (linear-cost ceiling) | S (host stage 0) to M | Low-medium | Yes | drafter-1a LOSS (+1–2.4% at 100k); spec-2 skipped |
 | 10 | quant-5 | Batch-mode lm_head as W4A8 | A | +2–3% | S–M | Low-medium | No | NEUTRAL: +0.8% |
 | 11 | attn-3 | int8-QK prefill on quantized-KV arms | D, E | cold TTFT −8 to −9% at 150k | M | Medium | No | WIN: TTFT −8.9% D, −7.1% E at 148k |
@@ -160,7 +161,7 @@ In order; each step names the items it decides. Commands are in the appendices. 
 9. **E profile at 200k** (torch profile): the real attention share per step. Decides attn-2 and spec-0's sign. *Done: attention is 78% of the step at ~170k.*
 10. **spec-1 boot and greedy bit-identity** on `bench/labd_accept.py`, then `bench/conc_ladder.py` at C1, C2, C4 against `DYNAMIC_K`. Also answers whether FA2-fp8 accepts device q_len below the host bound. *Done: INVALID, bit-identity breaks at token 0–1.*
 11. **spec-0 ladder**: `DFLASH_TOKENS=3/5/7` at 90k, 150k and 240k, three boots per arm. *Done: k=3 wins at depth (+54–70%).*
-12. **Drafter work** once drafter-2 exists: quant-3 requant, then drafter-3, each measured by tau_prob before any tok/s run. *drafter-2 done; quant-3 and drafter-3 running.*
+12. **Drafter work** once drafter-2 exists: quant-3 requant, then drafter-3, each measured by tau_prob before any tok/s run. *Done: the int4 gap is 0.6%, not ~5%; quant-3 recovers +0.12% and drafter-3 +0.17%, both far below their bars, so no tok/s run.*
 
 ## CPU checks run on the research box
 

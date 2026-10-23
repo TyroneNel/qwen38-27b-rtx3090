@@ -147,6 +147,8 @@ DFlash2's 2:1 loss on QA-type work at 112k then splits into: about 4 extra verif
 
 ### drafter-3: TV-loss repair of the W4A16 DFlash2
 
+**Measured (2026-10-23):** LOSS against the bar: the TV repair lifts default-sampling acceptance +0.17% (paired, CI95 +0.13 to +0.21%, held-out domains included), greedy unchanged. Its ceiling, bf16 parity, is only +0.6% (drafter-2), not +6%. [gpu-results/drafter-3.md](gpu-results/drafter-3.md)
+
 - **DeepSpec.** The TV-dominant loss with position decay, 0.9·L1 + 0.1·CE, γ = 4 (`DeepSpec/deepspec/modeling/dspark/loss.py:25-37, 73-87, 248-252`; `DeepSpec/config/dspark/dspark_qwen3_8b.py`).
 - **HyperQwen today.** GPTQ int4 drafter (`drafter/quant_dflash2.py:1-30`). It keeps greedy acceptance but loses about 5% at default sampling: "noise in q hurts the acceptance *probability*, not the argmax" (`drafter/README.md:88-91`). A bf16 `fc` didn't help (`:94`); the context-KV Hessian blend was worse (`:95-99`).
 - **The gap.** GPTQ minimizes weight-space output error. Nothing optimizes the drafter's distribution against what sampled acceptance depends on.

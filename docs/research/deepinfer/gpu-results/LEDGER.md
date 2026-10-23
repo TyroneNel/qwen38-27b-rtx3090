@@ -68,7 +68,7 @@ Status: `todo` · `running` · `done` · `blocked` · `skipped`. Verdict: `WIN` 
 |---|---|---|---|---|---|---|
 | drafter-2 | Offline DFlash2 gate (`drafter/eval_dflash2.py`) | – | done | INFO | tool validated (W4A16 matches its known numbers, negative control collapses, repeat spread 0.21%); the published bf16 gap does not reproduce: paired W4A16/bf16 tau_chain 0.994 at default sampling (CI95 0.992–0.995), 0.997 greedy, against 0.941 from unpaired single live runs | [drafter-2.md](drafter-2.md) |
 | quant-3 | Better GPTQ for the int4 drafter and lm_head | drafter-2 | done | LOSS (against the bar) | drafter: weight error −13% (0.147 → 0.128), paired tau_chain vs shipped W4A16 +0.12% at default sampling (CI95 +0.01 to +0.24%), +0.11% greedy (ns); bar +2–3%; the whole bf16 gap is only 0.6% | [quant-3.md](quant-3.md) |
-| drafter-3 | TV-loss repair of the W4A16 DFlash2 | drafter-2 | todo | | | |
+| drafter-3 | TV-loss repair of the W4A16 DFlash2 | drafter-2 | done | LOSS (against the bar) | 0.93 h TV training against the bf16 drafter: paired tau_chain vs shipped W4A16 +0.17% at default sampling (CI95 +0.13 to +0.21%, held-out domains too), greedy 1.0001; bar +3%; the bf16 ceiling is only +0.6% | [drafter-3.md](drafter-3.md) |
 | drafter-1b | Learned confidence head, stage 1 | drafter-1a or spec-2 shows a win | skipped | | gate failed: drafter-1a LOSS, spec-2 skipped (spec-1 INVALID) | [drafter-1a.md](drafter-1a.md) |
 
 ## Phase 6: gated stretch
