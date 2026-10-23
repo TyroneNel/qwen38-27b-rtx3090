@@ -15,8 +15,9 @@ no vLLM file changes, and `patches/check_vllm_series.sh` is untouched by it.
 commit: the extension's translation units, every header they include, and the `pth_flash_attn` package,
 with the test-only handshake hooks stripped (upstream's `tools/prove_export_sass.sh` proves the stripped copy
 compiles to the same SASS). `setup.py`, `pyproject.toml`, `tools/build_flags.py`, `LICENSE` and `NOTICE` are
-the files at that commit, unchanged. `SHA256SUMS` lists all 33 files (32 vendored, plus attn-1's
-`csrc/pth_attn/instantiate_d256_attn1.cu`; see the attn-1 section below); the files are never edited here.
+the files at that commit, unchanged. `SHA256SUMS` lists all 36 files (32 vendored, plus attn-1's
+`csrc/pth_attn/instantiate_d256_attn1.cu` and attn-2's three KVarN sources; see the attn-1 and attn-2 sections
+below); the files are never edited here.
 
 Source rather than a prebuilt `.so`: the same reasoning as #153, where a binary was declined in favour of a
 source port CI can check. `bash pthfa/check_vendor.sh` checks the files against `SHA256SUMS` and that nothing
@@ -64,6 +65,18 @@ kernels. `pth_flash_attn.ops` reads the environment once at import and sets the 
   variants are `csrc/pth_attn/instantiate_d256_attn1.cu`. `bench/test_pthfa_attn.py` has the re-derived bound
   (stage 2) and the error statistics (stage 3).
 
+## attn-2 build flag (research/deepinfer): KVarN verify
+
+`docs/research/deepinfer/attention-kv.md` (attn-2) adds a second op to the library for KVarN's uniform speculative
+verify (mode E): `pth_flash_attn::pth_kvarn_verify_fwd`, wrapper `pth_flash_attn.ops.kvarn_verify`, kernel
+`csrc/pth_attn/attn_decode_kvarn.cuh` (its header has the design and the arithmetic budget), instantiations
+`csrc/pth_attn/instantiate_kvarn.cu`, op and registration (a `STABLE_TORCH_LIBRARY_FRAGMENT`)
+`csrc/pth_attn/kvarn_launch.cu`. Opt-in at BUILD time: `PTHFA_KVARN=1 bash pthfa/install.sh` adds the two
+translation units (`tools/build_flags.py` `KVARN_SOURCES`); unset, the source list, the flags and so the library are
+the ones above, and `ops.kvarn_is_available()` is False. The vLLM side is
+`docs/research/deepinfer/experiments/patches/attn2-kvarn-pthfa.patch` (`KVARN_BACKEND=pthfa`, default off), the test
+and microbench `bench/test_pthfa_kvarn.py`.
+
 ## Tests
 
 - `pthfa/tests/gate_test.py` (CPU): the items above, against the venv's vLLM.
@@ -71,6 +84,8 @@ kernels. `pth_flash_attn.ops` reads the environment once at import and sets the 
 - `bench/test_pthfa_attn.py` (GPU): the op against an fp64 reference on the cache it reads, including a pool
   past block id 2,383 (#86/#109), CUDA-graph replay and the DFlash2 drafter's windowed, non-causal shapes;
   `SKIP(by design)` off sm_8x or without the package.
+- `bench/test_pthfa_kvarn.py` (GPU; `--dry-run` on CPU): the attn-2 KVarN op against bench/test_kvarn_verify.py's
+  fp64 reference, `--bench` its µs per layer; `SKIP(by design)` when the library was built without `PTHFA_KVARN=1`.
 
 ## Re-vendoring
 

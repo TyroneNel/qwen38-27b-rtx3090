@@ -10,6 +10,7 @@ they report is the one the shipped ``.so`` gets.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -59,6 +60,17 @@ EXTENSION_SOURCES: tuple[str, ...] = (
     # attn-1 MMA modes of the D = 256 decode kernel (docs/research/deepinfer, opt-in at run time).
     "csrc/pth_attn/instantiate_d256_attn1.cu",
 )
+
+# attn-2 (docs/research/deepinfer/attention-kv.md): KVarN's uniform verify kernel and its op
+# pth_flash_attn::pth_kvarn_verify_fwd. Opt-in at BUILD time with PTHFA_KVARN=1; unset, the source list
+# (and so the library) is exactly the one above.
+KVARN_SOURCES: tuple[str, ...] = (
+    "csrc/pth_attn/kvarn_launch.cu",
+    "csrc/pth_attn/instantiate_kvarn.cu",
+)
+KVARN = os.environ.get("PTHFA_KVARN", "0").strip() == "1"
+if KVARN:
+    EXTENSION_SOURCES = EXTENSION_SOURCES + KVARN_SOURCES
 
 
 def define_flags() -> list[str]:

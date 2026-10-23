@@ -528,3 +528,130 @@ def pth_flash_attn_fwd(
         window,
         causal,
     )
+
+
+# attn-2 experiment (docs/research/deepinfer/attention-kv.md, attn-2): KVarN's uniform speculative verify
+# (csrc/pth_attn/attn_decode_kvarn.cuh), the op pth_flash_attn::pth_kvarn_verify_fwd. Opt-in at BUILD time:
+# only a library built with PTHFA_KVARN=1 (tools/build_flags.py) has the op; kvarn_is_available() is False on
+# the default build, and nothing in this package calls it.
+KVARN_OP_NAME = "pth_kvarn_verify_fwd"
+# The C++ schema (kvarn_launch.cu), repeated for reference and tests.
+KVARN_OP_SCHEMA = (
+    "pth_kvarn_verify_fwd(Tensor! out_rot, Tensor q_rot, Tensor kv_cache, "
+    "Tensor tail_k_pool, Tensor tail_v_pool, Tensor block_to_slot, "
+    "Tensor block_table, Tensor vq_seqlen, int qlen, int num_splits, "
+    "float softmax_scale, Tensor! ws_o, Tensor! ws_lse, int[] tile_offsets, "
+    "int window=0, int mma=0) -> ()"
+)
+# MMA modes: f32 = QK and PV with fp32 accumulate; pv16 = PV per 64 tokens in fp16; qk16 = pv16 plus QK per
+# 16-d k-step in fp16 (attn_decode_kvarn.cuh has the bounds).
+KVARN_MMA_MODES = {"f32": 0, "pv16": 1, "qk16": 2}
+# The one tile layout the kernel implements: KVarNConfig kvarn_k4v2_g128 at head_dim 256 (k_packed, k_s_col,
+# k_zp, k_s_row, v_packed, v_s_col, v_s_row, v_zp; 26,880 B per block and kv head).
+KVARN_TILE_OFFSETS = (0, 16384, 16896, 17408, 17664, 25856, 26368, 26624)
+KVARN_TILE_BYTES = 26880
+KVARN_HEAD_SIZE = 256
+KVARN_MAX_ROWS = 48  # qlen * Hq / Hk
+KVARN_MAX_SPLITS = 256
+
+
+def _kvarn_registered() -> bool:
+    if not _LIBRARY_LOADED:
+        return False
+    try:
+        getattr(torch.ops.pth_flash_attn, KVARN_OP_NAME)
+    except (AttributeError, RuntimeError):
+        return False
+    return True
+
+
+def pth_kvarn_verify_fwd_fake(out_rot, q_rot, kv_cache, tail_k_pool, tail_v_pool, block_to_slot, block_table,
+                              vq_seqlen, qlen, num_splits, softmax_scale, ws_o, ws_lse, tile_offsets, window=0,
+                              mma=0) -> None:
+    """Fake (meta) kernel of the out-variant op: writes nothing, returns None."""
+    return None
+
+
+_KVARN_LOADED = _kvarn_registered()
+if _KVARN_LOADED:
+    torch.library.register_fake(f"{OP_NAMESPACE}::{KVARN_OP_NAME}")(pth_kvarn_verify_fwd_fake)
+
+
+def kvarn_is_available() -> bool:
+    """Return True if the op library was built with PTHFA_KVARN=1 and loaded."""
+    return _KVARN_LOADED
+
+
+def kvarn_mma_mode(name: str) -> int:
+    """Return the op's ``mma`` argument for a mode name (``KVARN_MMA_MODES``).
+
+    Raises:
+        ValueError: an unknown name.
+    """
+    key = (name or "f32").strip().lower()
+    if key not in KVARN_MMA_MODES:
+        raise ValueError(f"KVarN MMA mode must be one of {'|'.join(KVARN_MMA_MODES)}, got {name!r}")
+    return KVARN_MMA_MODES[key]
+
+
+def kvarn_verify_splits(num_reqs: int, num_kv_heads: int, sm_count: int, max_ctx_blocks: int) -> int:
+    """KV splits for one wave of CTAs (the kernel runs one CTA per SM): ``sm_count // (B * Hk)``, at least 1,
+    at most the block bound and ``KVARN_MAX_SPLITS``. Depends only on the batch shape and the deployment's
+    block bound, so a captured graph keeps it."""
+    s = sm_count // max(num_reqs * num_kv_heads, 1)
+    return max(1, min(s, max(max_ctx_blocks, 1), KVARN_MAX_SPLITS))
+
+
+def kvarn_verify(
+    q_rot: torch.Tensor,
+    kv_cache: torch.Tensor,
+    tail_k_pool: torch.Tensor,
+    tail_v_pool: torch.Tensor,
+    block_to_slot: torch.Tensor,
+    block_table: torch.Tensor,
+    vq_seqlen: torch.Tensor,
+    qlen: int,
+    softmax_scale: float,
+    num_splits: int,
+    out_rot: torch.Tensor | None = None,
+    ws_o: torch.Tensor | None = None,
+    ws_lse: torch.Tensor | None = None,
+    tile_offsets=KVARN_TILE_OFFSETS,
+    window: int = 0,
+    mma: int | str = 0,
+) -> torch.Tensor:
+    """KVarN uniform verify attention in the rotated frame; returns ``out_rot`` [NQ, Hq, 256] fp16.
+
+    ``q_rot`` [NQ = B * qlen, Hq, 256] fp16 (rotated, token-major); ``kv_cache`` [NB, Hk, 26880] uint8;
+    ``tail_k_pool``/``tail_v_pool`` [POOL, 128, Hk, 256] fp16; ``block_to_slot`` [lookup] int32 (pool slot of a
+    block id, < 0 = quantised); ``block_table`` [>= B, max_blocks] int32; ``vq_seqlen`` [NQ] int32 (request b's
+    length is entry ``b * qlen + qlen - 1``; <= 0 = padded request, all-zero rows). ``num_splits`` from
+    ``kvarn_verify_splits``. The fp32 workspace (``ws_o`` [S, NQ, Hq, 256], ``ws_lse`` [S, NQ, Hq]) is
+    allocated here when not given and S > 1. ``mma``: a ``KVARN_MMA_MODES`` name or value.
+
+    Raises:
+        RuntimeError: the op is not built (PTHFA_KVARN=1), or an argument is invalid.
+    """
+    if not _KVARN_LOADED:
+        raise RuntimeError(
+            f"pth_kvarn_verify_fwd: op library {LIBRARY_PATH} was built without PTHFA_KVARN=1 "
+            "(PTHFA_KVARN=1 bash pthfa/install.sh)"
+        )
+    mode = kvarn_mma_mode(mma) if isinstance(mma, str) else int(mma)
+    nq, hq, d = q_rot.shape
+    if out_rot is None:
+        out_rot = torch.empty_like(q_rot)
+    if num_splits > 1 and ws_o is None:
+        ws_o = torch.empty(num_splits, nq, hq, d, dtype=torch.float32, device=q_rot.device)
+    if num_splits > 1 and ws_lse is None:
+        ws_lse = torch.empty(num_splits, nq, hq, dtype=torch.float32, device=q_rot.device)
+    if ws_o is None:
+        ws_o = torch.empty(0, dtype=torch.float32, device=q_rot.device)
+    if ws_lse is None:
+        ws_lse = torch.empty(0, dtype=torch.float32, device=q_rot.device)
+    torch.ops.pth_flash_attn.pth_kvarn_verify_fwd.default(
+        out_rot, q_rot, kv_cache, tail_k_pool, tail_v_pool, block_to_slot, block_table, vq_seqlen,
+        int(qlen), int(num_splits), float(softmax_scale), ws_o, ws_lse, [int(x) for x in tile_offsets],
+        int(window), mode,
+    )
+    return out_rot

@@ -8,7 +8,8 @@
 #        arch list, torch and nvcc)
 # env:   PY (venv python), MAX_JOBS (4), CUDA_HOME (default: the nvcc on PATH, else /usr/local/cuda, if its
 #        CUDA major is torch's; else the venv's pip nvcc), PTHFA_BUILD (build dir; default a temp dir, removed
-#        afterwards)
+#        afterwards), PTHFA_KVARN=1 (research/deepinfer attn-2: also build the KVarN verify op; default off,
+#        and unset the build is unchanged; README "attn-2")
 set -e
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(dirname "$HERE")"
@@ -47,6 +48,7 @@ echo "== nvcc: $(nvcc --version | tail -1)  (CUDA_HOME=$CUDA_HOME)"
 TORCH_NOW=$("$PY" -c 'import torch; print(torch.__version__.split("+")[0])')
 case "$TORCH_NOW" in "$TORCH_VERSION"*) ;; *) echo "pthfa/install.sh: note: torch $TORCH_NOW, PIN says $TORCH_VERSION" >&2 ;; esac
 STAMP_NOW="$PTH_COMMIT | arch $TORCH_CUDA_ARCH_LIST | torch $TORCH_NOW | $(nvcc --version | tail -1)"
+if [ "${PTHFA_KVARN:-0}" = 1 ]; then STAMP_NOW="$STAMP_NOW | kvarn"; fi
 PKG_DIR=$("$PY" -c 'import importlib.util as u; s = u.find_spec("pth_flash_attn"); print(s.submodule_search_locations[0] if s else "")' 2>/dev/null || true)
 if [ -n "$PKG_DIR" ] && [ -f "$PKG_DIR/_C.abi3.so" ] && [ "$(cat "$PKG_DIR/.pthfa-stamp" 2>/dev/null)" = "$STAMP_NOW" ]; then
   echo "== pth_flash_attn already installed for this PIN ($PKG_DIR); nothing to do"
