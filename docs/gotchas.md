@@ -1514,7 +1514,7 @@ Things that each cost us hours, in rough order of pain. Worth skimming before yo
     measured), with the package installed and the arm's measured setup (on dflash2 no explicit
     `FA2_FP8KV`, KV offload tier or connector, backend flags in `EXTRA_ARGS`, `DRAFT`, `DRAFT_METHOD`,
     `DFLASH_TOKENS`, `LOOKUP=0`, `DYNAMIC_K` or `VISION=1`; on mtp no explicit `FA2_FP8KV`, KV offload tier
-    or connector, backend flags in `EXTRA_ARGS`, `DYNAMIC_K`, `VISION=1` or `DRAFT_TOKENS` other than 3);
+    or connector, backend flags in `EXTRA_ARGS`, `DYNAMIC_K` or `DRAFT_TOKENS` other than 3, and `VISION=1` keeps it);
     anything else keeps the arm's own default without a word (the FA2 arm on dflash2, fp8 on FlashInfer on
     mtp), a missing install says so once, and `PTH_FA=0` opts out. The effective-config line says
     `PTH_FA=1 (default; ...)` or

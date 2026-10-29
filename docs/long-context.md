@@ -260,7 +260,8 @@ are gotcha 63.
 **Default on an 8.6 GPU.** An unset or empty `PTH_FA` resolves to 1 on this arm, as on
 `SPEC=dflash2 CTX=long`, when `nvidia-smi` reports compute capability 8.6, the package is installed, and
 the launch is the measured one: no explicit `FA2_FP8KV`, no KV offload tier or connector, none of the three
-flags above in `EXTRA_ARGS`, no `DYNAMIC_K`, no `VISION=1` and `DRAFT_TOKENS` unset or 3. Then the argv is
+flags above in `EXTRA_ARGS`, no `DYNAMIC_K` and `DRAFT_TOKENS` unset or 3 (`VISION=1` keeps it: the 2x RTX 3080
+tables below are from a `VISION=1` launch). Then the argv is
 that of `PTH_FA=1` and the effective-config line says `PTH_FA=1 (default; ...)`; otherwise fp8 on
 FlashInfer runs as before, with one line if the package is missing. `PTH_FA=0` opts out. On the native
 RTX 3090 (TP=1, 250 W, vLLM 0.31.0, the launcher's own settings, four boots in the order fp8, default, default, fp8;

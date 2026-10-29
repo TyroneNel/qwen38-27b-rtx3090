@@ -279,7 +279,7 @@ fi
 # cache: 128k TTFT 129 s against 250 s, N=1 decode at 128k 85-92 against 46 tok/s, MTP tokens per step
 # and GSM8K unchanged (docs/long-context.md has the table, the hardware and the launch line; gotcha 63 the
 # limits). Unset, it defaults to 1 on a compute capability 8.6 GPU with the package installed and this arm's
-# measured setup (DRAFT_TOKENS unset or 3, no DYNAMIC_K, no VISION=1; resolve_config.sh), else the argv and the
+# measured setup (DRAFT_TOKENS unset or 3, no DYNAMIC_K; VISION=1 keeps it; resolve_config.sh), else the argv and the
 # environment are those of the arm without it; PTH_FA=0 opts out.
 # SPEC=dflash2 CTX=long: the arm's own int8_per_token_head cache, read by the kernel on the target AND the
 # DFlash2 drafter. The drafter's five layers are sliding-window (2048) and non-causal at head size 128,

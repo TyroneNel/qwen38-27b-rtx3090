@@ -13,7 +13,7 @@
 # the argv, environment and stderr of PTH_FA=0 (no refusal); an explicit FA2_FP8KV=1 with PTH_FA=1 is refused
 # before either plugin is probed; on 8.0, 8.9, 9.0 or no answer, and on every other arm, nothing changes. On
 # SPEC=mtp CTX=long the default works the same way with that arm's gates (no explicit FA2_FP8KV, no KV tier or
-# connector, no backend flags in EXTRA_ARGS, no DYNAMIC_K, no VISION=1, DRAFT_TOKENS unset or 3), against fp8 on
+# connector, no backend flags in EXTRA_ARGS, no DYNAMIC_K, DRAFT_TOKENS unset or 3; VISION=1 keeps it), against fp8 on
 # FlashInfer, and with PTHFA_BASE_TREE every default-off mtp launch is the base tree's byte for byte. Every
 # run gets a stub nvidia-smi that answers nothing unless it passes another. Copies
 # the checkout, without its own venv, to a temp dir and runs the launchers against a stub vllm (prints its argv,
@@ -273,7 +273,8 @@ check "0 fp8 none" "$(rc) $(after --kv-cache-dtype < "$T/m0") $(after --attentio
 run "$T/new" single-user/start_qwen.sh SPEC=mtp CTX=long FA2_FP8KV= PTHFA_STUB_INSTALLED=0 "$S86" > "$T/m00"; cp "$T/err" "$T/m00.err"
 check "0 same 1 same" "$(rc) $(cmp -s "$T/m00" "$T/m0" && echo same || echo differs) $(grep -cF "$NOTEM" "$T/m00.err") $(cmp -s \
   <(grep -vF "$NOTEM" "$T/m00.err") "$T/m0.err" && echo same || echo differs)" "no package: the launch of PTH_FA=0 and one note"
-for v in "PREFIX_CACHE=1" "PREFIX_CACHE=1 DRAFT_TOKENS=3" "VISION=0" "EXTRA_ARGS=--tensor-parallel-size=2"; do
+for v in "PREFIX_CACHE=1" "PREFIX_CACHE=1 DRAFT_TOKENS=3" "VISION=0" "VISION=1" "PREFIX_CACHE=1 VISION=1" \
+         "VISION=1 VISION_OFFLOAD=0" "EXTRA_ARGS=--tensor-parallel-size=2"; do
   run "$T/new" single-user/start_qwen.sh SPEC=mtp CTX=long FA2_FP8KV= $v PTH_FA=1 "$S86" > "$T/x"
   run "$T/new" single-user/start_qwen.sh SPEC=mtp CTX=long FA2_FP8KV= $v "$S86" > "$T/y"; cp "$T/err" "$T/y.err"
   check "0 same 1" "$(rc) $(cmp -s "$T/x" "$T/y" && echo same || echo differs) $(grep -c '^\[effective-config\] PTH_FA=1 (default; ' "$T/y.err")" \
@@ -282,8 +283,6 @@ done
 L3="SPEC=mtp CTX=long"
 keeps "mtp: explicit FA2_FP8KV=1 (refused by the FA2 resolution, as without the default)" $L3 FA2_FP8KV=1
 keeps "mtp: explicit FA2_FP8KV=0"                         $L3 FA2_FP8KV=0
-keeps "mtp: VISION=1"                                     $L3 VISION=1
-keeps "mtp: PREFIX_CACHE=1 VISION=1"                      $L3 PREFIX_CACHE=1 VISION=1
 keeps "mtp: KV_OFFLOAD_GB=8"                              $L3 KV_OFFLOAD_GB=8
 keeps "mtp: EXTRA_ARGS --kv-offloading-size"              $L3 EXTRA_ARGS="--kv-offloading-size 4"
 keeps "mtp: EXTRA_ARGS --attention-backend"               $L3 EXTRA_ARGS="--attention-backend FLASHINFER"
@@ -315,18 +314,20 @@ if [ -n "${PTHFA_BASE_TREE:-}" ]; then
     vsbase "no knob, nvidia-smi 8.6, $arm" "" $arm "$S86"
   done
   # SPEC=mtp CTX=long where a gate fails: the base tree's launch (fp8 on FlashInfer, or its refusal) byte for byte.
-  for g in "VISION=1" "PREFIX_CACHE=1 VISION=1" "FA2_FP8KV=0" "FA2_FP8KV=1" "DRAFT_TOKENS=4" "KV_OFFLOAD_GB=8" \
+  for g in "FA2_FP8KV=0" "FA2_FP8KV=1" "DRAFT_TOKENS=4" "KV_OFFLOAD_GB=8" \
            "EXTRA_ARGS=--kv-offloading-size=4" "EXTRA_ARGS=--attention-backend=FLASHINFER" "EXTRA_ARGS=--kv-cache-dtype=fp8"; do
     vsbase "no knob, nvidia-smi 8.6, SPEC=mtp CTX=long $g" "" SPEC=mtp CTX=long $g "$S86"
   done
   vsbase "no knob, nvidia-smi 8.6, SPEC=mtp CTX=long DYNAMIC_K" "" SPEC=mtp CTX=long DYNAMIC_K='[[1,2,3],[3,512,2]]' "$S86"
   # SPEC=mtp CTX=long with no knob on 8.6 is the base tree's explicit PTH_FA=1: argv and environment byte for byte,
-  # stderr but for (default) in the PTH_FA=1 effective-config line.
-  run "$T/base86" single-user/start_qwen.sh FA2_FP8KV= SPEC=mtp CTX=long PTH_FA=1 "$S86" > "$T/x"; sed "s|$T/base86|TREE|g" "$T/err" > "$T/x.err"
-  run "$T/new" single-user/start_qwen.sh FA2_FP8KV= SPEC=mtp CTX=long "$S86" > "$T/y"; sed "s|$T/new|TREE|g" "$T/err" > "$T/y.err"
-  sed -i "s|$T/base86|TREE|g" "$T/x"; sed -i "s|$T/new|TREE|g" "$T/y"
-  check "same same" "$(cmp -s "$T/x" "$T/y" && echo same || echo differs) $(cmp -s <(sed 's/^\(\[effective-config\] PTH_FA=1 (\)explicit; /\1default; /' \
-    "$T/x.err") "$T/y.err" && echo same || echo differs)" "no knob, nvidia-smi 8.6, SPEC=mtp CTX=long: the base tree's PTH_FA=1"
+  # stderr but for (default) in the PTH_FA=1 effective-config line. With VISION=1 too.
+  for v in "" "VISION=1" "PREFIX_CACHE=1 VISION=1"; do
+    run "$T/base86" single-user/start_qwen.sh FA2_FP8KV= SPEC=mtp CTX=long $v PTH_FA=1 "$S86" > "$T/x"; sed "s|$T/base86|TREE|g" "$T/err" > "$T/x.err"
+    run "$T/new" single-user/start_qwen.sh FA2_FP8KV= SPEC=mtp CTX=long $v "$S86" > "$T/y"; sed "s|$T/new|TREE|g" "$T/err" > "$T/y.err"
+    sed -i "s|$T/base86|TREE|g" "$T/x"; sed -i "s|$T/new|TREE|g" "$T/y"
+    check "same same" "$(cmp -s "$T/x" "$T/y" && echo same || echo differs) $(cmp -s <(sed 's/^\(\[effective-config\] PTH_FA=1 (\)explicit; /\1default; /' \
+      "$T/x.err") "$T/y.err" && echo same || echo differs)" "no knob, nvidia-smi 8.6, SPEC=mtp CTX=long $v: the base tree's PTH_FA=1"
+  done
   run "$T/base86" single-user/start_qwen.sh FA2_FP8KV= SPEC=mtp CTX=long "$S86" > "$T/x"; sed "s|$T/base86|TREE|g" "$T/err" > "$T/x.err"
   run "$T/new" single-user/start_qwen.sh FA2_FP8KV= SPEC=mtp CTX=long PTHFA_STUB_INSTALLED=0 "$S86" > "$T/y"
   sed "s|$T/new|TREE|g" "$T/err" > "$T/y.err"; sed -i "s|$T/base86|TREE|g" "$T/x"; sed -i "s|$T/new|TREE|g" "$T/y"
